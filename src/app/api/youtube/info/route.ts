@@ -10,7 +10,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 async function tryResolveWithPython(urlOrId: string): Promise<any | null> {
   try {

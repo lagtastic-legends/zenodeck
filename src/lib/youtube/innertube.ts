@@ -96,6 +96,8 @@ export interface YouTubeQualityOption {
     | "1080P 60"
     | "1080P"
     | "720P"
+    | "480P"
+    | "360P"
     | "SD"
     | "320 KBPS"
     | "256 KBPS"
@@ -186,9 +188,11 @@ export function formatBytes(bytes: number): string {
 }
 
 /**
- * Helper to get the absolute or relative YouTube API endpoint.
- * In web dev/production, relative /api/youtube/... is used.
- * In Capacitor Android APK, falls back to the production API origin.
+ * Helper to get the fully qualified or relative YouTube API endpoint.
+ * - In native Capacitor mobile APK (Android / iOS), routes to remote API fallback.
+ * - In any browser environment (localhost on any port: 3000, 3001, custom domain, LAN IP),
+ *   returns `${window.location.origin}${normalizedPath}`.
+ * - In SSR / Node runtime, falls back to remote API origin.
  */
 export function getYouTubeApiUrl(path: string): string {
   let normalizedPath = path;
@@ -196,16 +200,25 @@ export function getYouTubeApiUrl(path: string): string {
   if (!pathname.endsWith("/")) {
     normalizedPath = `${pathname}/${search ? `?${search}` : ""}`;
   }
+  if (!normalizedPath.startsWith("/")) {
+    normalizedPath = `/${normalizedPath}`;
+  }
 
   if (typeof window !== "undefined") {
+    // 1. In native mobile APK (Capacitor Android / iOS), route to remote API fallback
+    if (Capacitor.isNativePlatform()) {
+      const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
+      return `${fallback.replace(/\/$/, "")}${normalizedPath}`;
+    }
+
+    // 2. In any web browser environment (localhost on ANY port, custom domain, LAN IP):
     const origin = window.location.origin;
-    if (origin && !origin.includes("capacitor") && !origin.startsWith("file:")) {
-      // In dev (port 3000) or public web domain, use origin directly
-      if (window.location.port === "3000" || (!origin.includes("localhost") && !origin.includes("127.0.0.1"))) {
-        return `${origin}${normalizedPath}`;
-      }
+    if (origin && !origin.startsWith("file:")) {
+      return `${origin}${normalizedPath}`;
     }
   }
+
+  // 3. SSR / Node.js fallback
   const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
   return `${fallback.replace(/\/$/, "")}${normalizedPath}`;
 }
@@ -525,11 +538,52 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
 
   const bestAudio = audioFormats[0];
 
+  // Specific format queries for intelligent container pairing:
+  // Best AAC audio (itag 140 or audio/mp4 / m4a)
+  const aacAudioFormats = audioFormats.filter(
+    (f) =>
+      f.container === "m4a" ||
+      f.mimeType.includes("audio/mp4") ||
+      f.codec.toLowerCase().includes("mp4a") ||
+      f.codec.toLowerCase().includes("aac") ||
+      f.itag === 140
+  );
+  const bestAacAudio = aacAudioFormats[0] || null;
+
+  // Best Opus audio (itag 251 or audio/webm / opus)
+  const opusAudioFormats = audioFormats.filter(
+    (f) =>
+      f.container === "webm" ||
+      f.mimeType.includes("audio/webm") ||
+      f.codec.toLowerCase().includes("opus") ||
+      f.itag === 251
+  );
+  const bestOpusAudio = opusAudioFormats[0] || null;
+
   // Group and sort video formats
   const videoFormats = parsedFormats.filter((f) => f.mimeType.startsWith("video/"));
 
   // Build targeted quality tiers
   const qualities: YouTubeQualityOption[] = [];
+
+  // Helper to determine format container & codec profile
+  const isWebMFormat = (f: YouTubeFormatMeta) =>
+    f.container === "webm" ||
+    f.mimeType.toLowerCase().includes("webm") ||
+    f.codec.toLowerCase().includes("vp9") ||
+    f.codec.toLowerCase().includes("vp8");
+
+  // Helper to get paired audio for video format
+  const getPairedAudio = (videoFmt: YouTubeFormatMeta) => {
+    if (isWebMFormat(videoFmt)) {
+      return bestOpusAudio || bestAudio;
+    }
+    return bestAacAudio || bestAudio;
+  };
+
+  const getContainerForVideo = (videoFmt: YouTubeFormatMeta): "mp4" | "webm" => {
+    return isWebMFormat(videoFmt) ? "webm" : "mp4";
+  };
 
   // Helper to find best format matching resolution and fps criteria
   const findFormat = (minHeight: number, maxHeight: number, prefer60 = false) => {
@@ -554,8 +608,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   const fmt4k = findFormat(2000, 2160, true);
   if (fmt4k) {
     const is60 = (fmt4k.fps || 0) >= 50;
+    const pairedAudio = getPairedAudio(fmt4k);
     const vSize = fmt4k.contentLength || 0;
-    const aSize = bestAudio?.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
       id: is60 ? "2160p60" : "2160p",
       label: is60 ? "4K Ultra HD 60fps" : "4K Ultra HD",
@@ -565,10 +620,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       is4K: true,
       is60fps: is60,
       isAudioOnly: false,
-      container: "mp4",
+      container: getContainerForVideo(fmt4k),
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt4k,
-      audioFormat: bestAudio,
+      audioFormat: pairedAudio,
     });
   }
 
@@ -576,8 +631,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   const fmt2k = findFormat(1300, 1440, true);
   if (fmt2k) {
     const is60 = (fmt2k.fps || 0) >= 50;
+    const pairedAudio = getPairedAudio(fmt2k);
     const vSize = fmt2k.contentLength || 0;
-    const aSize = bestAudio?.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
       id: is60 ? "1440p60" : "1440p",
       label: is60 ? "2K Quad HD 60fps" : "2K Quad HD",
@@ -587,10 +643,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       is4K: false,
       is60fps: is60,
       isAudioOnly: false,
-      container: "mp4",
+      container: getContainerForVideo(fmt2k),
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt2k,
-      audioFormat: bestAudio,
+      audioFormat: pairedAudio,
     });
   }
 
@@ -598,8 +654,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   const fmt1080 = findFormat(950, 1080, true);
   if (fmt1080) {
     const is60 = (fmt1080.fps || 0) >= 50;
+    const pairedAudio = getPairedAudio(fmt1080);
     const vSize = fmt1080.contentLength || 0;
-    const aSize = bestAudio?.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
       id: is60 ? "1080p60" : "1080p",
       label: is60 ? "Full HD 60fps" : "Full HD 1080p",
@@ -609,18 +666,19 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       is4K: false,
       is60fps: is60,
       isAudioOnly: false,
-      container: "mp4",
+      container: getContainerForVideo(fmt1080),
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt1080,
-      audioFormat: bestAudio,
+      audioFormat: pairedAudio,
     });
   }
 
   // 4. 720p HD
   const fmt720 = findFormat(650, 720, true);
   if (fmt720) {
+    const pairedAudio = getPairedAudio(fmt720);
     const vSize = fmt720.contentLength || 0;
-    const aSize = bestAudio?.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
       id: "720p",
       label: "High Definition 720p",
@@ -630,60 +688,84 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       is4K: false,
       is60fps: (fmt720.fps || 0) >= 50,
       isAudioOnly: false,
-      container: "mp4",
+      container: getContainerForVideo(fmt720),
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt720,
-      audioFormat: bestAudio,
+      audioFormat: pairedAudio,
     });
   }
 
-  // 5. 480p / 360p Standard Quality
-  const fmt480 = findFormat(320, 480);
+  // 5. 480p Standard Quality
+  const fmt480 = findFormat(400, 480);
   if (fmt480) {
+    const pairedAudio = getPairedAudio(fmt480);
     const vSize = fmt480.contentLength || 0;
-    const aSize = bestAudio?.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
       id: "480p",
       label: "Standard Definition 480p",
       resolutionLabel: "854 × 480 (480p)",
       fps: fmt480.fps || 30,
-      badge: "SD",
+      badge: "480P",
       is4K: false,
       is60fps: false,
       isAudioOnly: false,
-      container: "mp4",
+      container: getContainerForVideo(fmt480),
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt480,
-      audioFormat: bestAudio,
+      audioFormat: pairedAudio,
     });
   }
 
-  // Fallback: If no standard quality tier matched (e.g. very old 240p/360p video), add highest available video format
+  // 6. 360p Standard Quality
+  const fmt360 = findFormat(300, 399);
+  if (fmt360) {
+    const pairedAudio = getPairedAudio(fmt360);
+    const vSize = fmt360.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
+    qualities.push({
+      id: "360p",
+      label: "Standard Definition 360p",
+      resolutionLabel: "640 × 360 (360p)",
+      fps: fmt360.fps || 30,
+      badge: "360P",
+      is4K: false,
+      is60fps: false,
+      isAudioOnly: false,
+      container: getContainerForVideo(fmt360),
+      approxSizeBytes: vSize + aSize,
+      videoFormat: fmt360,
+      audioFormat: pairedAudio,
+    });
+  }
+
+  // Fallback: If no standard quality tier matched (e.g. very old 240p video), add highest available video format
   const hasVideoTier = qualities.some((q) => !q.isAudioOnly);
   if (!hasVideoTier && videoFormats.length > 0) {
     const topVideo = [...videoFormats].sort((a, b) => (b.height || 0) - (a.height || 0))[0];
     const h = topVideo.height || (topVideo.qualityLabel ? parseInt(topVideo.qualityLabel) : 360);
+    const pairedAudio = getPairedAudio(topVideo);
     const vSize = topVideo.contentLength || 0;
-    const aSize = bestAudio?.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
     qualities.unshift({
       id: `${h}p`,
       label: `Standard Definition ${h}p`,
       resolutionLabel: `${topVideo.width || 640} × ${h} (${h}p)`,
       fps: topVideo.fps || 30,
-      badge: "SD",
+      badge: (h >= 480 ? "480P" : h >= 360 ? "360P" : "SD") as any,
       is4K: false,
       is60fps: false,
       isAudioOnly: false,
-      container: "mp4",
+      container: getContainerForVideo(topVideo),
       approxSizeBytes: vSize + aSize,
       videoFormat: topVideo,
-      audioFormat: bestAudio,
+      audioFormat: pairedAudio,
     });
   }
 
-  // 6. Direct Audio Extraction Qualities (Multi-tier bitrates & native/lossless formats)
+  // 7. Direct Audio Extraction Qualities (Multi-tier bitrates & native/lossless formats)
   if (bestAudio) {
-    const bestM4a = audioFormats.find((f) => f.container === "m4a") || bestAudio;
+    const bestM4a = bestAacAudio || audioFormats.find((f) => f.container === "m4a") || bestAudio;
 
     // 6a. 320 kbps Studio Master MP3
     qualities.push({

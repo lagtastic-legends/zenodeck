@@ -291,9 +291,11 @@ export function YouTubeDownloader() {
       (!selectedQuality.isAudioOnly && !selectedQuality.audioFormat && Boolean(selectedQuality.videoFormat)) ||
       (selectedQuality.isAudioOnly && selectedQuality.id === "audio-m4a" && selectedQuality.audioFormat?.container === "m4a");
 
-    if (!isDirectFastPath && (!engine || engineState !== "ready")) {
+    let activeEngine = engine;
+    if (!isDirectFastPath && (!activeEngine || engineState !== "ready")) {
       try {
-        await boot();
+        const booted = await boot();
+        if (booted) activeEngine = booted;
       } catch (bootErr) {
         console.warn("FFmpeg engine boot deferred:", bootErr);
       }
@@ -311,7 +313,7 @@ export function YouTubeDownloader() {
         videoTitle: videoInfo.title,
         author: videoInfo.author,
         thumbnailUrl: videoInfo.thumbnailUrl,
-        engine,
+        engine: activeEngine,
         maxParallelWorkers: workersCount,
         onProgress: (p) => {
           setProgress(p);
@@ -376,9 +378,11 @@ export function YouTubeDownloader() {
   const handleStartBatchDownload = async () => {
     if (!playlistInfo || selectedVideoIds.size === 0) return;
 
-    if (!engine || engineState !== "ready") {
+    let activeEngine = engine;
+    if (!activeEngine || engineState !== "ready") {
       try {
-        await boot();
+        const booted = await boot();
+        if (booted) activeEngine = booted;
       } catch (bootErr) {
         console.warn("FFmpeg engine boot deferred for batch:", bootErr);
       }
@@ -406,7 +410,7 @@ export function YouTubeDownloader() {
       items: itemsToDownload,
       targetQualityBadge: batchQualityBadge,
       isAudioOnly: batchIsAudioOnly,
-      engine,
+      engine: activeEngine,
       onItemUpdate: (updatedItem, stats) => {
         setBatchItems((prev) =>
           prev.map((i) => (i.videoId === updatedItem.videoId ? { ...updatedItem } : i))

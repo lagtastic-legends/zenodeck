@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.4.8-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.4.8" />
+    <img src="https://img.shields.io/badge/Release-v3.4.9-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.4.9" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.8/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.9/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20APK-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.8/zenodeck-v3.4.8.apk">
-    <img src="https://img.shields.io/badge/Versioned%20APK-v3.4.8-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.9/zenodeck-v3.4.9.apk">
+    <img src="https://img.shields.io/badge/Versioned%20APK-v3.4.9-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -45,11 +45,34 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 | Platform | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.8/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and Python 4K 60FPS engine. |
-| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.4.8.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.8/zenodeck-v3.4.8.apk) | Dedicated v3.4.8 release package with full version archive support. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.9/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and Python 4K 60FPS engine. |
+| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.4.9.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.4.9/zenodeck-v3.4.9.apk) | Dedicated v3.4.9 release package with full version archive support. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.4.8)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.4.8) | Complete release packages, checksums, changelogs, and release assets. |
+| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.4.9)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.4.9) | Complete release packages, checksums, changelogs, and release assets. |
+
+---
+
+## 🌟 What's New in v3.4.9 — YouTube 4K Stream Resilience, Lossless Container Muxing, Dynamic API Routing, & Chunked Native Storage
+
+### 🎬 1. Multi-Tier FFmpeg WebAssembly Container Muxing (No Silent Videos)
+- **Zero Silent Videos**: Eliminated video-only fallbacks. Video and audio streams are always muxed into a single synchronized media file.
+- **Tier 1 (Lossless Stream-Copy)**: Direct container packaging (`-c copy`) when audio/video codecs match container specifications (e.g. MP4 + AAC, or WebM + Opus).
+- **Tier 2 (Fast Audio Transcode)**: When packaging Opus audio into MP4 containers, transcodes audio via `-c:v copy -c:a aac -b:a 192k` in ~1 second with zero video re-encoding.
+- **Tier 3 (WebM Rescue Container)**: Fallback muxing container ensuring stream delivery never fails.
+- **Expanded Quality Matrix**: Full support for 4K 60fps, 4K, 2K, 1080p60, 1080p, 720p, 480p, 360p, and 6 audio extraction presets (320k/256k/192k/128k MP3, Native M4A, Lossless WAV).
+
+### 🌐 2. Dynamic API Route Stability & Port-Agnostic Web Routing
+- **`force-dynamic` Handlers**: All YouTube API endpoints strictly declare `export const dynamic = "force-dynamic"` to guarantee query parameters are always executed dynamically.
+- **Universal Origin Routing**: Dynamically derives `window.location.origin` across any development or production port/reverse proxy, while isolating remote fallback endpoints strictly to native Capacitor mobile environments.
+
+### 📱 3. Android Native Chunked Save & OOM Elimination
+- **Progressive 512 KB Slicing**: Files are written in 512 KB chunks (`Filesystem.writeFile` for chunk 0, `Filesystem.appendFile` for subsequent chunks), bounding payloads under Android's 1MB Binder limit and preventing `TransactionTooLargeException`.
+- **Zero-Spike Memory Footprint**: Eliminates full-file `readAsDataURL` memory spikes to save large 4K video downloads reliably on low-RAM devices.
+- **Automatic Scoped Storage Fallback**: Gracefully falls back from `Directory.Documents` to app-internal `Directory.Data` if restricted by OEM permissions.
+
+### 🛠️ 4. Non-Destructive Mobile Build Pipeline
+- **Atomic Route Substitution**: `scripts/build-mobile-export.ts` stashes dynamic server route handlers, injects temporary static stubs during `next build`, and unconditionally restores original source routes with zero git diff.
 
 ---
 

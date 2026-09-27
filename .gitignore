@@ -56,3 +56,4 @@ scratch/
 dist/
 *.apk
 !public/zenodeck.apk
+.agents/

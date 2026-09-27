@@ -33,7 +33,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build Static Export for Mobile
-        run: npm run build
+        run: npm run build:mobile
         env:
           MOBILE_EXPORT: 1
           NEXT_TELEMETRY_DISABLED: 1

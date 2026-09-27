@@ -19,7 +19,7 @@
  *     and dynamic ETA computation.
  */
 
-import type { FFmpeg } from "@ffmpeg/ffmpeg";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { Capacitor } from "@capacitor/core";
 import {
   buildCandidateUrls,
@@ -27,6 +27,46 @@ import {
   type YouTubeQualityOption,
 } from "./innertube";
 import { tagMp3Buffer } from "./id3-tagger";
+import {
+  loadWasmCoreBlobUrl,
+  resolveCoreModuleUrl,
+} from "../ffmpeg/wasm-loader";
+
+let sharedTurboEngine: FFmpeg | null = null;
+
+/**
+ * Resiliently obtains an active FFmpeg WASM engine instance, booting one on demand if needed
+ */
+async function getOrInitTurboEngine(providedEngine?: FFmpeg | null): Promise<FFmpeg | null> {
+  if (providedEngine) {
+    if ((providedEngine as any).loaded === true || (providedEngine as any).loaded === undefined) {
+      return providedEngine;
+    }
+  }
+  if (sharedTurboEngine && (sharedTurboEngine as any).loaded) {
+    return sharedTurboEngine;
+  }
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const instance = new FFmpeg();
+    const coreURL = await resolveCoreModuleUrl();
+    const { blobUrl: wasmURL } = await loadWasmCoreBlobUrl();
+    const workerURL = new URL("/ffmpeg/worker.js", window.location.origin).href;
+    await instance.load({
+      coreURL,
+      wasmURL,
+      classWorkerURL: workerURL,
+    });
+    sharedTurboEngine = instance;
+    return instance;
+  } catch (err) {
+    console.warn("Turbo downloader: auto-boot of FFmpeg engine failed:", err);
+    return null;
+  }
+}
 
 export type TurboPhase =
   | "idle"
@@ -72,6 +112,9 @@ export interface TurboDownloadResult {
  * Builds the stream proxy URL for web CORS compatibility or returns direct URL for native mobile
  */
 function getProxiedStreamUrl(directUrl: string): string {
+  if (directUrl.startsWith("data:") || directUrl.startsWith("blob:")) {
+    return directUrl;
+  }
   if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
     return directUrl;
   }
@@ -399,10 +442,14 @@ export async function downloadYouTubeStream({
       signal,
     });
 
-    const isNativeM4A = option.id === "audio-m4a" || audioFmt.container === "m4a";
+    const isSourceM4a =
+      audioFmt.container === "m4a" ||
+      (audioFmt.mimeType || "").toLowerCase().includes("audio/mp4") ||
+      (audioFmt.codec || "").toLowerCase().includes("mp4a") ||
+      (audioFmt.codec || "").toLowerCase().includes("aac");
 
-    // Fast-path for Native AAC (M4A): direct container save without FFmpeg
-    if (isNativeM4A && (!engine || option.id === "audio-m4a")) {
+    // Fast-path for Native AAC (M4A): direct container save without FFmpeg ONLY if source audio is genuinely M4A/AAC
+    if (isSourceM4a && (!engine || option.id === "audio-m4a")) {
       const blob = new Blob([audioData.buffer as ArrayBuffer], { type: "audio/mp4" });
       const url = URL.createObjectURL(blob);
       const filename = `${sanitizedTitle} [Native AAC].m4a`;
@@ -429,11 +476,17 @@ export async function downloadYouTubeStream({
       };
     }
 
+    let activeEngine = engine;
+    if (!activeEngine || !(activeEngine as any).loaded) {
+      activeEngine = await getOrInitTurboEngine(engine);
+    }
+
     // FFmpeg audio transcoding for MP3 and WAV if engine is active
-    if (engine) {
+    if (activeEngine) {
       try {
-        const inputName = `input_audio.${audioFmt.container || "m4a"}`;
-        await engine.writeFile(inputName, audioData);
+        const inputExt = audioFmt.container || (isSourceM4a ? "m4a" : "webm");
+        const inputName = `input_audio.${inputExt}`;
+        await activeEngine.writeFile(inputName, audioData);
 
         let outputName = "output.mp3";
         let mimeType = "audio/mp3";
@@ -471,23 +524,23 @@ export async function downloadYouTubeStream({
         }
 
         try {
-          await engine.exec(ffmpegArgs);
+          await activeEngine.exec(ffmpegArgs);
         } catch (execErr: any) {
           console.warn("FFmpeg specialized audio command failed, trying fallback:", execErr);
           if (outputName.endsWith(".mp3")) {
             const fallbackBitrate = option.audioBitrate || 256;
-            await engine.exec(["-i", inputName, "-vn", "-b:a", `${fallbackBitrate}k`, outputName]);
+            await activeEngine.exec(["-i", inputName, "-vn", "-b:a", `${fallbackBitrate}k`, outputName]);
           } else if (outputName.endsWith(".m4a")) {
-            await engine.exec(["-i", inputName, "-vn", "-c:a", "aac", outputName]);
+            await activeEngine.exec(["-i", inputName, "-vn", "-c:a", "aac", outputName]);
           } else {
             throw execErr;
           }
         }
 
-        const outData = (await engine.readFile(outputName)) as Uint8Array;
+        const outData = (await activeEngine.readFile(outputName)) as Uint8Array;
         try {
-          await engine.deleteFile(inputName);
-          await engine.deleteFile(outputName);
+          await activeEngine.deleteFile(inputName);
+          await activeEngine.deleteFile(outputName);
         } catch {}
 
         let finalAudioData = outData;
@@ -625,100 +678,255 @@ export async function downloadYouTubeStream({
     };
   }
 
-  // Mux video stream + audio stream via FFmpeg lossless stream copy (-c copy)
-  if (engine) {
-    try {
-      updateProgress("muxing", "Muxing 4K 60fps video & audio streams (lossless stream-copy)…", 1);
+  // -------------------------------------------------------------
+  // Case B: Video Muxing (4K 60fps / 2K / 1080p / 720p / 480p / 360p)
+  // Multi-tier resilient FFmpeg pipeline (VP9 WebM, H.264 MP4, Opus transcode, WebM rescue)
+  // -------------------------------------------------------------
+  const vContainer = option.videoFormat.container || "mp4";
+  const vMime = (option.videoFormat.mimeType || "").toLowerCase();
+  const vCodec = (option.videoFormat.codec || "").toLowerCase();
+  const isVideoWebM =
+    vContainer === "webm" ||
+    vMime.includes("webm") ||
+    vCodec.includes("vp9") ||
+    vCodec.includes("vp8");
 
-      const vExt = option.videoFormat.container || "mp4";
-      const aExt = option.audioFormat?.container || "m4a";
-      const vInput = `stream_v.${vExt}`;
-      const aInput = `stream_a.${aExt}`;
-      const outputExt = "mp4";
-      const outputName = `stream_out.${outputExt}`;
+  const aContainer = option.audioFormat?.container || "m4a";
+  const aMime = (option.audioFormat?.mimeType || "").toLowerCase();
+  const aCodec = (option.audioFormat?.codec || "").toLowerCase();
+  const isAudioOpus =
+    aContainer === "webm" ||
+    aMime.includes("opus") ||
+    aMime.includes("webm") ||
+    aCodec.includes("opus");
+  const isAudioAac =
+    aContainer === "m4a" ||
+    aMime.includes("mp4a") ||
+    aMime.includes("aac") ||
+    aCodec.includes("mp4a") ||
+    aCodec.includes("aac");
 
-      await engine.writeFile(vInput, videoBytes);
-      await engine.writeFile(aInput, audioBytes);
+  const vExt = isVideoWebM ? "webm" : "mp4";
+  const aExt = isAudioOpus ? "webm" : isAudioAac ? "m4a" : (option.audioFormat?.container || "m4a");
+  const vInput = `stream_v.${vExt}`;
+  const aInput = `stream_a.${aExt}`;
 
-      // Lossless stream-copy muxing: instant 1-2s execution
-      await engine.exec([
-        "-i",
-        vInput,
-        "-i",
-        aInput,
-        "-c",
-        "copy",
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
-        "-movflags",
-        "+faststart",
-        outputName,
-      ]);
+  interface MuxPlan {
+    outputName: string;
+    outputExt: "mp4" | "webm";
+    mimeType: string;
+    args: string[];
+    description: string;
+  }
 
-      const finalVideoData = (await engine.readFile(outputName)) as Uint8Array;
+  const plans: MuxPlan[] = [];
 
-      try {
-        await engine.deleteFile(vInput);
-        await engine.deleteFile(aInput);
-        await engine.deleteFile(outputName);
-      } catch {}
+  if (isVideoWebM) {
+    // WebM video (VP9 / WebM): Lossless stream-copy into WebM container
+    plans.push({
+      outputName: "stream_out.webm",
+      outputExt: "webm",
+      mimeType: "video/webm",
+      args: ["-i", vInput, "-i", aInput, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", "stream_out.webm"],
+      description: "lossless WebM stream-copy",
+    });
 
-      const finalBlob = new Blob([finalVideoData.buffer as ArrayBuffer], { type: "video/mp4" });
-      const finalUrl = URL.createObjectURL(finalBlob);
-      const finalFilename = `${sanitizedTitle} [${option.id}].mp4`;
-
-      onProgress({
-        phase: "complete",
-        progress: 100,
-        speedMbps: currentSpeedMbps,
-        downloadedBytes: finalBlob.size,
-        totalBytes: finalBlob.size,
-        activeThreads: 0,
-        etaSeconds: 0,
-        statusMessage: `Ready! 4K 60fps video packaged cleanly.`,
+    // Fallback: WebM with Opus audio transcode
+    plans.push({
+      outputName: "stream_out.webm",
+      outputExt: "webm",
+      mimeType: "video/webm",
+      args: [
+        "-i", vInput,
+        "-i", aInput,
+        "-c:v", "copy",
+        "-c:a", "libopus",
+        "-b:a", "160k",
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        "stream_out.webm",
+      ],
+      description: "WebM copy with Opus audio transcode",
+    });
+  } else {
+    // MP4 video (H.264 / AV01)
+    if (isAudioAac && !isAudioOpus) {
+      // Audio is AAC: instant lossless stream-copy into MP4
+      plans.push({
+        outputName: "stream_out.mp4",
+        outputExt: "mp4",
+        mimeType: "video/mp4",
+        args: [
+          "-i", vInput,
+          "-i", aInput,
+          "-c", "copy",
+          "-map", "0:v:0",
+          "-map", "1:a:0",
+          "-movflags", "+faststart",
+          "stream_out.mp4",
+        ],
+        description: "lossless MP4 stream-copy",
       });
 
-      return {
-        blob: finalBlob,
-        url: finalUrl,
-        filename: finalFilename,
-        fileSizeBytes: finalBlob.size,
+      // Secondary fallback: MP4 copy with AAC audio transcode
+      plans.push({
+        outputName: "stream_out.mp4",
+        outputExt: "mp4",
         mimeType: "video/mp4",
-        is4K,
-        is60fps,
-      };
-    } catch (muxErr) {
-      console.warn("FFmpeg stream muxing failed, falling back to direct video export:", muxErr);
+        args: [
+          "-i", vInput,
+          "-i", aInput,
+          "-c:v", "copy",
+          "-c:a", "aac",
+          "-b:a", "192k",
+          "-ar", "44100",
+          "-map", "0:v:0",
+          "-map", "1:a:0",
+          "-movflags", "+faststart",
+          "stream_out.mp4",
+        ],
+        description: "MP4 copy with AAC audio transcode",
+      });
+
+      // Tertiary rescue fallback: WebM container rescue
+      plans.push({
+        outputName: "stream_out.webm",
+        outputExt: "webm",
+        mimeType: "video/webm",
+        args: ["-i", vInput, "-i", aInput, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", "stream_out.webm"],
+        description: "WebM rescue container stream-copy",
+      });
+    } else {
+      // Audio is Opus: transcode audio to AAC so MP4 container has universally decodable, audible sound
+      plans.push({
+        outputName: "stream_out.mp4",
+        outputExt: "mp4",
+        mimeType: "video/mp4",
+        args: [
+          "-i", vInput,
+          "-i", aInput,
+          "-c:v", "copy",
+          "-c:a", "aac",
+          "-b:a", "192k",
+          "-ar", "44100",
+          "-map", "0:v:0",
+          "-map", "1:a:0",
+          "-movflags", "+faststart",
+          "stream_out.mp4",
+        ],
+        description: "MP4 copy with AAC audio transcode (from Opus)",
+      });
+
+      // Rescue fallback 1: If MP4 muxing fails, attempt muxing into WebM container rather than dropping audio!
+      plans.push({
+        outputName: "stream_out.webm",
+        outputExt: "webm",
+        mimeType: "video/webm",
+        args: ["-i", vInput, "-i", aInput, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", "stream_out.webm"],
+        description: "WebM rescue container stream-copy",
+      });
+
+      // Rescue fallback 2: WebM with libopus transcode
+      plans.push({
+        outputName: "stream_out.webm",
+        outputExt: "webm",
+        mimeType: "video/webm",
+        args: [
+          "-i", vInput,
+          "-i", aInput,
+          "-c:v", "copy",
+          "-c:a", "libopus",
+          "-b:a", "160k",
+          "-map", "0:v:0",
+          "-map", "1:a:0",
+          "stream_out.webm",
+        ],
+        description: "WebM rescue container with Opus transcode",
+      });
     }
   }
 
-  // Resilient fallback if FFmpeg is unavailable or failed: export high-res video stream directly
-  const ext = option.videoFormat.container || "mp4";
-  const mime = ext === "webm" ? "video/webm" : "video/mp4";
-  const fallbackBlob = new Blob([videoBytes.buffer as ArrayBuffer], { type: mime });
-  const fallbackUrl = URL.createObjectURL(fallbackBlob);
-  const fallbackFilename = `${sanitizedTitle} [${option.id}].${ext}`;
+  let activeEngine = engine;
+  if (!activeEngine || !(activeEngine as any).loaded) {
+    activeEngine = await getOrInitTurboEngine(engine);
+  }
 
-  onProgress({
-    phase: "complete",
-    progress: 100,
-    speedMbps: currentSpeedMbps,
-    downloadedBytes: fallbackBlob.size,
-    totalBytes: fallbackBlob.size,
-    activeThreads: 0,
-    etaSeconds: 0,
-    statusMessage: "Download complete!",
-  });
+  if (activeEngine) {
+    try {
+      await activeEngine.writeFile(vInput, videoBytes);
+      await activeEngine.writeFile(aInput, audioBytes);
 
-  return {
-    blob: fallbackBlob,
-    url: fallbackUrl,
-    filename: fallbackFilename,
-    fileSizeBytes: fallbackBlob.size,
-    mimeType: mime,
-    is4K,
-    is60fps,
-  };
+      let successfulPlan: MuxPlan | null = null;
+      let lastMuxError: any = null;
+
+      for (const plan of plans) {
+        try {
+          updateProgress("muxing", `Muxing video & audio streams (${plan.description})…`, 1);
+          await activeEngine.exec(plan.args);
+          successfulPlan = plan;
+          break;
+        } catch (planErr) {
+          lastMuxError = planErr;
+          console.warn(`FFmpeg muxing plan failed (${plan.description}), trying next tier:`, planErr);
+          try {
+            await activeEngine.deleteFile(plan.outputName);
+          } catch {}
+        }
+      }
+
+      if (successfulPlan) {
+        const finalVideoData = (await activeEngine.readFile(successfulPlan.outputName)) as Uint8Array;
+
+        try {
+          await activeEngine.deleteFile(vInput);
+          await activeEngine.deleteFile(aInput);
+          await activeEngine.deleteFile(successfulPlan.outputName);
+        } catch {}
+
+        const finalBlob = new Blob([finalVideoData.buffer as ArrayBuffer], { type: successfulPlan.mimeType });
+        const finalUrl = URL.createObjectURL(finalBlob);
+        const finalFilename = `${sanitizedTitle} [${option.id}].${successfulPlan.outputExt}`;
+
+        onProgress({
+          phase: "complete",
+          progress: 100,
+          speedMbps: currentSpeedMbps,
+          downloadedBytes: finalBlob.size,
+          totalBytes: finalBlob.size,
+          activeThreads: 0,
+          etaSeconds: 0,
+          statusMessage: `Ready! ${option.label || option.badge} packaged cleanly with audible audio.`,
+        });
+
+        return {
+          blob: finalBlob,
+          url: finalUrl,
+          filename: finalFilename,
+          fileSizeBytes: finalBlob.size,
+          mimeType: successfulPlan.mimeType,
+          is4K,
+          is60fps,
+        };
+      }
+
+      // Clean up inputs on failure
+      try {
+        await activeEngine.deleteFile(vInput);
+        await activeEngine.deleteFile(aInput);
+      } catch {}
+
+      throw new Error(
+        `FFmpeg stream muxing failed across all fallback tiers: ${lastMuxError?.message || lastMuxError || "unknown error"}. Audio cannot be dropped.`
+      );
+    } catch (muxErr) {
+      console.error("FFmpeg stream muxing error:", muxErr);
+      throw muxErr;
+    }
+  }
+
+  // Active FFmpeg engine was unavailable and separate audio is required:
+  // ELIMINATE SILENT VIDEO FALLBACK: Never drop audio track!
+  throw new Error(
+    "FFmpeg WebAssembly engine is required to multiplex separate video and audio streams. Cannot output silent video."
+  );
 }

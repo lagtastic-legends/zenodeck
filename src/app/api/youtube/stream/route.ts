@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "Content-Range, Content-Length, Content-Type, Accept-Ranges",
 };
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
