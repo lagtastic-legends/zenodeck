@@ -25,9 +25,25 @@ import {
   Pause,
   PlayCircle,
   Layers,
+  Subtitles,
+  History,
+  FileText,
+  Trash2,
+  Search,
+  Eye,
+  FileCode,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { getClipboardText } from "@/lib/clipboard";
+import {
+  fetchAndFormatSubtitles,
+  type YouTubeSubtitleTrack,
+} from "@/lib/youtube/subtitles";
+import { useHistoryStore } from "@/lib/youtube/history-store";
+import { usePlayerStore } from "@/lib/youtube/player-store";
+import { YouTubeMiniPlayer } from "./youtube-mini-player";
+import { YouTubeSubtitlesView } from "./youtube-subtitles-view";
+import { YouTubeVaultView } from "./youtube-vault-view";
 import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useUIAudio } from "@/hooks/useUIAudio";
@@ -87,6 +103,21 @@ export function YouTubeDownloader() {
   const [batchStats, setBatchStats] = useState<QueueStats | null>(null);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const batchControllerRef = useRef<BatchQueueController | null>(null);
+
+  // View Navigation: "downloader" | "subtitles" | "vault"
+  const [activeViewTab, setActiveViewTab] = useState<"downloader" | "subtitles" | "vault">("downloader");
+
+  // Subtitle Engine State
+  const [isDownloadingSubtitle, setIsDownloadingSubtitle] = useState(false);
+  const [previewSubtitleText, setPreviewSubtitleText] = useState<string | null>(null);
+  const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<YouTubeSubtitleTrack | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // History Vault & Player Store
+  const historyStore = useHistoryStore();
+  const playerStore = usePlayerStore();
+  const [vaultSearchQuery, setVaultSearchQuery] = useState("");
+  const [vaultFilter, setVaultFilter] = useState<"all" | "video" | "audio" | "subtitles">("all");
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
@@ -334,6 +365,23 @@ export function YouTubeDownloader() {
       void haptics.success();
       playSuccess();
 
+      // Record to Download History Vault
+      if (videoInfo && selectedQuality) {
+        historyStore.addItem({
+          videoId: videoInfo.videoId,
+          title: videoInfo.title,
+          author: videoInfo.author,
+          thumbnailUrl: videoInfo.thumbnailUrl,
+          durationFormatted: videoInfo.durationFormatted,
+          qualityBadge: selectedQuality.badge,
+          format: selectedQuality.container,
+          fileSizeBytes: result.blob.size,
+          isAudioOnly: selectedQuality.isAudioOnly,
+          audioStreamUrl: selectedQuality.isAudioOnly ? selectedQuality.audioFormat?.url || result.url : undefined,
+          localFileName: result.filename,
+        });
+      }
+
       // Notify completion in status bar
       void updateDownloadNotification({
         id: 7777,
@@ -466,6 +514,62 @@ export function YouTubeDownloader() {
     await nativeSave(downloadResult.blob, downloadResult.filename);
   };
 
+  // Subtitle Handlers
+  const handleDownloadSubtitle = async (track: YouTubeSubtitleTrack, format: "srt" | "vtt" | "txt") => {
+    try {
+      setIsDownloadingSubtitle(true);
+      void haptics.light();
+
+      const { content, filename, mimeType } = await fetchAndFormatSubtitles(track, format);
+      const blob = new Blob([content], { type: mimeType });
+      const fullFilename = `${(videoInfo?.title || "youtube").replace(/[^a-zA-Z0-9_-]/g, "_")}_${filename}`;
+
+      await nativeSave(blob, fullFilename);
+
+      if (videoInfo) {
+        historyStore.addItem({
+          videoId: videoInfo.videoId,
+          title: `${videoInfo.title} [${track.languageName}]`,
+          author: videoInfo.author,
+          thumbnailUrl: videoInfo.thumbnailUrl,
+          durationFormatted: videoInfo.durationFormatted,
+          qualityBadge: format.toUpperCase(),
+          format: format,
+          fileSizeBytes: blob.size,
+          isAudioOnly: false,
+          localFileName: fullFilename,
+        });
+      }
+
+      void haptics.success();
+      playSuccess();
+    } catch (err: any) {
+      console.error("Subtitle download error:", err);
+      setResolveError(err.message || "Failed to download subtitles.");
+      void haptics.error();
+      playError();
+    } finally {
+      setIsDownloadingSubtitle(false);
+    }
+  };
+
+  const handlePreviewSubtitle = async (track: YouTubeSubtitleTrack) => {
+    try {
+      setIsDownloadingSubtitle(true);
+      void haptics.light();
+      const { content } = await fetchAndFormatSubtitles(track, "txt");
+      setPreviewSubtitleText(content);
+      setSelectedSubtitleTrack(track);
+      setIsPreviewOpen(true);
+    } catch (err: any) {
+      setResolveError(err.message || "Failed to preview subtitles.");
+      void haptics.error();
+      playError();
+    } finally {
+      setIsDownloadingSubtitle(false);
+    }
+  };
+
   // Sample 4K Demo Video
   const handleLoadSample = () => {
     const sample = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
@@ -507,6 +611,71 @@ export function YouTubeDownloader() {
           </button>
         </div>
       </div>
+
+      {/* View Switcher: Downloader | Subtitles | Download Vault */}
+      <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl border border-border/60 bg-card/40 w-fit">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveViewTab("downloader");
+            void haptics.light();
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+            activeViewTab === "downloader"
+              ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Film className="size-3.5" />
+          <span>Downloader</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveViewTab("subtitles");
+            void haptics.light();
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+            activeViewTab === "subtitles"
+              ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Subtitles className="size-3.5" />
+          <span>Subtitles</span>
+          {videoInfo?.subtitles && videoInfo.subtitles.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-red-500/30 text-[10px] text-red-300 font-bold">
+              {videoInfo.subtitles.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveViewTab("vault");
+            void haptics.light();
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+            activeViewTab === "vault"
+              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <History className="size-3.5" />
+          <span>Vault</span>
+          {historyStore.items.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-[10px] text-amber-300 font-bold">
+              {historyStore.items.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* 1. Downloader Main View */}
+      {activeViewTab === "downloader" && (
+        <>
 
       {/* URL Input Bar */}
       <div className="panel-hud rounded-2xl border border-primary/20 bg-card/50 p-4 sm:p-5 shadow-elevation1 space-y-3">
@@ -1392,6 +1561,92 @@ export function YouTubeDownloader() {
           </motion.div>
         )}
       </AnimatePresence>
+        </>
+      )}
+
+      {/* 2. Subtitles View */}
+      {activeViewTab === "subtitles" && (
+        <YouTubeSubtitlesView
+          videoInfo={videoInfo}
+          onDownloadSubtitle={handleDownloadSubtitle}
+          onPreviewSubtitle={handlePreviewSubtitle}
+          isDownloadingSubtitle={isDownloadingSubtitle}
+          onLoadSample={handleLoadSample}
+        />
+      )}
+
+      {/* 3. Download History Vault View */}
+      {activeViewTab === "vault" && <YouTubeVaultView />}
+
+      {/* Subtitle Transcript Preview Modal */}
+      {isPreviewOpen && selectedSubtitleTrack && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-primary/30 bg-card p-5 shadow-elevation3 space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="space-y-0.5 min-w-0">
+                <h3 className="font-display text-sm font-bold text-foreground truncate">
+                  Transcript: {selectedSubtitleTrack.languageName}
+                </h3>
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  Language Code: {selectedSubtitleTrack.languageCode} · {selectedSubtitleTrack.isAutoGenerated ? "Auto ASR" : "Manual"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(false)}
+                className="size-7 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Scrollable text area */}
+            <div className="flex-1 overflow-y-auto max-h-[50vh] p-3 rounded-xl border border-border/60 bg-background/80 font-mono text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed select-text">
+              {previewSubtitleText || "Loading transcript..."}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (previewSubtitleText) {
+                    await navigator.clipboard.writeText(previewSubtitleText);
+                    void haptics.success();
+                    playSuccess();
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <Clipboard className="size-3.5" />
+                <span>Copy Transcript</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleDownloadSubtitle(selectedSubtitleTrack, "srt");
+                    setIsPreviewOpen(false);
+                  }}
+                  className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold px-3 py-1.5 cursor-pointer"
+                >
+                  Download .SRT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="rounded-lg border border-border/70 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Background Mini Player Deck */}
+      <YouTubeMiniPlayer />
     </div>
   );
 }
