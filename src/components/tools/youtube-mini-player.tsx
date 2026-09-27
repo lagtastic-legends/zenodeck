@@ -5,6 +5,7 @@
  * =================================================================================
  * Floating audio player with hardware-accelerated playback and full
  * `navigator.mediaSession` integration for Android notification / lock-screen controls.
+ * Integrates the Audio DSP Studio panel for real-time EQ, effects, and mastering.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -24,6 +25,7 @@ import {
 import { usePlayerStore } from "@/lib/youtube/player-store";
 import { formatDuration } from "@/lib/youtube/innertube";
 import { useHaptics } from "@/hooks/use-haptics";
+import { DspStudioPanel, DspStudioToggle } from "@/components/tools/dsp-studio-panel";
 
 const SPEED_OPTIONS = [0.75, 1.0, 1.25, 1.5, 2.0];
 
@@ -51,6 +53,7 @@ export function YouTubeMiniPlayer() {
   const haptics = useHaptics();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [isDspOpen, setIsDspOpen] = useState(false);
 
   // Sync audio element with store play state
   useEffect(() => {
@@ -377,8 +380,26 @@ export function YouTubeMiniPlayer() {
                 >
                   {isMuted ? <VolumeX className="size-4 text-red-400" /> : <Volume2 className="size-4" />}
                 </button>
+
+                {/* DSP Studio toggle */}
+                <DspStudioToggle
+                  isOpen={isDspOpen}
+                  onToggle={() => {
+                    setIsDspOpen((v) => !v);
+                    void haptics.light();
+                  }}
+                />
               </div>
             </div>
+          )}
+
+          {/* DSP Studio Panel (slides up from player) */}
+          {!isMinimized && (
+            <DspStudioPanel
+              audioRef={audioRef}
+              isOpen={isDspOpen}
+              onToggle={() => setIsDspOpen((v) => !v)}
+            />
           )}
 
           {/* Minimized Compact Bar */}
