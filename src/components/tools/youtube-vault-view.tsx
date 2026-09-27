@@ -217,7 +217,12 @@ export function YouTubeVaultView() {
               </div>
 
               {/* Badges & Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {item.platform && (
+                  <span className="px-1.5 py-0.5 rounded-md font-mono text-[8px] font-bold uppercase tracking-wider bg-card/80 border border-border/80 text-muted-foreground">
+                    {item.platform}
+                  </span>
+                )}
                 <span className="px-2 py-0.5 rounded-full font-mono text-[9px] font-bold bg-muted border border-border/70 text-foreground uppercase">
                   {item.qualityBadge}
                 </span>

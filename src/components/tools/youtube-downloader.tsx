@@ -74,6 +74,18 @@ import {
   type QueueStats,
 } from "@/lib/youtube/batch-queue";
 import { updateDownloadNotification } from "@/lib/notifications";
+import {
+  detectPlatform,
+  PLATFORM_CONFIGS,
+  type DetectedPlatformResult,
+} from "@/lib/media/detector";
+import { resolveMediaUrl } from "@/lib/media/universal-resolver";
+import { downloadUniversalMedia } from "@/lib/media/downloader";
+import type {
+  UniversalMediaInfo,
+  UniversalQualityOption,
+  PlatformType,
+} from "@/lib/media/types";
 
 export function YouTubeDownloader() {
   const { engine, state: engineState, boot } = useFFmpegEngine();
@@ -84,6 +96,8 @@ export function YouTubeDownloader() {
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<YouTubeVideoInfo | null>(null);
+  const [activePlatform, setActivePlatform] = useState<PlatformType>("youtube");
+  const [universalMedia, setUniversalMedia] = useState<UniversalMediaInfo | null>(null);
 
   const [selectedQuality, setSelectedQuality] = useState<YouTubeQualityOption | null>(null);
   const [mediaTypeTab, setMediaTypeTab] = useState<"video" | "audio">("video");
@@ -176,18 +190,80 @@ export function YouTubeDownloader() {
 
   // Handle URL Resolution
   const handleResolve = async (urlToResolve = inputUrl) => {
+    const detected = detectPlatform(urlToResolve);
     const videoId = extractYouTubeId(urlToResolve);
     const playlistId = extractPlaylistId(urlToResolve);
 
-    if (!videoId && !playlistId) {
-      setResolveError("Please enter a valid YouTube video or playlist URL (e.g. https://www.youtube.com/watch?v=... or /playlist?list=...)");
+    if (!detected && !videoId && !playlistId) {
+      setResolveError("Please enter a valid video link from YouTube, TikTok, Instagram, Twitter / X, or Reddit.");
       void haptics.warning();
       return;
     }
 
+    if (detected && detected.platform !== "youtube") {
+      setActivePlatform(detected.platform);
+      setResolveError(null);
+      setIsResolving(true);
+      setVideoInfo(null);
+      setUniversalMedia(null);
+      setPlaylistInfo(null);
+      setIsPlaylistMode(false);
+      clearResult();
+      void haptics.light();
+
+      try {
+        const res = await resolveMediaUrl(urlToResolve);
+        setUniversalMedia(res.mediaInfo);
+
+        const mappedQualities: YouTubeQualityOption[] = res.mediaInfo.qualities.map((q, idx) => ({
+          id: `qual_${idx}_${q.ext}`,
+          label: q.label,
+          resolutionLabel: q.resolution || (q.isAudioOnly ? "AUDIO" : "HD"),
+          fps: 30,
+          badge: q.resolution || (q.isAudioOnly ? "AUDIO" : "HD"),
+          is4K: false,
+          is60fps: false,
+          isAudioOnly: !!q.isAudioOnly,
+          container: q.ext,
+          approxSizeBytes: q.fileSize || 0,
+          audioBitrate: q.bitrate,
+          videoFormat: q.isAudioOnly ? undefined : ({ url: q.downloadUrl } as any),
+          audioFormat: q.isAudioOnly ? ({ url: q.downloadUrl } as any) : undefined,
+        }));
+
+        setVideoInfo({
+          videoId: res.mediaInfo.id,
+          title: res.mediaInfo.title,
+          author: res.mediaInfo.author,
+          thumbnailUrl: res.mediaInfo.thumbnailUrl,
+          durationSeconds: res.mediaInfo.duration || 0,
+          durationFormatted: formatDuration(res.mediaInfo.duration || 0),
+          viewCount: res.mediaInfo.viewCount,
+          qualities: mappedQualities,
+        });
+
+        if (mappedQualities.length > 0) {
+          setSelectedQuality(mappedQualities[0]);
+        }
+
+        void haptics.success();
+        playSuccess();
+      } catch (err: any) {
+        console.error("Multi-platform media resolution error:", err);
+        setResolveError(err.message || "Failed to resolve media from this link.");
+        void haptics.error();
+        playError();
+      } finally {
+        setIsResolving(false);
+      }
+      return;
+    }
+
+    setActivePlatform("youtube");
     setResolveError(null);
     setIsResolving(true);
     setVideoInfo(null);
+    setUniversalMedia(null);
     clearResult();
     void haptics.light();
 
@@ -317,6 +393,72 @@ export function YouTubeDownloader() {
   // Handle Turbo Download
   const handleStartDownload = async () => {
     if (!videoInfo || !selectedQuality) return;
+
+    if (activePlatform !== "youtube" && universalMedia) {
+      const chosenUniversalOpt =
+        universalMedia.qualities.find((q) => q.label === selectedQuality.label) ||
+        universalMedia.qualities[0];
+
+      if (!chosenUniversalOpt) {
+        setResolveError("Selected format option is invalid.");
+        return;
+      }
+
+      setIsDownloading(true);
+      clearResult();
+      void haptics.medium();
+      abortControllerRef.current = new AbortController();
+
+      try {
+        const result = await downloadUniversalMedia(universalMedia, chosenUniversalOpt, {
+          ffmpegEngine: engine,
+          onProgress: (p) => {
+            setProgress({
+              phase: p.phase as any,
+              progress: p.percent,
+              speedMbps: p.speedMBs || 0,
+              downloadedBytes: p.transferredBytes || 0,
+              totalBytes: p.totalBytes || 0,
+              activeThreads: 1,
+              etaSeconds: 0,
+              statusMessage: p.message,
+            });
+          },
+          abortSignal: abortControllerRef.current.signal,
+        });
+
+        currentResultUrlRef.current = result.url;
+        setDownloadResult(result);
+        void haptics.success();
+        playSuccess();
+
+        // Record to History Vault
+        historyStore.addItem({
+          videoId: universalMedia.id,
+          title: universalMedia.title,
+          author: universalMedia.author,
+          thumbnailUrl: universalMedia.thumbnailUrl,
+          durationFormatted: formatDuration(universalMedia.duration || 0),
+          qualityBadge: chosenUniversalOpt.label,
+          format: chosenUniversalOpt.ext,
+          fileSizeBytes: result.fileSizeBytes,
+          isAudioOnly: !!chosenUniversalOpt.isAudioOnly,
+          audioStreamUrl: chosenUniversalOpt.isAudioOnly ? result.url : undefined,
+          localFileName: result.filename,
+          platform: activePlatform,
+        });
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("Universal download failed:", err);
+          setResolveError(err.message || "Download failed. Please try again.");
+          void haptics.error();
+          playError();
+        }
+      } finally {
+        setIsDownloading(false);
+      }
+      return;
+    }
 
     const isDirectFastPath =
       (!selectedQuality.isAudioOnly && !selectedQuality.audioFormat && Boolean(selectedQuality.videoFormat)) ||
@@ -581,22 +723,30 @@ export function YouTubeDownloader() {
     <div className="mx-auto w-full max-w-4xl space-y-5 px-3 sm:px-6 py-4">
       {/* Tool Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-red-400">
-              <Youtube className="size-3" />
-              <span>YouTube 4K Turbo</span>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
+              <Youtube className="size-2.5" />
+              <span>YouTube 4K</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[9px] font-semibold text-amber-300">
-              <Zap className="size-2.5" />
-              <span>60 FPS HDR</span>
+            <span className="flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400">
+              <span>TikTok No-WM</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-pink-400">
+              <span>Instagram Reels</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-sky-400">
+              <span>X / Twitter</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-orange-400">
+              <span>Reddit Audio Mux</span>
             </span>
           </div>
           <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            YouTube 4K 60FPS Downloader
+            Universal Media Downloader
           </h1>
           <p className="font-mono text-xs text-muted-foreground">
-            Ultra-High-Definition video & studio audio downloads · Multi-worker chunk acceleration
+            High-speed video & audio downloads · YouTube 4K, Watermark-Free TikTok, Reels, Twitter & Reddit
           </p>
         </div>
 
@@ -679,13 +829,24 @@ export function YouTubeDownloader() {
 
       {/* URL Input Bar */}
       <div className="panel-hud rounded-2xl border border-primary/20 bg-card/50 p-4 sm:p-5 shadow-elevation1 space-y-3">
-        <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          Enter YouTube Video URL
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            Enter Media Link (YouTube, TikTok, Instagram, Twitter/X, Reddit)
+          </label>
+          {detectPlatform(inputUrl) && (
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider border ${
+                PLATFORM_CONFIGS[detectPlatform(inputUrl)!.platform].badgeClass
+              }`}
+            >
+              {PLATFORM_CONFIGS[detectPlatform(inputUrl)!.platform].name} Detected
+            </span>
+          )}
+        </div>
         <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
           <div className="relative flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-              <Youtube className="size-4 text-red-500" />
+              <Zap className="size-4 text-primary" />
             </div>
             <input
               type="text"
@@ -697,11 +858,11 @@ export function YouTubeDownloader() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleResolve();
               }}
-              placeholder="https://www.youtube.com/watch?v=... or youtu.be/..."
+              placeholder="Paste YouTube, TikTok, Instagram, X/Twitter, or Reddit link…"
               disabled={isResolving || isDownloading}
               className={`w-full rounded-xl border border-border/80 bg-background/80 py-2.5 pl-10 ${
                 inputUrl.length > 0 ? "pr-28" : "pr-20"
-              } font-mono text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-red-500 focus:outline-hidden focus:ring-1 focus:ring-red-500/50`}
+              } font-mono text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary/50`}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputUrl.length > 0 && (

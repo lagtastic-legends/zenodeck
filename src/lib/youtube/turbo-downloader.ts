@@ -37,7 +37,7 @@ let sharedTurboEngine: FFmpeg | null = null;
 /**
  * Resiliently obtains an active FFmpeg WASM engine instance, booting one on demand if needed
  */
-async function getOrInitTurboEngine(providedEngine?: FFmpeg | null): Promise<FFmpeg | null> {
+export async function getOrInitTurboEngine(providedEngine?: FFmpeg | null): Promise<FFmpeg | null> {
   if (providedEngine) {
     if ((providedEngine as any).loaded === true || (providedEngine as any).loaded === undefined) {
       return providedEngine;

@@ -24,6 +24,7 @@ export interface DownloadHistoryItem {
   isAudioOnly: boolean;
   audioStreamUrl?: string;
   localFileName?: string;
+  platform?: "youtube" | "tiktok" | "instagram" | "twitter" | "reddit";
 }
 
 interface HistoryStore {

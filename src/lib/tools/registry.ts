@@ -70,8 +70,8 @@ export const TOOL_REGISTRY: ToolMeta[] = [
   /* ---------------- PHASE 2 — Video & Visual Engine ---------------- */
   {
     id: "youtube-downloader",
-    name: "YouTube 4K Downloader",
-    description: "Download YouTube videos up to 4K 60fps with multi-thread speed acceleration.",
+    name: "Universal Media Downloader",
+    description: "Download videos & audio from YouTube (4K), TikTok (No Watermark), Instagram Reels, X/Twitter, and Reddit.",
     category: "video",
     icon: Youtube,
     phase: 2,
