@@ -44,6 +44,12 @@ const nextConfig: NextConfig = {
     if (isMobileExport) return [];
     return [
       {
+        // Global cross-origin isolation headers — unlocks SharedArrayBuffer
+        // for multi-threaded FFmpeg WASM execution on all device CPU cores.
+        source: "/:path*",
+        headers: COOP_COEP_HEADERS,
+      },
+      {
         source: "/zenodeck.mobileconfig",
         headers: [
           {

@@ -31,6 +31,11 @@ import {
   loadWasmCoreBlobUrl,
   resolveCoreModuleUrl,
 } from "../ffmpeg/wasm-loader";
+import {
+  injectThreads,
+  canStreamCopy,
+  buildAudioExtractionArgs,
+} from "../media/perf-utils";
 
 let sharedTurboEngine: FFmpeg | null = null;
 
@@ -496,15 +501,24 @@ export async function downloadYouTubeStream({
         if (option.id === "audio-m4a") {
           outputName = "output.m4a";
           mimeType = "audio/mp4";
-          qualitySuffix = "[Native AAC]";
-          updateProgress("muxing", "Packaging native AAC audio stream…", 1);
-          ffmpegArgs = ["-i", inputName, "-vn", "-c:a", "aac", "-b:a", "256k", "-ar", "44100", outputName];
+          // Zero-encode stream copy: rips the raw AAC bitstream without
+          // re-encoding — ~100x faster than transcoding.
+          const useStreamCopy = canStreamCopy(inputExt, "m4a");
+          if (useStreamCopy) {
+            qualitySuffix = "[Native AAC · Stream Copy]";
+            updateProgress("muxing", "Stream-copying native AAC (zero-encode)…", 1);
+            ffmpegArgs = injectThreads(["-i", inputName, "-vn", "-c:a", "copy", outputName]);
+          } else {
+            qualitySuffix = "[Native AAC]";
+            updateProgress("muxing", "Transcoding to AAC audio stream…", 1);
+            ffmpegArgs = injectThreads(["-i", inputName, "-vn", "-c:a", "aac", "-b:a", "256k", "-ar", "44100", outputName]);
+          }
         } else if (option.id === "audio-wav") {
           outputName = "output.wav";
           mimeType = "audio/wav";
           qualitySuffix = "[Lossless PCM]";
           updateProgress("muxing", "Exporting uncompressed 16-bit WAV PCM…", 1);
-          ffmpegArgs = ["-i", inputName, "-vn", "-c:a", "pcm_s16le", "-ar", "44100", outputName];
+          ffmpegArgs = injectThreads(["-i", inputName, "-vn", "-c:a", "pcm_s16le", "-ar", "44100", outputName]);
         } else {
           // MP3 at requested bitrate (320k, 256k, 192k, 128k, etc.)
           const bitrate = option.audioBitrate || (option.id === "audio-mp3" ? 320 : 256);
@@ -512,7 +526,7 @@ export async function downloadYouTubeStream({
           mimeType = "audio/mp3";
           qualitySuffix = `[${bitrate}kbps]`;
           updateProgress("muxing", `Mastering ${bitrate} kbps MP3 in WebAssembly…`, 1);
-          ffmpegArgs = [
+          ffmpegArgs = injectThreads([
             "-i", inputName,
             "-vn",
             "-c:a", "libmp3lame",
@@ -520,7 +534,7 @@ export async function downloadYouTubeStream({
             "-ar", "44100",
             "-af", "aresample=async=1000",
             outputName,
-          ];
+          ]);
         }
 
         try {
