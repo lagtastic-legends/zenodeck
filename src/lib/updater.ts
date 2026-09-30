@@ -191,3 +191,14 @@ export async function installNativeApkUpdate(
     };
   }
 }
+
+/**
+ * Dismisses/removes the cached update notification from storage
+ */
+export function dismissUpdateNotification(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(UPDATE_CACHE_KEY);
+    localStorage.setItem("zenodeck_update_dismissed_at", Date.now().toString());
+  } catch {}
+}

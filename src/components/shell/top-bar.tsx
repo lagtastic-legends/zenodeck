@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Download, LogOut, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
+import { Download, LogOut, ShieldAlert, ShieldCheck, RefreshCw } from "lucide-react";
 import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useAuth } from "@/lib/auth/auth-context";
 import { SearchPalette } from "@/components/shell/search-palette";
@@ -11,6 +11,7 @@ import { UserAvatar } from "@/components/auth/user-avatar";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { usePwaStore } from "@/lib/pwa/pwa-store";
 import { checkForUpdates, type AppUpdateInfo } from "@/lib/updater";
+import { useUpdateStore } from "@/lib/update-store";
 import { UpdateModal } from "@/components/dialogs/update-modal";
 import { useState, useEffect } from "react";
 import type { EngineState } from "@/types/omni";
@@ -47,18 +48,28 @@ export function TopBar() {
   const navigate = useNavStore((s) => s.navigate);
   const setDownloadModalOpen = usePwaStore((s) => s.setDownloadModalOpen);
   const meta = STATE_META[state];
-  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
+  const autoUpdateEnabled = useUpdateStore((s) => s.autoUpdateEnabled);
+  const storeUpdateInfo = useUpdateStore((s) => s.updateInfo);
+  const setStoreUpdateInfo = useUpdateStore((s) => s.setUpdateInfo);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
-    void checkForUpdates(false).then((info) => {
-      if (active) setUpdateInfo(info);
-    });
+    if (autoUpdateEnabled) {
+      void checkForUpdates(false).then((info) => {
+        if (active) setStoreUpdateInfo(info);
+      });
+    }
+
+    const onDismissed = () => {
+      if (active) setStoreUpdateInfo(null);
+    };
+    window.addEventListener("zenodeck:update-dismissed", onDismissed);
     return () => {
       active = false;
+      window.removeEventListener("zenodeck:update-dismissed", onDismissed);
     };
-  }, []);
+  }, [autoUpdateEnabled, setStoreUpdateInfo]);
 
   return (
     <motion.header
@@ -137,29 +148,42 @@ export function TopBar() {
           </div>
           <SearchPalette />
 
-          {/* Update Button */}
-          {updateInfo?.updateAvailable ? (
+          {/* Auto-Update Quick Access / Status Toggle Button (Replacing old AI button) */}
+          {storeUpdateInfo?.updateAvailable ? (
             <button
               type="button"
               onClick={() => setIsUpdateModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-1 text-emerald-300 hover:bg-emerald-500/25 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer"
-              title={`Update available: v${updateInfo.latestVersion}`}
+              className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-1 text-emerald-300 hover:bg-emerald-500/25 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shadow-[0_0_8px_rgba(52,211,153,0.25)]"
+              title={`New version v${storeUpdateInfo.latestVersion} available! Click to install or remove.`}
             >
               <span className="flex size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="hidden xs:inline sm:inline">Update</span>
-              <span>v{updateInfo.latestVersion}</span>
+              <span className="hidden xs:inline">Update</span>
+              <span>v{storeUpdateInfo.latestVersion}</span>
             </button>
-          ) : isNative ? (
+          ) : (
             <button
               type="button"
               onClick={() => setIsUpdateModalOpen(true)}
-              className="grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer"
-              title="Check for ZenoDeck Updates"
-              aria-label="Check for ZenoDeck Updates"
+              className="flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-2 sm:px-2.5 py-1 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-all cursor-pointer font-mono text-[10px]"
+              title={`Auto-Update: ${autoUpdateEnabled ? "ON" : "OFF"} — Click to configure or check for updates`}
+              aria-label={`Auto-Update: ${autoUpdateEnabled ? "ON" : "OFF"}`}
             >
-              <Sparkles className="size-3.5 text-primary/80" />
+              <RefreshCw
+                className={`size-3 text-primary ${autoUpdateEnabled ? "animate-spin" : ""}`}
+                style={{ animationDuration: "8s" }}
+              />
+              <span className="hidden xs:inline uppercase tracking-wider font-semibold text-[9px]">
+                UPDATES
+              </span>
+              <span
+                className={`size-1.5 rounded-full ${
+                  autoUpdateEnabled
+                    ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                    : "bg-muted-foreground/60"
+                }`}
+              />
             </button>
-          ) : null}
+          )}
 
           {!isNative ? (
             <button
@@ -224,9 +248,9 @@ export function TopBar() {
       <UpdateModal
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
-        updateInfo={updateInfo}
+        updateInfo={storeUpdateInfo}
         onRefresh={() => {
-          void checkForUpdates(true).then(setUpdateInfo);
+          void checkForUpdates(true).then(setStoreUpdateInfo);
         }}
       />
     </motion.header>

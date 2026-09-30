@@ -30,8 +30,9 @@ import {
   ShieldCheck,
   Trash2,
   X,
+  Gamepad2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth, type AuthUser } from "@/lib/auth/auth-context";
 import { UserAvatar } from "@/components/auth/user-avatar";
 
@@ -80,6 +81,8 @@ export function UnifiedLoginCard({
     switchAccount,
     removeSavedAccount,
     continueAsGuest,
+    autoLoginEnabled,
+    setAutoLoginEnabled,
   } = useAuth();
 
   const [inputEmail, setInputEmail] = useState("");
@@ -89,6 +92,76 @@ export function UnifiedLoginCard({
   const [dismissedError, setDismissedError] = useState(false);
 
   const hasSavedAccounts = savedAccounts && savedAccounts.length > 0;
+  const primaryAccount = hasSavedAccounts ? savedAccounts[0] : null;
+
+  const [autoLoginCancelled, setAutoLoginCancelled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return sessionStorage.getItem("zenodeck_autologin_cancelled") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const [autoLoginCountdown, setAutoLoginCountdown] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const isCancelled = sessionStorage.getItem("zenodeck_autologin_cancelled") === "true";
+      if (!isCancelled && autoLoginEnabled && primaryAccount) {
+        return 3;
+      }
+    } catch {}
+    return null;
+  });
+
+  const handleSelectAccount = useCallback(
+    (acc: AuthUser) => {
+      switchAccount(acc);
+      onSuccess?.();
+    },
+    [switchAccount, onSuccess]
+  );
+
+  const cancelAutoLogin = useCallback(() => {
+    setAutoLoginCountdown(null);
+    setAutoLoginCancelled(true);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("zenodeck_autologin_cancelled", "true");
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (
+      autoLoginCountdown === null &&
+      !autoLoginCancelled &&
+      autoLoginEnabled &&
+      primaryAccount
+    ) {
+      const timer = setTimeout(() => {
+        setAutoLoginCountdown(3);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [autoLoginCountdown, autoLoginCancelled, autoLoginEnabled, primaryAccount]);
+
+  useEffect(() => {
+    if (autoLoginCountdown === null || autoLoginCountdown <= 0) return;
+
+    const timer = setTimeout(() => {
+      if (autoLoginCountdown === 1) {
+        setAutoLoginCountdown(0);
+        if (primaryAccount) {
+          handleSelectAccount(primaryAccount);
+        }
+      } else {
+        setAutoLoginCountdown((prev) => (prev !== null ? prev - 1 : null));
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [autoLoginCountdown, primaryAccount, handleSelectAccount]);
 
   const handleDirectEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,11 +174,6 @@ export function UnifiedLoginCard({
     signInWithGoogleEmail(cleanEmail, inputName.trim() || undefined);
     setInputEmail("");
     setInputName("");
-    onSuccess?.();
-  };
-
-  const handleSelectAccount = (acc: AuthUser) => {
-    switchAccount(acc);
     onSuccess?.();
   };
 
@@ -156,6 +224,69 @@ export function UnifiedLoginCard({
       </div>
 
       <div className="mt-5 sm:mt-6 space-y-3.5 sm:space-y-4">
+        {/* Call of Duty-Style Auto Login Sequence Banner */}
+        {autoLoginCountdown !== null && autoLoginCountdown > 0 && primaryAccount && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -6 }}
+            className="relative overflow-hidden rounded-xl border-2 border-primary/70 bg-gradient-to-br from-primary/20 via-card/95 to-background p-3.5 shadow-xl"
+          >
+            {/* Animated Laser Progress Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-secondary/60">
+              <motion.div
+                className="h-full bg-gradient-to-r from-emerald-400 via-primary to-neon"
+                initial={{ width: "100%" }}
+                animate={{ width: "0%" }}
+                transition={{ duration: 3, ease: "linear" }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1 mb-2">
+              <div className="flex items-center gap-1.5">
+                <Gamepad2 className="size-4 text-emerald-400 animate-pulse" />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                  AUTO-LOGIN SEQUENCE ACTIVE ({autoLoginCountdown}s)
+                </span>
+              </div>
+              <span className="rounded bg-primary/20 px-1.5 py-0.5 font-mono text-[8px] font-extrabold uppercase text-primary">
+                COD Game Mode
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/80 p-2.5 shadow-inner">
+              <UserAvatar user={primaryAccount} size="sm" showGoogleBadge={true} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-xs font-bold text-foreground">
+                  {primaryAccount.displayName || "Saved Account"}
+                </p>
+                <p className="truncate font-mono text-[10px] text-muted-foreground">
+                  {primaryAccount.email}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-2.5">
+              <button
+                type="button"
+                onClick={() => handleSelectAccount(primaryAccount)}
+                className="flex-1 flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 active:scale-98 transition-all cursor-pointer shadow-md"
+              >
+                <span>Instant Sign In</span>
+                <ArrowRight className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={cancelAutoLogin}
+                className="flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-border/80 bg-background/90 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-red-400/50 hover:text-red-300 active:scale-98 transition-all cursor-pointer"
+                title="Cancel automatic sign-in"
+              >
+                <span>Cancel</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Primary Action: Continue with Google Button */}
         <div>
           <button
@@ -189,18 +320,43 @@ export function UnifiedLoginCard({
         {/* Saved Accounts on this Device */}
         {hasSavedAccounts && (
           <div className="space-y-2 rounded-xl border border-border/60 bg-background/40 p-3">
-            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-1">
-              <span>Accounts on this device</span>
-              <span className="rounded-full bg-secondary/80 px-1.5 py-0.2 text-[9px] font-bold text-foreground">
-                {savedAccounts.length}
-              </span>
+            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-1 pb-1">
+              <div className="flex items-center gap-1.5">
+                <span>Accounts on this device</span>
+                <span className="rounded-full bg-secondary/80 px-1.5 py-0.2 text-[9px] font-bold text-foreground">
+                  {savedAccounts.length}
+                </span>
+              </div>
+
+              {/* Auto-Login On/Off Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setAutoLoginEnabled(!autoLoginEnabled)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[9px] font-bold transition-all cursor-pointer ${
+                  autoLoginEnabled
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40"
+                    : "bg-secondary text-muted-foreground border border-border/60"
+                }`}
+                title={autoLoginEnabled ? "Auto-Login on launch is enabled" : "Auto-Login is disabled"}
+              >
+                <span
+                  className={`size-1.5 rounded-full ${
+                    autoLoginEnabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"
+                  }`}
+                />
+                <span>Auto-Login: {autoLoginEnabled ? "ON" : "OFF"}</span>
+              </button>
             </div>
 
             <div className="space-y-1.5 max-h-44 sm:max-h-52 overflow-y-auto overscroll-contain pr-0.5 scrollbar-thin">
-              {savedAccounts.map((acc) => (
+              {savedAccounts.map((acc, index) => (
                 <div
                   key={acc.uid}
-                  className="group flex items-center justify-between gap-2.5 rounded-lg border border-border/40 bg-card/60 p-2 hover:border-primary/40 hover:bg-card transition-all"
+                  className={`group flex items-center justify-between gap-2.5 rounded-lg border p-2 transition-all ${
+                    index === 0 && autoLoginEnabled
+                      ? "border-primary/50 bg-primary/5 shadow-xs"
+                      : "border-border/40 bg-card/60 hover:border-primary/40 hover:bg-card"
+                  }`}
                 >
                   <button
                     type="button"
@@ -211,9 +367,16 @@ export function UnifiedLoginCard({
                   >
                     <UserAvatar user={acc} size="sm" showGoogleBadge={true} />
                     <div className="min-w-0">
-                      <p className="truncate font-display text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {acc.displayName || "Google Account"}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate font-display text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {acc.displayName || "Google Account"}
+                        </p>
+                        {index === 0 && autoLoginEnabled && (
+                          <span className="rounded bg-primary/20 px-1 py-0.2 font-mono text-[8px] font-extrabold uppercase tracking-wide text-primary shrink-0">
+                            Auto-Login
+                          </span>
+                        )}
+                      </div>
                       <p className="truncate font-mono text-[10px] text-muted-foreground">
                         {acc.email}
                       </p>

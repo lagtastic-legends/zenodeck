@@ -70,6 +70,8 @@ export interface AuthContextValue {
   removeSavedAccount: (uidOrEmail: string) => void;
   continueAsGuest: () => void;
   signOut: () => Promise<void>;
+  autoLoginEnabled: boolean;
+  setAutoLoginEnabled: (enabled: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -78,6 +80,7 @@ const STORAGE_ACTIVE_USER = "zenodeck_active_user";
 const STORAGE_SAVED_ACCOUNTS = "zenodeck_saved_accounts";
 const STORAGE_GUEST_SESSION = "omni_guest_session";
 const STORAGE_MOCK_USER = "omni_mock_user";
+const STORAGE_AUTO_LOGIN = "zenodeck_auto_login_enabled";
 
 export const DEFAULT_SUGGESTED_ACCOUNTS: AuthUser[] = [];
 
@@ -153,13 +156,71 @@ function toAuthUser(user: User | any): AuthUser {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<AuthMode>("probing");
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [savedAccounts, setSavedAccounts] = useState<AuthUser[]>(DEFAULT_SUGGESTED_ACCOUNTS);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const rawUser =
+        localStorage.getItem(STORAGE_ACTIVE_USER) ||
+        sessionStorage.getItem(STORAGE_ACTIVE_USER);
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        if (parsed?.uid) return parsed;
+      }
+      const mockUserJson = sessionStorage.getItem(STORAGE_MOCK_USER);
+      if (mockUserJson) {
+        const parsed = JSON.parse(mockUserJson);
+        if (parsed?.uid) return parsed;
+      }
+      if (
+        localStorage.getItem(STORAGE_GUEST_SESSION) === "true" ||
+        sessionStorage.getItem(STORAGE_GUEST_SESSION) === "true"
+      ) {
+        return {
+          uid: "guest-user",
+          displayName: "Guest Explorer",
+          email: "guest@omnitool.local",
+          photoURL: null,
+          providerId: "guest.local",
+          isGuest: true,
+        };
+      }
+    } catch {}
+    return null;
+  });
+
+  const [savedAccounts, setSavedAccounts] = useState<AuthUser[]>(() => {
+    if (typeof window === "undefined") return DEFAULT_SUGGESTED_ACCOUNTS;
+    try {
+      const rawSaved = localStorage.getItem(STORAGE_SAVED_ACCOUNTS);
+      if (rawSaved) {
+        const parsed = JSON.parse(rawSaved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return DEFAULT_SUGGESTED_ACCOUNTS;
+  });
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoLoginEnabled, setAutoLoginEnabledState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const stored = localStorage.getItem(STORAGE_AUTO_LOGIN);
+      if (stored !== null) return stored === "true";
+    } catch {}
+    return true;
+  });
 
   const isNative =
     typeof window !== "undefined" && Capacitor.isNativePlatform?.() === true;
+
+  const setAutoLoginEnabled = useCallback((enabled: boolean) => {
+    setAutoLoginEnabledState(enabled);
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(STORAGE_AUTO_LOGIN, String(enabled));
+    } catch {}
+  }, []);
 
   // Sync active user to localStorage helper
   const persistActiveUser = useCallback((u: AuthUser | null) => {
@@ -224,68 +285,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [persistActiveUser]
   );
-
-  /* Initialize from localStorage / sessionStorage on mount ----------------- */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // 1. Load saved accounts list (default to [] if none)
-    try {
-      const rawSaved = localStorage.getItem(STORAGE_SAVED_ACCOUNTS);
-      if (rawSaved) {
-        const parsed = JSON.parse(rawSaved);
-        if (Array.isArray(parsed)) {
-          setSavedAccounts(parsed);
-        } else {
-          setSavedAccounts([]);
-        }
-      } else {
-        setSavedAccounts([]);
-      }
-    } catch {
-      setSavedAccounts([]);
-    }
-
-    // 2. Check active persistent user
-    try {
-      const rawUser =
-        localStorage.getItem(STORAGE_ACTIVE_USER) ||
-        sessionStorage.getItem(STORAGE_ACTIVE_USER);
-      if (rawUser) {
-        const parsed = JSON.parse(rawUser);
-        if (parsed?.uid) {
-          setUser(parsed);
-          return;
-        }
-      }
-    } catch {
-      // ignore JSON parse error
-    }
-
-    // 3. Check guest session or mock user
-    const mockUserJson = sessionStorage.getItem(STORAGE_MOCK_USER);
-    if (mockUserJson) {
-      try {
-        const parsed = JSON.parse(mockUserJson);
-        setUser(parsed);
-        return;
-      } catch {}
-    }
-
-    if (
-      localStorage.getItem(STORAGE_GUEST_SESSION) === "true" ||
-      sessionStorage.getItem(STORAGE_GUEST_SESSION) === "true"
-    ) {
-      setUser({
-        uid: "guest-user",
-        displayName: "Guest Explorer",
-        email: "guest@omnitool.local",
-        photoURL: null,
-        providerId: "guest.local",
-        isGuest: true,
-      });
-    }
-  }, []);
 
   /* Probe configuration once, then subscribe to session changes. -------- */
   useEffect(() => {
@@ -664,6 +663,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       removeSavedAccount,
       continueAsGuest,
       signOut,
+      autoLoginEnabled,
+      setAutoLoginEnabled,
     }),
     [
       mode,
@@ -680,6 +681,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       removeSavedAccount,
       continueAsGuest,
       signOut,
+      autoLoginEnabled,
+      setAutoLoginEnabled,
     ]
   );
 

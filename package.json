@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "npx tsx scripts/test-e2e-suite.ts",
-    "test:all": "npx tsx scripts/test-e2e-suite.ts && npx tsx scripts/test-youtube-suite.ts && npx tsx scripts/test-m2-muxing.ts && npx tsx scripts/test-m3-native-save.ts && npx tsx scripts/test-subtitles-and-vault.ts && npx tsx scripts/test-multi-platform-downloader.ts && npx tsx scripts/test-dsp-m1.ts && npx tsx scripts/test-audio-dsp-e2e.ts",
+    "test:all": "npx tsx scripts/test-e2e-suite.ts && npx tsx scripts/test-youtube-suite.ts && npx tsx scripts/test-m2-muxing.ts && npx tsx scripts/test-m3-native-save.ts && npx tsx scripts/test-subtitles-and-vault.ts && npx tsx scripts/test-multi-platform-downloader.ts && npx tsx scripts/test-dsp-m1.ts && npx tsx scripts/test-audio-dsp-e2e.ts && npx tsx scripts/test-updater.ts",
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

@@ -22,11 +22,17 @@ import {
   Plus,
   ShieldCheck,
   Trash2,
+  RefreshCw,
+  Sparkles,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { UserAvatar } from "@/components/auth/user-avatar";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { UnifiedLoginCard } from "@/components/auth/unified-login-card";
+import { useUpdateStore } from "@/lib/update-store";
+import { UpdateModal } from "@/components/dialogs/update-modal";
+import { APP_VERSION } from "@/config/version";
 
 export function AuthGateway() {
   const {
@@ -43,6 +49,16 @@ export function AuthGateway() {
 
   const navigate = useNavStore((s) => s.navigate);
 
+  const {
+    autoUpdateEnabled,
+    toggleAutoUpdate,
+    updateInfo,
+    isChecking: isCheckingUpdate,
+    checkUpdates,
+    removeUpdate,
+  } = useUpdateStore();
+
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newName, setNewName] = useState("");
@@ -311,6 +327,124 @@ export function AuthGateway() {
 
       {/* ------------------------------------------------------ System Infrastructure Column */}
       <div className="space-y-4 sm:space-y-5">
+        {/* ------------------------------------------------------ Auto-Update Control Section */}
+        <div className="panel-hud scanlines space-y-4 rounded-2xl p-4 sm:p-5 border border-border/80 bg-card/90">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10">
+                <RefreshCw
+                  className={`size-5 text-primary ${autoUpdateEnabled ? "animate-spin" : ""}`}
+                  style={{ animationDuration: "8s" }}
+                />
+              </div>
+              <div>
+                <h3 className="font-display text-sm sm:text-base font-bold tracking-wide text-foreground">
+                  Automatic Updates
+                </h3>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  OTA Release Distribution
+                </p>
+              </div>
+            </div>
+
+            {/* ON / OFF Toggle Switch */}
+            <button
+              type="button"
+              onClick={toggleAutoUpdate}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                autoUpdateEnabled
+                  ? "border border-emerald-500/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.2)]"
+                  : "border border-border/80 bg-secondary/50 text-muted-foreground"
+              }`}
+              title={
+                autoUpdateEnabled
+                  ? "Auto-Update is ON. Click to disable."
+                  : "Auto-Update is OFF. Click to enable."
+              }
+            >
+              <span
+                className={`size-2 rounded-full ${
+                  autoUpdateEnabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"
+                }`}
+              />
+              <span>{autoUpdateEnabled ? "ON" : "OFF"}</span>
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-border/70 bg-background/40 p-3.5 space-y-2.5 font-mono text-xs">
+            <div className="flex items-center justify-between py-0.5 border-b border-border/50">
+              <span className="text-muted-foreground">Installed Version</span>
+              <span className="text-foreground font-semibold">v{APP_VERSION}</span>
+            </div>
+            <div className="flex items-center justify-between py-0.5 border-b border-border/50">
+              <span className="text-muted-foreground">Update Engine</span>
+              <span className={autoUpdateEnabled ? "text-emerald-400 font-semibold" : "text-amber-400"}>
+                {autoUpdateEnabled ? "Enabled (OTA Auto-Scan)" : "Manual Check Only"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-0.5">
+              <span className="text-muted-foreground">Channel</span>
+              <span className="text-foreground">Official GitHub Production</span>
+            </div>
+          </div>
+
+          {/* Pending update banner or Check for updates button */}
+          {updateInfo?.updateAvailable ? (
+            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="font-display text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                  New Version v{updateInfo.latestVersion} Ready
+                </span>
+                <button
+                  type="button"
+                  onClick={removeUpdate}
+                  className="flex items-center gap-1 text-[11px] font-mono text-red-400 hover:text-red-300 hover:underline cursor-pointer"
+                  title="Remove this update notice"
+                >
+                  <Trash2 className="size-3" />
+                  <span>Remove</span>
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsUpdateModalOpen(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 transition-all cursor-pointer"
+                >
+                  <Download className="size-3.5" />
+                  <span>Install Update</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={removeUpdate}
+                  className="flex items-center justify-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3.5 py-2 font-mono text-xs font-bold text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                  title="Remove update notification"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>Remove</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <p className="font-mono text-[11px] text-muted-foreground">
+                Keep ZenoDeck updated for security and performance patches.
+              </p>
+              <button
+                type="button"
+                onClick={() => void checkUpdates(true)}
+                disabled={isCheckingUpdate}
+                className="flex items-center gap-1.5 shrink-0 rounded-lg border border-border/80 bg-background/50 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`size-3.5 ${isCheckingUpdate ? "animate-spin" : ""}`} />
+                <span>{isCheckingUpdate ? "Checking…" : "Check Updates"}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="panel-hud scanlines space-y-4 sm:space-y-5 rounded-2xl p-4 sm:p-6 border border-border/80 bg-card/90">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -366,6 +500,15 @@ export function AuthGateway() {
           </div>
         </div>
       </div>
+
+      <UpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        updateInfo={updateInfo}
+        onRefresh={() => {
+          void checkUpdates(true);
+        }}
+      />
     </div>
   );
 }

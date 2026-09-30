@@ -30,7 +30,40 @@ function runTests() {
   assert(APP_VERSION === "3.6.1", "APP_VERSION must be 3.6.1");
   console.log("✓ APP_VERSION config constant verified: " + APP_VERSION);
 
-  console.log("ALL UPDATER TESTS PASSED! (8/8)");
+  // 4. Test dismissUpdateNotification logic
+  const mockStorage: Record<string, string> = {
+    zenodeck_update_cache: JSON.stringify({ timestamp: Date.now(), data: { latestVersion: "3.6.2" } }),
+  };
+  (global as any).window = {};
+  (global as any).localStorage = {
+    getItem: (key: string) => mockStorage[key] ?? null,
+    setItem: (key: string, val: string) => { mockStorage[key] = val; },
+    removeItem: (key: string) => { delete mockStorage[key]; },
+  };
+
+  const { dismissUpdateNotification } = require("../src/lib/updater");
+  dismissUpdateNotification();
+  assert(mockStorage["zenodeck_update_cache"] === undefined, "Update cache must be deleted on dismiss");
+  assert(typeof mockStorage["zenodeck_update_dismissed_at"] === "string", "Dismiss timestamp must be recorded");
+  console.log("✓ dismissUpdateNotification successfully cleans update cache");
+
+  // 5. Test useUpdateStore behavior
+  const { useUpdateStore } = require("../src/lib/update-store");
+  const store = useUpdateStore.getState();
+  assert(store.autoUpdateEnabled === true, "autoUpdateEnabled defaults to true");
+
+  store.toggleAutoUpdate();
+  assert(useUpdateStore.getState().autoUpdateEnabled === false, "toggleAutoUpdate toggles to false");
+
+  store.setAutoUpdateEnabled(true);
+  assert(useUpdateStore.getState().autoUpdateEnabled === true, "setAutoUpdateEnabled sets to true");
+
+  store.removeUpdate();
+  assert(useUpdateStore.getState().updateInfo === null, "removeUpdate clears updateInfo");
+  console.log("✓ useUpdateStore ON/OFF toggle and removeUpdate verified");
+
+  console.log("ALL UPDATER & AUTO-UPDATE TESTS PASSED! (12/12)");
 }
 
 runTests();
+

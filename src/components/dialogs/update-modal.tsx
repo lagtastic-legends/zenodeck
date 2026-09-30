@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Download,
@@ -11,14 +11,17 @@ import {
   AlertCircle,
   ExternalLink,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useHaptics } from "@/hooks/use-haptics";
 import {
   checkForUpdates,
   installNativeApkUpdate,
+  dismissUpdateNotification,
   type AppUpdateInfo,
 } from "@/lib/updater";
+import { useUpdateStore } from "@/lib/update-store";
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -34,6 +37,10 @@ export function UpdateModal({
   onRefresh,
 }: UpdateModalProps) {
   const haptics = useHaptics();
+  const autoUpdateEnabled = useUpdateStore((s) => s.autoUpdateEnabled);
+  const toggleAutoUpdate = useUpdateStore((s) => s.toggleAutoUpdate);
+  const removeUpdateStore = useUpdateStore((s) => s.removeUpdate);
+
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(
     initialUpdateInfo || null
   );
@@ -43,30 +50,51 @@ export function UpdateModal({
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const runCheck = useCallback(
+    async (force: boolean) => {
+      setIsChecking(true);
+      setErrorMessage(null);
+      try {
+        const info = await checkForUpdates(force);
+        setUpdateInfo(info);
+        if (onRefresh) onRefresh();
+      } catch (e: any) {
+        setErrorMessage(e?.message || "Failed to check for updates");
+      } finally {
+        setIsChecking(false);
+      }
+    },
+    [onRefresh]
+  );
+
   useEffect(() => {
     if (initialUpdateInfo) {
-      setUpdateInfo(initialUpdateInfo);
+      const timer = setTimeout(() => {
+        setUpdateInfo(initialUpdateInfo);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [initialUpdateInfo]);
 
   useEffect(() => {
     if (isOpen && !updateInfo && !isChecking) {
-      void runCheck(false);
+      const timer = setTimeout(() => {
+        void runCheck(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, updateInfo, isChecking, runCheck]);
 
-  const runCheck = async (force: boolean) => {
-    setIsChecking(true);
-    setErrorMessage(null);
-    try {
-      const info = await checkForUpdates(force);
-      setUpdateInfo(info);
-      if (onRefresh) onRefresh();
-    } catch (e: any) {
-      setErrorMessage(e?.message || "Failed to check for updates");
-    } finally {
-      setIsChecking(false);
-    }
+  const handleRemoveUpdate = () => {
+    void haptics.medium();
+    dismissUpdateNotification();
+    removeUpdateStore();
+    setUpdateInfo((prev) => (prev ? { ...prev, updateAvailable: false } : null));
+    setStatusMessage("Update notification removed.");
+    if (onRefresh) onRefresh();
+    setTimeout(() => {
+      onClose();
+    }, 300);
   };
 
   if (!isOpen) return null;
@@ -239,7 +267,7 @@ export function UpdateModal({
                   <button
                     onClick={handleInstall}
                     disabled={isInstalling}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     {isInstalling ? (
                       <>
@@ -254,6 +282,17 @@ export function UpdateModal({
                     )}
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={handleRemoveUpdate}
+                    disabled={isInstalling}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/20 hover:border-red-500/60 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                    title="Remove and dismiss this update"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>Remove</span>
+                  </button>
+
                   <a
                     href={updateInfo.releaseUrl}
                     target="_blank"
@@ -261,7 +300,7 @@ export function UpdateModal({
                     className="flex items-center justify-center gap-1.5 rounded-xl border border-border/80 px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
                   >
                     <ExternalLink className="size-3.5" />
-                    <span>View GitHub</span>
+                    <span>GitHub</span>
                   </a>
                 </div>
               </>
@@ -276,7 +315,7 @@ export function UpdateModal({
                     ZenoDeck is Up to Date
                   </h4>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    You are currently using version v{updateInfo?.currentVersion || "3.4.6"}. No newer updates found.
+                    You are currently using version v{updateInfo?.currentVersion || "3.6.1"}. No newer updates found.
                   </p>
                 </div>
 
@@ -284,7 +323,7 @@ export function UpdateModal({
                   <button
                     onClick={() => runCheck(true)}
                     disabled={isChecking}
-                    className="inline-flex items-center gap-2 rounded-lg border border-border/80 px-3.5 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border/80 px-3.5 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all cursor-pointer"
                   >
                     <RefreshCw className={`size-3.5 ${isChecking ? "animate-spin" : ""}`} />
                     <span>Check Again</span>
@@ -292,6 +331,40 @@ export function UpdateModal({
                 </div>
               </div>
             )}
+
+            {/* Auto-Update Setting Bar */}
+            <div className="flex items-center justify-between rounded-xl border border-border/70 bg-background/50 p-3">
+              <div className="flex items-center gap-2.5">
+                <div className="grid size-7 place-items-center rounded-lg border border-primary/30 bg-primary/10">
+                  <RefreshCw className={`size-3.5 text-primary ${autoUpdateEnabled ? "animate-spin" : ""}`} style={{ animationDuration: "6s" }} />
+                </div>
+                <div>
+                  <p className="font-display text-xs font-semibold text-foreground">
+                    Auto-Update Engine
+                  </p>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    {autoUpdateEnabled ? "Background checks & OTA alerts active" : "Manual update checks only"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  void haptics.light();
+                  toggleAutoUpdate();
+                }}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  autoUpdateEnabled
+                    ? "border border-emerald-500/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
+                    : "border border-border/80 bg-secondary/50 text-muted-foreground"
+                }`}
+                title={autoUpdateEnabled ? "Click to turn Auto-Update OFF" : "Click to turn Auto-Update ON"}
+              >
+                <span className={`size-1.5 rounded-full ${autoUpdateEnabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`} />
+                <span>{autoUpdateEnabled ? "ON" : "OFF"}</span>
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>

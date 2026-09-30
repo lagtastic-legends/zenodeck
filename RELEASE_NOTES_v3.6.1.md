@@ -10,8 +10,8 @@
 | Platform | Link | SHA-256 Checksum |
 |:---|:---|:---|
 | **🌐 Web App** | [omni-tool-two.vercel.app](https://omni-tool-two.vercel.app) | `Live PWA · Zero Install` |
-| **📱 Android Universal APK** | [zenodeck.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck.apk) (24.07 MB) | `B76A894044352101DEA0243FB1DEED1F61740CC84005ABE2D24458DFEB79A441` |
-| **🏷️ Versioned APK** | [zenodeck-v3.6.1.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck-v3.6.1.apk) | `B76A894044352101DEA0243FB1DEED1F61740CC84005ABE2D24458DFEB79A441` |
+| **📱 Android Universal APK** | [zenodeck.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck.apk) (24.07 MB) | `CD4D0E9611E97C2B6D207EBAA3223602879F00B409DD6DFC0A20820E1BC8EDE6` |
+| **🏷️ Versioned APK** | [zenodeck-v3.6.1.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck-v3.6.1.apk) | `CD4D0E9611E97C2B6D207EBAA3223602879F00B409DD6DFC0A20820E1BC8EDE6` |
 | **🍏 iOS Profile** | [zenodeck.mobileconfig](https://omni-tool-two.vercel.app/api/ios-profile) | `Apple Web Clip Configuration` |
 
 ---
@@ -64,9 +64,40 @@ Completely resolved the Android APK touch scrolling freeze:
 
 ---
 
+## 🎮 Call of Duty-Style Auto-Login Sequence for Saved Accounts
+
+Introduces high-tempo, seamless authentication on Android APK and Web:
+
+- **Automated Sign-In Sequence**: When returning users launch ZenoDeck with a saved account on device, a prominent 3-second animated laser countdown begins immediately.
+- **Instant Override Controls**: Users can tap **"Instant Sign In"** to bypass the countdown immediately or **"Cancel"** to abort the sequence and switch accounts without getting trapped in a loop (`sessionStorage` cancel latching).
+- **Auto-Login Master Switch**: Added a dedicated `Auto-Login: ON / OFF` toggle switch directly in the "Accounts on this device" header, allowing users to disable automatic sign-ins permanently.
+- **Account Priority Tagging**: The active primary auto-login account is clearly labeled with an amber `Auto-Login` badge in the saved accounts roster.
+
+---
+
+## 🔄 Universal Update Dismissal & Cache Purge ("Remove" Button)
+
+Provides full user autonomy over pending Over-The-Air (OTA) updates:
+
+- **Update Removal**: Added a red **"Remove"** button with trash icon in both the `UpdateModal` and `AuthGateway` update action rows.
+- **Storage Sanitization**: Clicking "Remove" removes `zenodeck_update_cache` from `localStorage`, logs the dismissal timestamp to prevent nagging popups, resets local notification state, and broadcasts the `zenodeck:update-dismissed` event across all open components.
+- **Cross-Component Synchronization**: TopBar badge and notification indicators instantly clear in real-time when an update is dismissed or removed.
+
+---
+
+## ⚙️ Auto-Update Engine Controls in Auth Gateway & TopBar
+
+Empowers users to manage background OTA update checks:
+
+- **Auth Gateway Card**: Dedicated "Automatic Updates" card displaying installed version (`v3.6.1`), live background update toggle (`ON / OFF`), on-demand "Check Updates" button, and inline update installation/removal actions.
+- **TopBar Quick-Access**: Replaced the ambiguous AI sparkles button with an interactive `UPDATES` button. Features a subtle rotating sync indicator and a live glowing emerald pulse dot when Auto-Update is active.
+- **Zustand Persistence**: Auto-update preferences persist in local storage via `useUpdateStore` (`zenodeck_auto_update_enabled`).
+
+---
+
 ## 🧪 Verification & Test Suite
 
-All 8 automated test suites pass with 100% success:
+All 9 automated test suites pass with 100% success:
 
 | Test Suite | Total Tests | Status |
 |:---|:---:|:---:|
@@ -78,8 +109,10 @@ All 8 automated test suites pass with 100% success:
 | Multi-Platform Downloader Suite | 22 | ✅ 100% Pass |
 | Audio DSP M1 Unit Suite | 111 | ✅ 100% Pass |
 | Audio DSP E2E 4-Tier Suite | 125 | ✅ 100% Pass |
-| **Total Test Assertions** | **494** | **✅ 100% PASS** |
+| Updater & Cache Test Suite | 12 | ✅ 100% Pass |
+| **Total Test Assertions** | **506** | **✅ 100% PASS** |
 
 - Static Typecheck: `npx tsc --noEmit` → **0 errors**
 - Mobile Static Export: `npm run build:mobile` → **Clean build**
 - Android Release APK: `gradlew.bat assembleRelease` → **BUILD SUCCESSFUL (Signed APK: 24.07 MB)**
+

@@ -71,6 +71,15 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 - **Root Viewport Scrolling Architecture**: Configured `html` to handle the document scroll container and freed `body` (`overflow-y: visible`, `touch-action: pan-y pinch-zoom`, `-webkit-overflow-scrolling: touch`).
 - **Eliminated WebView Gesture Trapping**: Fixed the APK scrolling issue where touch drag was required instead of natural momentum fling gestures, unlocking fluid 120Hz scrolling across all Android devices.
 
+### 🎮 4. Call of Duty-Style Auto-Login Sequence for Saved Accounts
+- **High-Tempo Game-Style Auto-Login**: Automatically begins a 3-second animated laser countdown when returning users launch ZenoDeck with a saved device account.
+- **Immediate Controls**: Instant Sign-In button bypasses the timer immediately, while Cancel aborts the sequence with session-persisted cancellation latching.
+- **Accounts on This Device Toggle**: Added `Auto-Login: ON / OFF` toggle directly in the account roster header, plus visual `Auto-Login` badges on the primary account.
+
+### 🔄 5. Universal Update Dismissal & Auto-Update Engine
+- **Update "Remove" Action**: Red `Remove` button in UpdateModal and AuthGateway dismisses pending OTA updates, wipes `zenodeck_update_cache`, and clears indicators across all components via `zenodeck:update-dismissed`.
+- **Auth Gateway & TopBar Controls**: Dedicated Auto-Update toggle card in the Auth Gateway and a persistent, animated `UPDATES` status/toggle button in the TopBar replacing the legacy AI button.
+
 ---
 
 ## 🌟 What's New in v3.6.0 — Audio DSP Studio, Multi-Platform Downloader & Performance Engine
