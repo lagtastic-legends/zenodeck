@@ -30,6 +30,21 @@
   <img src="https://img.shields.io/badge/Privacy-100%25%20On--Device-10B981?style=for-the-badge" alt="Privacy" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/ci.yml">
+    <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
+  </a>
+  <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml">
+    <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml/badge.svg" alt="Release Build Status" />
+  </a>
+  <img src="https://img.shields.io/badge/Tests-506%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor" />
+  <img src="https://img.shields.io/badge/WebAssembly-FFmpeg%20Multi--Thread-654FF0?style=flat-square&logo=webassembly&logoColor=white" alt="WebAssembly" />
+  <img src="https://img.shields.io/badge/Code%20Style-CodeRabbit%20%26%20ESLint-4B32C3?style=flat-square" alt="Code Style" />
+</p>
+
 ---
 
 ## ⚡ Overview
@@ -580,7 +595,7 @@ For full disclosure and vulnerability reporting, see [SECURITY.md](SECURITY.md).
 
 ## 🤝 Contributing
 
-We welcome community contributions, bug reports, and feature proposals! Please review [CONTRIBUTING.md](CONTRIBUTING.md) before submitting pull requests.
+We welcome community contributions, bug reports, and feature proposals! Please review [CONTRIBUTING.md](CONTRIBUTING.md), our [Code of Conduct](CODE_OF_CONDUCT.md), and [CHANGELOG.md](CHANGELOG.md) before submitting pull requests.
 
 ---
 

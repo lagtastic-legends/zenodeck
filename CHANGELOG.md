@@ -5,6 +5,91 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.1] — 2026-09-30
+
+### Added
+- **Call of Duty-Style Auto-Login Engine**:
+  - High-tempo 3-second animated laser progress bar countdown upon app launch for saved accounts on device.
+  - "Instant Sign In" override and session-persisted "Cancel" latch (`zenodeck_autologin_cancelled`).
+  - `Auto-Login: ON / OFF` master toggle directly in the "Accounts on this device" header.
+  - Visual gold `Auto-Login` badge on primary account.
+- **Universal Update Removal & Dismissal**:
+  - Red "Remove" button with `Trash2` icon in `UpdateModal` and `AuthGateway`.
+  - Purges `zenodeck_update_cache` from `localStorage`, logs dismissal timestamp, and fires `zenodeck:update-dismissed` event.
+- **Auto-Update Engine Controls**:
+  - Dedicated "Automatic Updates" card in `AuthGateway` with ON/OFF switch, installed version tag, and on-demand check button.
+  - Animated `UPDATES` button in `TopBar` replacing legacy AI button, featuring rotating sync icon and emerald status pulse.
+- **Universal Multi-Candidate YouTube Stream Resolution**:
+  - CapacitorHttp native chunk fetching on Android APK, eliminating HTTP 403 Forbidden errors and CORS restrictions by matching device IP to stream ticket.
+  - Dynamic `mn` edge node parsing and automated candidate node failover.
+  - iOS InnerTube User-Agent alignment (`com.google.ios.youtube/20.10.4`).
+- **120Hz Hardware Kinetic Momentum & Touch Scrolling**:
+  - Root viewport scrolling delegation via `html { overflow-x: clip; scroll-behavior: smooth; }` and `body { overflow-y: visible; touch-action: pan-y pinch-zoom; }`.
+  - Eliminated Android Chromium WebView touch gesture trapping.
+- **Universal Mobile Phone Responsive Layout**:
+  - Android display cutout mode (`shortEdges`) for notch and punch-hole cameras.
+  - Dynamic wrapping (`flex-wrap`) and adaptive sizing for compact phones (<360px).
+
+---
+
+## [3.6.0] — 2026-09-30
+
+### Added
+- **Audio DSP Studio & Equalizer Suite**:
+  - 10-Band ISO Graphic Equalizer (32 Hz to 16 kHz) with ±12 dB precision gain.
+  - Dynamic Bass Boost with soft-clipping limiter and headroom attenuation (60–120 Hz, 0–18 dB).
+  - Real-Time 8D Spatial Audio with circular LFO orbital panning, Haas micro-delay (22ms), and pinna highpass filter.
+  - Vocal Isolation (Acapella) center-channel bandpass extraction with sub-bass preservation.
+  - Vocal Removal (Karaoke) OOPS phase cancellation.
+  - 10 Curated DSP Presets with A/B zero-glitch bypass crossfade (20ms).
+  - Live Web Audio AnalyserNode spectrum visualizer.
+  - FFmpeg WASM mastering export to 320 kbps MP3 with ID3v2.3 tags or lossless WAV.
+- **Universal Multi-Platform Media Downloader**:
+  - Unified URL input supporting YouTube, TikTok (watermark-free), Instagram (Reels/Posts), Twitter/X, and Reddit (video + DASH audio muxing).
+- **FFmpeg Multithreading & Performance Engine**:
+  - Cross-Origin-Embedder-Policy `credentialless` & COOP `same-origin` unlocking `SharedArrayBuffer`.
+  - Zero-encode M4A stream-copy extraction (`-vn -c:a copy`) ~100x faster than re-encoding.
+  - Dynamic `-threads N` injection from `navigator.hardwareConcurrency`.
+  - Hybrid execution bridge for native Capacitor plugins.
+
+---
+
+## [3.5.0] — 2026-09-27
+
+### Added
+- **Subtitles & Captions Extraction Engine**:
+  - Multi-language subtitle tracks (.srt, .vtt, .txt) with in-app transcript viewer.
+- **In-App Download History Vault**:
+  - Local IndexedDB media ledger with category filtering, search, and 50-item storage cap.
+- **Floating Background Audio Mini Player**:
+  - Background playback with `navigator.mediaSession` lockscreen/notification controls and 0.75x–2.0x playback speeds.
+
+---
+
+## [3.4.9] — 2026-09-27
+
+### Added
+- **3-Tier WebAssembly Container Muxing**: Lossless stream-copy (`-c copy`), fast audio transcode (`-c:v copy -c:a aac`), and WebM rescue container.
+- **Progressive 512 KB Slicing**: Android chunked write/append preventing IPC `TransactionTooLargeException`.
+
+---
+
+## [3.4.8] — 2026-09-26
+
+### Added
+- Universal mobile autofit and viewport keyboard displacement prevention.
+- Safe Area insets (`env(safe-area-inset-top)`) and notch compliance.
+
+---
+
+## [3.4.7] — 2026-09-26
+
+### Added
+- Python backend downloader fallback for stubborn restricted YouTube streams.
+- Audio DSP mastering engine test harness.
+
+---
+
 ## [3.3.0] — 2026-09-25
 
 ### Added

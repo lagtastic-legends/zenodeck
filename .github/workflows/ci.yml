@@ -28,6 +28,12 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Run TypeScript Type Check
+        run: npm run typecheck
+
+      - name: Run Automated Test Suites (506 Assertions)
+        run: npm run test:all
+
       - name: Build Next.js Application
         run: npm run build
         env:

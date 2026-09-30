@@ -16,15 +16,13 @@ Thank you for your interest in contributing to **ZenoDeck**! We welcome contribu
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/lagtastic-legends/ZenoDeck.git
-   cd ZenoDeck
+   git clone https://github.com/lagtastic-legends/zenodeck.git
+   cd zenodeck
    ```
 
 2. **Install dependencies:**
    ```bash
-   npm install
-   # or
-   bun install
+   npm install --legacy-peer-deps
    ```
 
 3. **Start local development server:**
@@ -33,7 +31,13 @@ Thank you for your interest in contributing to **ZenoDeck**! We welcome contribu
    ```
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-4. **Run build check:**
+4. **Run TypeScript check & Automated Test Suites:**
+   ```bash
+   npm run typecheck
+   npm run test:all
+   ```
+
+5. **Run web production build check:**
    ```bash
    npm run build
    ```
@@ -44,15 +48,10 @@ Thank you for your interest in contributing to **ZenoDeck**! We welcome contribu
 
 ZenoDeck uses Capacitor to package the static Next.js export into a native Android application:
 
-1. **Generate Static Export:**
-   - **Windows (PowerShell):**
-     ```powershell
-     $env:MOBILE_EXPORT = "1"; npm run build
-     ```
-   - **Linux / macOS (Bash):**
-     ```bash
-     MOBILE_EXPORT=1 npm run build
-     ```
+1. **Generate Static Export for Mobile:**
+   ```bash
+   npm run build:mobile
+   ```
 
 2. **Sync Assets to Capacitor:**
    ```bash
