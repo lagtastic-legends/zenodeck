@@ -87,6 +87,16 @@ Download media from **5 platforms** through a single unified URL input:
 
 ---
 
+## 📱 Native Android 120Hz Smooth Touch Scrolling Engine
+
+Completely overhauled the APK touch gesture and viewport architecture to eliminate Android WebView scroll freezing:
+- **1:1 Responsive Viewport**: Replaced desktop overview mode with native 1:1 hardware pixel scaling (`setUseWideViewPort(false)` & `setLoadWithOverviewMode(false)`).
+- **Nested Scrolling Architecture**: Scoped workstation overflow clipping to desktop (`lg:`), unlocking the document window scroll container for mobile phones.
+- **Hardware Kinetic Momentum**: Enabled `OVER_SCROLL_IF_CONTENT_SCROLLS`, `nestedScrollingEnabled(true)`, and `-webkit-overflow-scrolling: touch` for buttery 120Hz flings and swipe gestures across all Android devices.
+- **Modern CSS Scroll Containment**: Migrated from `overflow-x: hidden` to modern `overflow-x: clip` with `touch-action: manipulation`, ensuring gestures that begin on buttons, cards, or waveforms scroll smoothly without delay.
+
+---
+
 ## 🧪 Test Coverage
 
 | Suite | Tests | Status |

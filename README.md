@@ -81,7 +81,13 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 - **Dynamic `-threads N` Injection**: Auto-detects CPU core count via `navigator.hardwareConcurrency`.
 - **Hybrid Execution Bridge**: Routes to native FFmpeg plugin on Capacitor (Android/iOS) for raw device speed, with automatic WASM fallback on web.
 
-### 🧪 4. Test Coverage Expansion
+### 📱 4. Native Android 120Hz Smooth Touch Scrolling Engine
+- **Hardware-Accelerated Kinetic Momentum**: Native overscroll physics and smooth 120Hz touch flings unlocked in the Android APK.
+- **1:1 Responsive Viewport**: Eliminated overview scaling lock in Android Chromium WebView for instant gesture responsiveness.
+- **Zero Scroll Trapping**: Scoped workstation overflow clipping to desktop (`lg:`), enabling natural document-level touch scrolling on mobile.
+- **Modern CSS Scroll Containment**: Replaced `overflow-x: hidden` with `overflow-x: clip` and enabled `touch-action: manipulation` across all cards, buttons, and tools.
+
+### 🧪 5. Test Coverage Expansion
 - **494 total tests** across 8 suites — all passing at 100%.
 - New DSP M1 unit tests (111) and E2E 4-tier test suite (125).
 
