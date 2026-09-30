@@ -141,11 +141,11 @@ async function runTier1FeatureCoverage() {
   console.log("\n[Feature 3] Port-Agnostic Origin Routing");
   const testPath = "/api/youtube/info";
   const formattedUrl = getYouTubeApiUrl(testPath);
-  assert(typeof formattedUrl === "string" && formattedUrl.includes("/api/youtube/info/"), "F-03.1: getYouTubeApiUrl normalizes path with trailing slash");
+  assert(typeof formattedUrl === "string" && formattedUrl.includes("/api/youtube/info"), "F-03.1: getYouTubeApiUrl normalizes path without trailing slash redirect");
 
   const queryPath = "/api/youtube/stream?url=https%3A%2F%2Fgooglevideo.com";
   const formattedQueryUrl = getYouTubeApiUrl(queryPath);
-  assert(formattedQueryUrl.includes("/api/youtube/stream/?url="), "F-03.2: getYouTubeApiUrl preserves query string with normalized slash");
+  assert(formattedQueryUrl.includes("/api/youtube/stream?url="), "F-03.2: getYouTubeApiUrl preserves query string cleanly without redirect slash");
 
   const dummyUrl = "https://rr1---sn-abc.googlevideo.com/videoplayback?expire=123&mn=sn-abc,sn-xyz&fallback_host=rr1---sn-fallback.googlevideo.com";
   const candidates = buildCandidateUrls(dummyUrl);

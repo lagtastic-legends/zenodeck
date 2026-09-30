@@ -862,7 +862,7 @@ export function YouTubeDownloader() {
               disabled={isResolving || isDownloading}
               className={`w-full rounded-xl border border-border/80 bg-background/80 py-2.5 pl-10 ${
                 inputUrl.length > 0 ? "pr-28" : "pr-20"
-              } font-mono text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary/50`}
+              } font-mono text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary/50`}
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {inputUrl.length > 0 && (
@@ -900,7 +900,7 @@ export function YouTubeDownloader() {
             type="button"
             onClick={() => void handleResolve()}
             disabled={isResolving || isDownloading || !inputUrl.trim()}
-            className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 font-display text-xs font-bold text-white shadow-xs hover:bg-red-500 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 font-display text-xs font-bold text-white shadow-xs hover:bg-red-500 disabled:opacity-50 transition-all cursor-pointer shrink-0"
           >
             {isResolving ? (
               <>
@@ -1291,13 +1291,13 @@ export function YouTubeDownloader() {
             {/* Quality Selector & Media Type Selection */}
             <div className="space-y-3">
               {/* Segmented Media Tabs */}
-              <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2.5">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => handleTabChange("video")}
                     disabled={isDownloading}
-                    className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 font-display text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 font-display text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                       mediaTypeTab === "video"
                         ? "bg-red-500/20 text-red-300 border border-red-500/40 shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-card/50 border border-transparent"
@@ -1311,7 +1311,7 @@ export function YouTubeDownloader() {
                     type="button"
                     onClick={() => handleTabChange("audio")}
                     disabled={isDownloading}
-                    className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 font-display text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 font-display text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                       mediaTypeTab === "audio"
                         ? "bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-card/50 border border-transparent"
@@ -1454,7 +1454,7 @@ export function YouTubeDownloader() {
                 type="button"
                 onClick={handleStartDownload}
                 disabled={!selectedQuality}
-                className={`w-full flex items-center justify-center gap-2.5 rounded-xl py-3.5 px-6 font-display text-sm font-bold text-white transition-all cursor-pointer ${
+                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold text-white transition-all cursor-pointer ${
                   selectedQuality?.isAudioOnly
                     ? "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 shadow-lg shadow-violet-500/25 hover:opacity-95"
                     : "bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 shadow-lg shadow-red-500/20 hover:opacity-95"
@@ -1462,15 +1462,15 @@ export function YouTubeDownloader() {
               >
                 {selectedQuality?.isAudioOnly ? (
                   <>
-                    <Music className="size-4" />
-                    <span>
+                    <Music className="size-4 shrink-0" />
+                    <span className="truncate">
                       EXTRACT AUDIO ({selectedQuality?.badge}) · {formatBytes(selectedQuality?.approxSizeBytes || 0)}
                     </span>
                   </>
                 ) : (
                   <>
-                    <Download className="size-4" />
-                    <span>
+                    <Download className="size-4 shrink-0" />
+                    <span className="truncate">
                       START TURBO DOWNLOAD ({selectedQuality?.badge || "4K"}) · {formatBytes(selectedQuality?.approxSizeBytes || 0)}
                     </span>
                   </>

@@ -199,14 +199,7 @@ export function formatBytes(bytes: number): string {
  * - In SSR / Node runtime, falls back to remote API origin.
  */
 export function getYouTubeApiUrl(path: string): string {
-  let normalizedPath = path;
-  const [pathname, search] = path.split("?");
-  if (!pathname.endsWith("/")) {
-    normalizedPath = `${pathname}/${search ? `?${search}` : ""}`;
-  }
-  if (!normalizedPath.startsWith("/")) {
-    normalizedPath = `/${normalizedPath}`;
-  }
+  let normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
   if (typeof window !== "undefined") {
     // 1. In native mobile APK (Capacitor Android / iOS), route to remote API fallback

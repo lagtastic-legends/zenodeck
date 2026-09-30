@@ -150,7 +150,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} ${ebGaramond.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-[100dvh] w-full max-w-[100vw] overflow-x-clip pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]`}
+        className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} ${ebGaramond.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-[100dvh] w-full max-w-[100vw] overflow-x-clip pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]`}
       >
         <AnalyticsProvider />
         {children}

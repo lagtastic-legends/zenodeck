@@ -224,17 +224,19 @@ html {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  max-width: 100vw;
+  width: 100%;
+  min-height: 100%;
   overflow-x: clip;
 }
 
 body {
   -webkit-tap-highlight-color: transparent;
-  max-width: 100vw;
+  width: 100%;
+  min-height: 100dvh;
   overflow-x: clip;
-  overflow-y: auto;
+  overflow-y: visible;
+  touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
-  touch-action: manipulation;
   overscroll-behavior-y: auto;
 }
 

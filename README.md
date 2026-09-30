@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.6.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.0" />
+    <img src="https://img.shields.io/badge/Release-v3.6.1-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.1" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20APK-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck-v3.6.0.apk">
-    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck-v3.6.1.apk">
+    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.1-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -45,11 +45,31 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 | Platform | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. |
-| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.0.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck-v3.6.0.apk) | Dedicated v3.6.0 release package with full version archive support. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. |
+| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.1.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck-v3.6.1.apk) | Dedicated v3.6.1 release package with full version archive support. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.0) | Complete release packages, checksums, changelogs, and release assets. |
+| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.1)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.1) | Complete release packages, checksums, changelogs, and release assets. |
+
+---
+
+## 🌟 What's New in v3.6.1 — Universal YouTube Stream Resolution, Mobile Responsive Layout & 120Hz Smooth Scrolling
+
+### 🎥 1. Universal YouTube Stream Resolution & Anti-Throttling Architecture
+- **On-Device CapacitorHttp Streaming**: Resolved HTTP 403 Forbidden errors by routing media chunk downloads through native `CapacitorHttp` on Android APK, perfectly matching the on-device IP bound to YouTube InnerTube URLs while bypassing browser CORS constraints.
+- **Dynamic Candidate Edge Node Failover**: Automatically parses secondary edge servers from the `mn` URL parameter (`sn-fapo3ox25a-3uh6`) and fails over instantly if the primary node times out or throttles.
+- **iOS Client UA Alignment**: Forwards authentic iOS InnerTube User-Agent on proxy and direct fetches for `c=IOS` stream streams.
+- **Route Trailing Slash Fix**: Normalized API query routing to prevent Next.js 308 redirects that strip `Range` headers.
+- **COEP `credentialless` Support**: Upgraded Cross-Origin Embedder Policy to preserve `SharedArrayBuffer` multithreading without blocking external media streams.
+
+### 📐 2. Universal Mobile Phone Responsive Layout & Cutout Ergonomics
+- **Safe Area Double-Padding Elimination**: Streamlined notch handling by removing duplicate padding in root layout, ensuring clean status bar integration without double displacement.
+- **Android Display Cutout Mode (`shortEdges`)**: Implemented Android 9+ display cutout layout in app themes for immersive edge-to-edge experience without letterboxing around camera punches.
+- **Adaptive Downloader UI**: Media format selector tabs dynamically wrap (`flex-wrap`) on compact screens (<360px) and buttons adapt with responsive text sizing and truncation.
+
+### 🏎️ 3. Native Android 120Hz Smooth Touch Scrolling Restoration
+- **Root Viewport Scrolling Architecture**: Configured `html` to handle the document scroll container and freed `body` (`overflow-y: visible`, `touch-action: pan-y pinch-zoom`, `-webkit-overflow-scrolling: touch`).
+- **Eliminated WebView Gesture Trapping**: Fixed the APK scrolling issue where touch drag was required instead of natural momentum fling gestures, unlocking fluid 120Hz scrolling across all Android devices.
 
 ---
 

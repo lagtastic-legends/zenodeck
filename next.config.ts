@@ -17,7 +17,7 @@ import type { NextConfig } from "next";
 
 const COOP_COEP_HEADERS = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+  { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
 ];
 
 const isMobileExport = process.env.MOBILE_EXPORT === "1";

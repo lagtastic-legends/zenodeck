@@ -20,7 +20,7 @@
  */
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import {
   buildCandidateUrls,
   getYouTubeApiUrl,
@@ -120,16 +120,95 @@ function getProxiedStreamUrl(directUrl: string): string {
   if (directUrl.startsWith("data:") || directUrl.startsWith("blob:")) {
     return directUrl;
   }
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  // In Node.js / CLI testing, fetch directly:
+  if (typeof window === "undefined") {
+    return directUrl;
+  }
+  // On native mobile (Capacitor Android / iOS), direct URL is handled natively
+  if (Capacitor.isNativePlatform()) {
     return directUrl;
   }
   return getYouTubeApiUrl(`/api/youtube/stream?url=${encodeURIComponent(directUrl)}`);
 }
 
 /**
- * Safely measures content length of stream URL via Range: bytes=0-0 GET probe
- * Bypasses hanging HEAD requests on Google Video CDN and CapacitorHttp.
- * Automatically tests candidate edge nodes and promotes the responsive candidate
+ * Universally fetches a byte range chunk.
+ * - On native mobile (Capacitor Android/iOS), uses native CapacitorHttp to bypass
+ *   browser CORS completely and avoid remote IP binding mismatch (403).
+ * - On web, uses the CORS/CORP stream proxy (/api/youtube/stream).
+ * - On Node.js, uses direct fetch with appropriate User-Agent.
+ */
+async function fetchChunkUniversal({
+  candidateUrl,
+  rangeHeader,
+  signal,
+}: {
+  candidateUrl: string;
+  rangeHeader?: string;
+  signal?: AbortSignal;
+}): Promise<Uint8Array> {
+  const isIos = candidateUrl.includes("c=IOS") || candidateUrl.includes("sparams=");
+  const defaultUa = isIos
+    ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
+    : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+  const headers: Record<string, string> = {
+    "User-Agent": defaultUa,
+  };
+  if (rangeHeader) {
+    headers["Range"] = rangeHeader;
+  }
+
+  // 1. Native mobile (Capacitor Android / iOS)
+  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+    try {
+      const res = await CapacitorHttp.request({
+        url: candidateUrl,
+        method: "GET",
+        headers,
+        responseType: "arraybuffer",
+      });
+
+      if (res.status === 200 || res.status === 206) {
+        if (typeof res.data === "string") {
+          const binaryStr = atob(res.data);
+          const len = binaryStr.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          return bytes;
+        } else if (res.data instanceof ArrayBuffer) {
+          return new Uint8Array(res.data);
+        } else if (res.data instanceof Uint8Array) {
+          return res.data;
+        }
+      }
+      throw new Error(`Native HTTP failed with status ${res.status}`);
+    } catch (nativeErr: any) {
+      console.warn("CapacitorHttp chunk fetch error, falling back:", nativeErr?.message);
+    }
+  }
+
+  // 2. Web browser or Node.js
+  const targetUrl = getProxiedStreamUrl(candidateUrl);
+  const fetchOpts: RequestInit = {
+    signal,
+    headers,
+  };
+
+  const res = await fetch(targetUrl, fetchOpts);
+  if (!res.ok && res.status !== 206) {
+    throw new Error(`Fetch failed (HTTP ${res.status})`);
+  }
+
+  const buf = await res.arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+/**
+ * Safely measures content length of stream URL via Range: bytes=0-0 probe
+ * Tests candidate edge nodes and promotes the responsive candidate
  * to index 0 of candidateUrls so chunk workers stream instantly without delay.
  */
 async function probeStreamSizeSafe(
@@ -141,42 +220,31 @@ async function probeStreamSizeSafe(
     const directUrl = candidateUrls[i];
     if (signal?.aborted) return knownSize || 0;
     try {
-      const targetUrl = getProxiedStreamUrl(directUrl);
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2500);
+      const timer = setTimeout(() => controller.abort(), 2000);
       const onParentAbort = () => controller.abort();
       signal?.addEventListener("abort", onParentAbort);
 
-      const res = await fetch(targetUrl, {
-        method: "GET",
-        headers: { Range: "bytes=0-0" },
+      const chunk = await fetchChunkUniversal({
+        candidateUrl: directUrl,
+        rangeHeader: "bytes=0-0",
         signal: controller.signal,
       });
 
       clearTimeout(timer);
       signal?.removeEventListener("abort", onParentAbort);
 
-      if (res.ok || res.status === 206) {
+      if (chunk && chunk.byteLength > 0) {
         // Candidate is responsive! Promote to front of candidateUrls array
         if (i > 0) {
           const [working] = candidateUrls.splice(i, 1);
           candidateUrls.unshift(working);
         }
-
-        const cr = res.headers.get("content-range");
-        if (cr) {
-          const match = cr.match(/\/(\d+)$/);
-          if (match) {
-            const size = parseInt(match[1], 10);
-            if (size > 0) return size;
-          }
-        }
-
-        if (knownSize && knownSize > 0) {
-          return knownSize;
-        }
+        return knownSize || 0;
       }
-    } catch {}
+    } catch {
+      // Continue to next candidate
+    }
   }
 
   return knownSize || 0;
@@ -204,43 +272,23 @@ async function downloadStreamResilient({
 
   // 1. Determine exact file size safely and identify the fastest responding CDN candidate node
   let totalSize = await probeStreamSizeSafe(candidateUrls, knownSize, signal);
+  if (!totalSize && knownSize) {
+    totalSize = knownSize;
+  }
 
-  // Fallback: if size is still unknown or very small (< 1 MB), perform direct streaming fetch
+  // Fallback: if size is still unknown or very small (< 1 MB), perform single chunk fetch
   if (!totalSize || totalSize < 1024 * 1024) {
     let lastErr: Error | null = null;
     for (const cand of candidateUrls) {
       if (signal?.aborted) throw new Error("Download aborted");
       try {
-        const targetUrl = getProxiedStreamUrl(cand);
-        const res = await fetch(targetUrl, { signal });
-        if (!res.ok) throw new Error(`Stream fetch failed (${res.status}) for ${label}`);
-
-        if (!res.body) {
-          const buf = await res.arrayBuffer();
-          onChunkBytes(buf.byteLength);
-          return new Uint8Array(buf);
-        }
-
-        const reader = res.body.getReader();
-        const chunks: Uint8Array[] = [];
-        while (true) {
-          if (signal?.aborted) throw new Error("Download aborted");
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            chunks.push(value);
-            onChunkBytes(value.byteLength);
-          }
-        }
-
-        const totalLen = chunks.reduce((acc, c) => acc + c.byteLength, 0);
-        const merged = new Uint8Array(totalLen);
-        let offset = 0;
-        for (const c of chunks) {
-          merged.set(c, offset);
-          offset += c.byteLength;
-        }
-        return merged;
+        const data = await fetchChunkUniversal({
+          candidateUrl: cand,
+          rangeHeader: totalSize ? `bytes=0-${totalSize - 1}` : undefined,
+          signal,
+        });
+        onChunkBytes(data.byteLength);
+        return data;
       } catch (err: any) {
         lastErr = err;
       }
@@ -278,28 +326,22 @@ async function downloadStreamResilient({
         if (signal?.aborted) throw new Error("Download aborted");
         const candIdx = (activeCandidateIndex + attempt) % candidateUrls.length;
         const candidate = candidateUrls[candIdx];
-        const requestUrl = getProxiedStreamUrl(candidate);
 
         const chunkController = new AbortController();
-        const timeoutTimer = setTimeout(() => chunkController.abort(), 5000);
+        const timeoutTimer = setTimeout(() => chunkController.abort(), 6000);
         const onParentAbort = () => chunkController.abort();
         signal?.addEventListener("abort", onParentAbort);
 
         try {
-          const res = await fetch(requestUrl, {
+          const partData = await fetchChunkUniversal({
+            candidateUrl: candidate,
+            rangeHeader: `bytes=${start}-${end}`,
             signal: chunkController.signal,
-            headers: { Range: `bytes=${start}-${end}` },
           });
 
           clearTimeout(timeoutTimer);
           signal?.removeEventListener("abort", onParentAbort);
 
-          if (!res.ok && res.status !== 206) {
-            throw new Error(`Range request failed (HTTP ${res.status})`);
-          }
-
-          const buf = await res.arrayBuffer();
-          const partData = new Uint8Array(buf);
           if (partData.byteLength === 0) {
             throw new Error("Received empty chunk payload");
           }

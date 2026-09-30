@@ -6,6 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Range, Content-Type, Authorization, Accept",
   "Access-Control-Expose-Headers": "Content-Range, Content-Length, Content-Type, Accept-Ranges",
+  "Cross-Origin-Resource-Policy": "cross-origin",
 };
 
 export const dynamic = "force-dynamic";
@@ -56,9 +57,11 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
     const candidateUrls = buildCandidateUrls(targetUrl);
     const rangeHeader = req.headers.get("range");
 
+    const isIosStream = targetUrl.includes("c=IOS") || targetUrl.includes("sparams=");
     const fetchHeaders: Record<string, string> = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+      "User-Agent": isIosStream
+        ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
+        : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
       Accept: "*/*",
       "Accept-Encoding": "identity",
     };
@@ -79,7 +82,7 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
           method: "GET",
           headers: fetchHeaders,
           redirect: "follow",
-          signal: AbortSignal.timeout(3500),
+          signal: AbortSignal.timeout(2000),
         });
 
         if (res.ok || res.status === 206 || res.status === 304) {
