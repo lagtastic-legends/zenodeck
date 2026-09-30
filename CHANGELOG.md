@@ -5,6 +5,20 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.2] — 2026-09-30
+
+### Added
+- **Universal Android APK for All Phone Form Factors**:
+  - Full compatibility across compact phones (<360px), tall aspect ratio slabs (19.5:9, 20:9, 21:9), foldables, and flip phones (Samsung Galaxy Z Flip Flex Mode 90°).
+  - Android Display Cutout Mode (`shortEdges`) for notch and punch-hole cameras without letterboxing.
+  - 120Hz Hardware Kinetic Momentum touch scrolling with zero gesture trapping in Chromium WebView.
+  - Call of Duty-style auto-login sequence with 3s laser countdown, instant sign in, cancel latching, and master toggle.
+  - Universal update removal action ("Remove" button) with cache cleansing and instant cross-component notification sync.
+  - Persistent Auto-Update controls in Auth Gateway and TopBar status button.
+  - Permanent Vercel & CI peer-dependency protection via `.npmrc` (`legacy-peer-deps=true`) and `vercel.json`.
+
+---
+
 ## [3.6.1] — 2026-09-30
 
 ### Added

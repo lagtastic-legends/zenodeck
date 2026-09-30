@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.6.1-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.1" />
+    <img src="https://img.shields.io/badge/Release-v3.6.2-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.2" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20APK-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck-v3.6.1.apk">
-    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.1-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck-v3.6.2.apk">
+    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.2-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -60,11 +60,35 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 | Platform | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. |
-| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.1.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.1/zenodeck-v3.6.1.apk) | Dedicated v3.6.1 release package with full version archive support. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. Runs on all phones. |
+| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.2.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck-v3.6.2.apk) | Dedicated v3.6.2 release package with full version archive support. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.1)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.1) | Complete release packages, checksums, changelogs, and release assets. |
+| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.2)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.2) | Complete release packages, checksums, changelogs, and release assets. |
+
+---
+
+## 🌟 What's New in v3.6.2 — Universal Android APK for All Phones (COD Auto-Login, OTA Controls & Display Cutout Responsive Layout)
+
+### 📱 1. Universal Phone Architecture for All Phone Models
+- **Adaptive Layout on Compact Screens**: Media selector buttons dynamically wrap (`flex-wrap`) and scale on narrow screens (<360px) to prevent clipped text or horizontal overflow.
+- **Android Display Cutout Mode (`shortEdges`)**: Uses modern display cutout layout to render edge-to-edge on camera punch-hole, pill, and notch displays without letterbox black bars.
+- **Flip Phone & Foldable Optimization**: Supports Samsung Galaxy Z Flip flex mode (tabletop 90°) with constrained viewport height auto-scrolling (`max-h-[calc(100dvh-4rem)]`).
+
+### 🏎️ 2. Native Android 120Hz Smooth Touch Scrolling Restoration
+- **Root Viewport Scrolling Architecture**: Configured `html` to handle the document scroll container and freed `body` (`overflow-y: visible`, `touch-action: pan-y pinch-zoom`, `-webkit-overflow-scrolling: touch`).
+- **Eliminated WebView Gesture Trapping**: Fixed the APK scrolling issue where touch drag was required instead of natural momentum fling gestures, unlocking fluid 120Hz scrolling across all Android devices.
+
+### 🎮 3. Call of Duty-Style Auto-Login Sequence for Saved Accounts
+- **High-Tempo Game-Style Auto-Login**: Automatically begins a 3-second animated laser countdown when returning users launch ZenoDeck with a saved device account.
+- **Immediate Controls**: Instant Sign-In button bypasses the timer immediately, while Cancel aborts the sequence with session-persisted cancellation latching.
+- **Accounts on This Device Toggle**: Added `Auto-Login: ON / OFF` toggle directly in the account roster header, plus visual `Auto-Login` badges on the primary account.
+
+### 🔄 4. Universal Update Dismissal & Auto-Update Engine
+- **Update "Remove" Action**: Red `Remove` button in UpdateModal and AuthGateway dismisses pending OTA updates, wipes `zenodeck_update_cache`, and clears indicators across all components via `zenodeck:update-dismissed`.
+- **Auth Gateway & TopBar Controls**: Dedicated Auto-Update toggle card in the Auth Gateway and a persistent, animated `UPDATES` status/toggle button in the TopBar replacing the legacy AI button.
+
+---
 
 ---
 

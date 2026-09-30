@@ -22,6 +22,7 @@ import {
   type AppUpdateInfo,
 } from "@/lib/updater";
 import { useUpdateStore } from "@/lib/update-store";
+import { APP_VERSION } from "@/config/version";
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -315,7 +316,7 @@ export function UpdateModal({
                     ZenoDeck is Up to Date
                   </h4>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    You are currently using version v{updateInfo?.currentVersion || "3.6.1"}. No newer updates found.
+                    You are currently using version v{updateInfo?.currentVersion || APP_VERSION}. No newer updates found.
                   </p>
                 </div>
 

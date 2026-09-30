@@ -27,12 +27,12 @@ function runTests() {
   console.log("✓ isNewerVersion comparisons passed");
 
   // 3. Test current version
-  assert(APP_VERSION === "3.6.1", "APP_VERSION must be 3.6.1");
+  assert(APP_VERSION === "3.6.2", "APP_VERSION must be 3.6.2");
   console.log("✓ APP_VERSION config constant verified: " + APP_VERSION);
 
   // 4. Test dismissUpdateNotification logic
   const mockStorage: Record<string, string> = {
-    zenodeck_update_cache: JSON.stringify({ timestamp: Date.now(), data: { latestVersion: "3.6.2" } }),
+    zenodeck_update_cache: JSON.stringify({ timestamp: Date.now(), data: { latestVersion: "3.6.3" } }),
   };
   (global as any).window = {};
   (global as any).localStorage = {
