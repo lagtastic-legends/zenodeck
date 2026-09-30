@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.5.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.5.0" />
+    <img src="https://img.shields.io/badge/Release-v3.6.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.5.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20APK-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.5.0/zenodeck-v3.5.0.apk">
-    <img src="https://img.shields.io/badge/Versioned%20APK-v3.5.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck-v3.6.0.apk">
+    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -45,11 +45,45 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 | Platform | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.5.0/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and Python 4K 60FPS engine. |
-| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.5.0.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.5.0/zenodeck-v3.5.0.apk) | Dedicated v3.5.0 release package with full version archive support. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. |
+| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.0.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck-v3.6.0.apk) | Dedicated v3.6.0 release package with full version archive support. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.5.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.5.0) | Complete release packages, checksums, changelogs, and release assets. |
+| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.0) | Complete release packages, checksums, changelogs, and release assets. |
+
+---
+
+## 🌟 What's New in v3.6.0 — Audio DSP Studio, Multi-Platform Downloader & Performance Engine
+
+### 🎛️ 1. Audio DSP Studio & Equalizer Suite
+- **10-Band ISO Graphic Equalizer** with ±12 dB precision gain, interactive vertical sliders, and real-time frequency readouts.
+- **Dynamic Bass Boost** with soft-clipping limiter and automatic headroom compensation (60–120 Hz, 0–18 dB).
+- **Real-Time 8D Spatial Audio** with circular LFO orbital panning, Haas micro-delay (22ms), and pinna highpass filter.
+- **Vocal Isolation (Acapella)** using center-channel bandpass extraction with sub-bass preservation below 140 Hz.
+- **Vocal Removal (Karaoke)** via OOPS phase cancellation removing center-panned vocals while retaining stereo instrumentation.
+- **10 Curated DSP Presets**: Flat, Bass Boost, Vocal Boost, Club/EDM, Rock, Pop, Classical, 8D Spatial, Acapella, Karaoke.
+- **A/B Bypass Switch** with zero-glitch 20ms exponential crossfade.
+- **Live Spectrum Visualizer** powered by Web Audio AnalyserNode.
+- **FFmpeg WASM Mastering Engine** for offline export to 320 kbps MP3 or lossless WAV with active DSP settings baked in.
+- **Zustand Persistent State** survives app restarts via localStorage.
+
+### 🌍 2. Universal Multi-Platform Media Downloader
+- **5 Platforms Supported**: YouTube, TikTok, Instagram, Twitter/X, and Reddit — all through a single URL input.
+- **Automatic Platform Detection** identifies source and routes to the correct extractor.
+- **TikTok**: Watermark-free video with `vt.tiktok.com` and `vm.tiktok.com` short URL support.
+- **Instagram**: Reels, Posts, and IGTV downloads.
+- **Twitter / X**: Status video extraction from `x.com` and `twitter.com`.
+- **Reddit**: Video + DASH audio merging with `redd.it` short URL resolution.
+
+### ⚡ 3. Performance Engine Upgrade
+- **WASM Multithreading**: Global COOP/COEP headers unlock `SharedArrayBuffer` for multi-core FFmpeg execution.
+- **Zero-Encode M4A Extraction**: Stream copy (`-c:a copy`) rips raw AAC bitstream — ~100x faster than re-encoding.
+- **Dynamic `-threads N` Injection**: Auto-detects CPU core count via `navigator.hardwareConcurrency`.
+- **Hybrid Execution Bridge**: Routes to native FFmpeg plugin on Capacitor (Android/iOS) for raw device speed, with automatic WASM fallback on web.
+
+### 🧪 4. Test Coverage Expansion
+- **494 total tests** across 8 suites — all passing at 100%.
+- New DSP M1 unit tests (111) and E2E 4-tier test suite (125).
 
 ---
 
