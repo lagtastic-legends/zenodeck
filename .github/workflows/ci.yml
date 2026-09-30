@@ -31,8 +31,8 @@ jobs:
       - name: Run TypeScript Type Check
         run: npm run typecheck
 
-      - name: Run Automated Test Suites (506 Assertions)
-        run: npm run test:all
+      - name: Run Automated Test Suites (Offline Verification)
+        run: npm run test:ci
 
       - name: Build Next.js Application
         run: npm run build
