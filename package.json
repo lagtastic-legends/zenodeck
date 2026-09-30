@@ -97,7 +97,7 @@
     "recharts": "^2.15.4",
     "sharp": "^0.34.3",
     "sonner": "^2.0.6",
-    "tailwind-merge": "^3.3.1",
+    "tailwind-merge": "^3.7.0",
     "tailwindcss-animate": "^1.0.7",
     "use-sound": "^5.0.0",
     "uuid": "^11.1.0",
