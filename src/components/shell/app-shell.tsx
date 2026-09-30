@@ -303,10 +303,10 @@ export function AppShell() {
       <TopBar />
       <AskOmni />
 
-      <div className="flex flex-1 w-full overflow-hidden min-h-0">
+      <div className="flex flex-1 w-full min-h-0 lg:overflow-hidden">
         <DesktopSidebar />
 
-        <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-y-auto h-full scrollbar-thin scrollbar-thumb-border">
+        <div className="flex flex-1 flex-col min-w-0 min-h-0 lg:h-full lg:overflow-y-auto scrollbar-thin scrollbar-thumb-border">
           <WorkstationRibbon />
 
           <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 sm:px-6 sm:py-8 pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] lg:pb-8">

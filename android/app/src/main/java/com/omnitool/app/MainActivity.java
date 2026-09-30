@@ -56,16 +56,20 @@ public class MainActivity extends BridgeActivity {
 
                 // Responsive Autofit & Display Normalization across all phone sizes
                 settings.setMediaPlaybackRequiresUserGesture(false);
-                settings.setUseWideViewPort(true);
-                settings.setLoadWithOverviewMode(true);
+                // Do NOT force desktop overview mode — let the mobile viewport (width=device-width) govern layout
+                settings.setUseWideViewPort(false);
+                settings.setLoadWithOverviewMode(false);
                 settings.setTextZoom(100); // Prevent OS "Large Text" accessibility setting from distorting layouts
                 settings.setDomStorageEnabled(true);
                 settings.setDatabaseEnabled(true);
                 settings.setAllowFileAccess(true);
 
-                // Eliminate rubber-band stretching that distorts fixed headers and navigation
-                webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                // Enable natural smooth touch scrolling & 120Hz momentum on Android
+                webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+                webView.setVerticalScrollBarEnabled(false);
+                webView.setHorizontalScrollBarEnabled(false);
                 webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
+                webView.setNestedScrollingEnabled(true);
             }
         }
     }

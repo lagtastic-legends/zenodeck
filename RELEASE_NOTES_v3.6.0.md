@@ -10,8 +10,8 @@
 | Platform | Link | SHA-256 Checksum |
 |:---|:---|:---|
 | **🌐 Web App** | [omni-tool-two.vercel.app](https://omni-tool-two.vercel.app) | `Live PWA · Zero Install` |
-| **📱 Android APK** | [zenodeck.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck.apk) (24.07 MB) | `3D0941057B9C9774A0C4B3BFF3D74B034D1C7F3DABA59412269BB8D9640B40CB` |
-| **🏷️ Versioned APK** | [zenodeck-v3.6.0.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck-v3.6.0.apk) | `3D0941057B9C9774A0C4B3BFF3D74B034D1C7F3DABA59412269BB8D9640B40CB` |
+| **📱 Android APK** | [zenodeck.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck.apk) (24.07 MB) | `DF86519C272B98BBF0EE2F2599952AC7B876ECD0F9BC5DA3890E2C6F591F9D5F` |
+| **🏷️ Versioned APK** | [zenodeck-v3.6.0.apk](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.0/zenodeck-v3.6.0.apk) | `DF86519C272B98BBF0EE2F2599952AC7B876ECD0F9BC5DA3890E2C6F591F9D5F` |
 | **🍏 iOS Profile** | [zenodeck.mobileconfig](https://omni-tool-two.vercel.app/api/ios-profile) | `Apple Web Clip Configuration` |
 
 ---
