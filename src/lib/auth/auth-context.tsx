@@ -290,14 +290,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let unsubscribeWeb: (() => void) | undefined;
     let unsubscribeNative: (() => void) | undefined;
+    let isMounted = true;
+
+    // Fail-safe watchdog: guarantees the boot sequence never hangs on "VERIFYING SECURE SESSION…"
+    const probeTimeout = setTimeout(() => {
+      if (isMounted) {
+        setMode((current) => (current === "probing" ? "configured" : current));
+      }
+    }, 1200);
 
     void (async () => {
-      const config = await loadFirebaseConfig();
-      if (!config) {
-        setMode("unconfigured");
-        return;
-      }
-      setMode("configured");
+      try {
+        const config = await loadFirebaseConfig();
+        clearTimeout(probeTimeout);
+        if (!isMounted) return;
+        if (!config) {
+          setMode("unconfigured");
+          return;
+        }
+        setMode("configured");
 
       if (isNative) {
         // Check existing native session first
@@ -376,9 +387,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       });
+      } catch (err) {
+        console.warn("Auth initialization error, failing safely to configured state:", err);
+        if (isMounted) setMode("configured");
+      }
     })();
 
     return () => {
+      isMounted = false;
+      clearTimeout(probeTimeout);
       unsubscribeWeb?.();
       unsubscribeNative?.();
     };
@@ -628,6 +645,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem(STORAGE_ACTIVE_USER);
         localStorage.removeItem(STORAGE_GUEST_SESSION);
         sessionStorage.removeItem(STORAGE_GUEST_SESSION);
+        sessionStorage.removeItem("zenodeck_boot_completed");
+        sessionStorage.setItem("zenodeck_autologin_cancelled", "true");
       } catch {}
     }
     setUser(null);

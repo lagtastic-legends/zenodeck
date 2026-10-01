@@ -26,6 +26,12 @@ export function ToolShell({ toolId, children }: ToolShellProps) {
   const requiresEngine = tool?.requiresEngine !== false;
 
   useEffect(() => {
+    if (requiresEngine && state === "idle") {
+      void boot();
+    }
+  }, [requiresEngine, state, boot]);
+
+  useEffect(() => {
     if (requiresEngine && state === "loading") {
       return useNavStore.getState().registerDirtyGuard(() => ({
         hasUnsaved: true,

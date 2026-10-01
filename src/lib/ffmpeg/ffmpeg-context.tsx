@@ -30,6 +30,7 @@ import {
 } from "react";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import {
+  clearCachedWasmBinary,
   loadWasmCoreBlobUrl,
   resolveCoreModuleUrl,
 } from "./wasm-loader";
@@ -231,11 +232,17 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
         window.location.href,
       ).href;
 
-      await instance.load({
+      // 30-second fail-safe timeout prevents permanent UI freeze on stalled networks or blocked workers
+      const loadPromise = instance.load({
         classWorkerURL,
         coreURL,
         wasmURL,
       });
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Engine compilation timed out after 30s")), 30000);
+      });
+
+      await Promise.race([loadPromise, timeoutPromise]);
 
       const elapsed = performance.now() - startedAt;
       engineRef.current = instance;
@@ -252,7 +259,11 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : String(err ?? "unknown error");
-      instance.terminate();
+      // Evict potentially corrupted WASM binary from IndexedDB so next boot fetches clean
+      void clearCachedWasmBinary();
+      try {
+        instance.terminate();
+      } catch {}
       engineRef.current = null;
       setEngine(null);
       setStage("standby");

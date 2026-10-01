@@ -7,13 +7,21 @@
  */
 
 import { ShieldCheck } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { UnifiedLoginCard } from "@/components/auth/unified-login-card";
 import { ZenoLoadingScreen } from "@/components/shell/zeno-loading-screen";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
-  const { mode, user } = useAuth();
+  const { mode, user, savedAccounts } = useAuth();
+  const [bootSequenceDone, setBootSequenceDone] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return sessionStorage.getItem("zenodeck_boot_completed") === "true";
+    } catch {
+      return true;
+    }
+  });
 
   /* 1. Probing State ----------------------------------------------------- */
   if (mode === "probing") {
@@ -36,11 +44,19 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  /* 3. Configured + Signed Out: Universal Responsive Login Experience ---- */
-  if (!user) {
+  /* 3. Configured + Signed Out OR Cold-Start Tactical Auto-Login --------- */
+  const needsBootAutoLogin = !bootSequenceDone && (savedAccounts.length > 0 || !!user);
+  if (!user || needsBootAutoLogin) {
     return (
       <div className="flex min-h-[calc(100dvh-7rem)] w-full items-center justify-center px-3 py-4 sm:px-4 sm:py-8">
-        <UnifiedLoginCard />
+        <UnifiedLoginCard
+          onSuccess={() => {
+            setBootSequenceDone(true);
+            try {
+              sessionStorage.setItem("zenodeck_boot_completed", "true");
+            } catch {}
+          }}
+        />
       </div>
     );
   }

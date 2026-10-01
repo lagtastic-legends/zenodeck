@@ -120,6 +120,27 @@ export async function cacheWasmBinary(buffer: ArrayBuffer): Promise<boolean> {
 }
 
 /**
+ * Purge cached WASM binary from IndexedDB in case of corruption or failed compilation.
+ */
+export async function clearCachedWasmBinary(): Promise<boolean> {
+  const db = await openDatabase();
+  if (!db) return false;
+
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.delete(WASM_CACHE_KEY);
+
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/**
  * Validates the WebAssembly magic number: '\0asm' (0x00, 0x61, 0x73, 0x6d).
  */
 export function isValidWasmHeader(buffer: ArrayBuffer | ArrayBufferLike): boolean {
@@ -323,16 +344,38 @@ export async function loadWasmCoreBlobUrl(
 
 /**
  * Resolve the core JS module URL, falling back through mirrors if necessary.
+ * Avoids method: "HEAD" because Android WebViewAssetLoader and certain CDNs reject HEAD.
  */
 export async function resolveCoreModuleUrl(logger?: WasmLogger): Promise<string> {
   const mirrors = getCoreMirrors();
 
-  for (const url of mirrors) {
+  // 1. If running in browser or Capacitor, test local mirror with GET + abort signal
+  if (typeof window !== "undefined") {
+    const localMirror = mirrors[0];
     try {
-      // Test if reachable
-      const resp = await fetch(url, { method: "HEAD" });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
+      const resp = await fetch(localMirror, { method: "GET", signal: controller.signal });
+      clearTimeout(timeoutId);
       if (resp.ok) {
-        logger?.("info", `Core JS resolved → ${url}`);
+        logger?.("info", `Core JS resolved locally → ${localMirror}`);
+        return localMirror;
+      }
+    } catch {
+      logger?.("warn", `Local Core JS check bypassed, evaluating fast edge mirrors...`);
+    }
+  }
+
+  // 2. Fall back through remote mirrors
+  for (let i = 1; i < mirrors.length; i++) {
+    const url = mirrors[i];
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const resp = await fetch(url, { method: "GET", signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (resp.ok) {
+        logger?.("info", `Core JS resolved via CDN → ${url}`);
         return url;
       }
     } catch {

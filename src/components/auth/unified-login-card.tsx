@@ -76,6 +76,7 @@ export function UnifiedLoginCard({
 }: UnifiedLoginCardProps) {
   const haptics = useHaptics();
   const {
+    user,
     savedAccounts,
     busy,
     error,
@@ -99,7 +100,7 @@ export function UnifiedLoginCard({
   const [transitionProgress, setTransitionProgress] = useState(0);
 
   const hasSavedAccounts = savedAccounts && savedAccounts.length > 0;
-  const primaryAccount = hasSavedAccounts ? savedAccounts[0] : null;
+  const primaryAccount = hasSavedAccounts ? savedAccounts[0] : user;
 
   const [autoLoginCancelled, setAutoLoginCancelled] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -114,8 +115,9 @@ export function UnifiedLoginCard({
     if (typeof window === "undefined") return null;
     try {
       const isCancelled = sessionStorage.getItem("zenodeck_autologin_cancelled") === "true";
-      if (!isCancelled && autoLoginEnabled && primaryAccount) {
-        return 3;
+      const target = (savedAccounts && savedAccounts.length > 0) ? savedAccounts[0] : user;
+      if (!isCancelled && autoLoginEnabled && target) {
+        return 2;
       }
     } catch {}
     return null;
@@ -170,7 +172,7 @@ export function UnifiedLoginCard({
       !isTransitioning
     ) {
       const timer = setTimeout(() => {
-        setAutoLoginCountdown(3);
+        setAutoLoginCountdown(2);
       }, 0);
       return () => clearTimeout(timer);
     }
