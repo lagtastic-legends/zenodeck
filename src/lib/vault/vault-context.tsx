@@ -69,9 +69,26 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refresh();
-    void vaultRequestPersistence();
-  }, [refresh]);
+    let active = true;
+    const init = async () => {
+      try {
+        const [list, est] = await Promise.all([vaultList(), vaultEstimate()]);
+        if (active) {
+          setItems(list);
+          setEstimate(est);
+        }
+      } catch {
+        if (active) setItems([]);
+      } finally {
+        if (active) setReady(true);
+      }
+      void vaultRequestPersistence();
+    };
+    void init();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const save = useCallback(
     async (input: SaveToVaultInput): Promise<VaultItem | null> => {

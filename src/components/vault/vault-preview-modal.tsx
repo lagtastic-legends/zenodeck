@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -208,21 +208,18 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   onClose: () => void;
   onDelete?: (id: string) => void;
 }) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageZoom, setImageZoom] = useState(1);
   const [imageRotation, setImageRotation] = useState(0);
   const haptics = useHaptics();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!item) {
-      setPreviewUrl(null);
-      return;
-    }
+    if (!item) return;
     const url = URL.createObjectURL(item.blob);
     setPreviewUrl(url);
     setImageZoom(1);
@@ -230,6 +227,7 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
 
     return () => {
       URL.revokeObjectURL(url);
+      setPreviewUrl(null);
     };
   }, [item]);
 
@@ -245,26 +243,23 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
     };
   }, [item]);
 
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-
   // Escape key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
+      if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [onClose]);
 
   // Hardware/Android back button integration
   useEffect(() => {
     if (!item) return;
     return useNavStore.getState().registerOverlay("vault-preview", () => {
-      onCloseRef.current();
+      onClose();
       return true;
     });
-  }, [Boolean(item)]);
+  }, [item, onClose]);
 
   if (!mounted) return null;
 

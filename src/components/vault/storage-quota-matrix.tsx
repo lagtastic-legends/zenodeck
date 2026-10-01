@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { HardDrive, Database, Zap, ShieldCheck, RefreshCw } from "lucide-react";
 import { formatBytes } from "@/lib/format";
 import { useVault } from "@/lib/vault/vault-context";
@@ -18,11 +18,8 @@ export function StorageQuotaMatrix({
 }) {
   const { items, totalBytes, estimate, refresh } = useVault();
   const [throughput, setThroughput] = useState<string>("Measuring...");
-  const [benchmarking, setBenchmarking] = useState(false);
 
-  // Measure real device storage throughput via OPFS
-  const testThroughput = async () => {
-    setBenchmarking(true);
+  const testThroughput = useCallback(async () => {
     try {
       if (typeof navigator !== "undefined" && typeof navigator.storage?.getDirectory === "function") {
         const root = await navigator.storage.getDirectory();
@@ -43,12 +40,14 @@ export function StorageQuotaMatrix({
       // OPFS private mode or non-supported origin
     }
     setThroughput("184 MB/s");
-    setBenchmarking(false);
-  };
+  }, []);
 
   useEffect(() => {
-    void testThroughput();
-  }, []);
+    const timer = setTimeout(() => {
+      void testThroughput();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [testThroughput]);
 
   // Real-time categorized bytes from actual vault contents
   const categories: StorageCategory[] = useMemo(() => {

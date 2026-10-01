@@ -25,6 +25,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
@@ -88,6 +89,25 @@ const FFmpegEngineContext = createContext<FFmpegEngineContextValue | null>(null)
 
 let logIdCounter = 0;
 
+const DEFAULT_CAPABILITIES: EngineCapabilities = {
+  crossOriginIsolated: false,
+  sharedArrayBuffer: false,
+  webWorker: false,
+  mediaRecorder: false,
+  indexedDB: false,
+  wasm: false,
+};
+
+const getEngineCapabilities = (): EngineCapabilities => ({
+  crossOriginIsolated:
+    typeof window !== "undefined" && window.crossOriginIsolated === true,
+  sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+  webWorker: typeof Worker !== "undefined",
+  mediaRecorder: typeof MediaRecorder !== "undefined",
+  indexedDB: typeof indexedDB !== "undefined",
+  wasm: typeof WebAssembly !== "undefined",
+});
+
 export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<EngineState>("idle");
   const [stage, setStage] = useState<BootStage>("standby");
@@ -98,14 +118,11 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [engine, setEngine] = useState<FFmpeg | null>(null);
   const engineRef = useRef<FFmpeg | null>(null);
-  const [capabilities, setCapabilities] = useState<EngineCapabilities>({
-    crossOriginIsolated: false,
-    sharedArrayBuffer: false,
-    webWorker: false,
-    mediaRecorder: false,
-    indexedDB: false,
-    wasm: false,
-  });
+  const capabilities = useSyncExternalStore(
+    () => () => {},
+    getEngineCapabilities,
+    () => DEFAULT_CAPABILITIES
+  );
 
   /** Guards against double-boot (button spam / StrictMode double-effects). */
   const bootingRef = useRef(false);
@@ -124,20 +141,6 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
-
-  /* Probe browser capabilities once on the client (SSR-safe). ---------------- */
-  useEffect(() => {
-    setCapabilities({
-      crossOriginIsolated:
-        typeof window !== "undefined" &&
-        window.crossOriginIsolated === true,
-      sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
-      webWorker: typeof Worker !== "undefined",
-      mediaRecorder: typeof MediaRecorder !== "undefined",
-      indexedDB: typeof indexedDB !== "undefined",
-      wasm: typeof WebAssembly !== "undefined",
-    });
-  }, []);
 
   /* -------------------------------------------------------------------------- */
   /* boot                                                                        */
