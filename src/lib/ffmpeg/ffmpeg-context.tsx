@@ -203,7 +203,7 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
       );
 
       /* Stream or load from IndexedDB cache with byte-accurate progress */
-      const { blobUrl: wasmURL } = await loadWasmCoreBlobUrl(
+      const { blobUrl: wasmURL, wasmBinary } = await loadWasmCoreBlobUrl(
         ({ received, total, percent, done }) => {
           setDownload({
             received,
@@ -232,14 +232,16 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
         window.location.href,
       ).href;
 
-      // 30-second fail-safe timeout prevents permanent UI freeze on stalled networks or blocked workers
+      // 120-second fail-safe timeout prevents permanent UI freeze on stalled networks or blocked workers,
+      // while giving slower mobile and low-power devices sufficient time to compile 32MB WebAssembly AOT.
       const loadPromise = instance.load({
         classWorkerURL,
         coreURL,
         wasmURL,
-      });
+        wasmBinary,
+      } as unknown as Parameters<typeof instance.load>[0]);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Engine compilation timed out after 30s")), 30000);
+        setTimeout(() => reject(new Error("Engine compilation timed out after 120s")), 120000);
       });
 
       await Promise.race([loadPromise, timeoutPromise]);
@@ -259,8 +261,15 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : String(err ?? "unknown error");
-      // Evict potentially corrupted WASM binary from IndexedDB so next boot fetches clean
-      void clearCachedWasmBinary();
+      // Evict cached WASM ONLY if there is actual payload corruption (invalid magic header bytes),
+      // NEVER on a timeout or abort, preserving the user's downloaded 30.7MB binary!
+      const isCorruptionError =
+        message.toLowerCase().includes("magic") ||
+        message.toLowerCase().includes("corrupt") ||
+        message.toLowerCase().includes("invalid webassembly");
+      if (isCorruptionError) {
+        void clearCachedWasmBinary();
+      }
       try {
         instance.terminate();
       } catch {}

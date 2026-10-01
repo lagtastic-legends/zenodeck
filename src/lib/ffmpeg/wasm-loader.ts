@@ -209,7 +209,7 @@ export function getCoreMirrors(): string[] {
 export async function loadWasmCoreBlobUrl(
   onProgress?: WasmProgressCallback,
   logger?: WasmLogger,
-): Promise<{ blobUrl: string; fromCache: boolean; byteLength: number }> {
+): Promise<{ blobUrl: string; fromCache: boolean; byteLength: number; wasmBinary?: ArrayBuffer }> {
   // Check local offline IndexedDB cache first
   try {
     const cachedBuffer = await getCachedWasmBinary();
@@ -229,6 +229,7 @@ export async function loadWasmCoreBlobUrl(
         blobUrl: URL.createObjectURL(blob),
         fromCache: true,
         byteLength: cachedBuffer.byteLength,
+        wasmBinary: cachedBuffer,
       };
     }
   } catch (cacheErr) {
@@ -332,6 +333,7 @@ export async function loadWasmCoreBlobUrl(
         blobUrl: URL.createObjectURL(blob),
         fromCache: false,
         byteLength: finalBuffer.byteLength,
+        wasmBinary: finalBuffer,
       };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
