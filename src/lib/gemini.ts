@@ -16,7 +16,7 @@ const getAiEndpoint = (params = ""): string => {
   // On native Android APK (where origin is localhost without local server), call production deployment
   if (isNative) {
     const remote = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-    return `${remote.replace(/\/+$/, "")}/api/ai${query}`;
+    return `${remote.replace(/\/+$/, "")}/api/ai/${query}`;
   }
 
   // In browser environments
@@ -24,13 +24,13 @@ const getAiEndpoint = (params = ""): string => {
     // If not local dev port 3000 and origin is localhost/capacitor, route to remote host
     if (window.location.hostname === "localhost" && window.location.port !== "3000") {
       const remote = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-      return `${remote.replace(/\/+$/, "")}/api/ai${query}`;
+      return `${remote.replace(/\/+$/, "")}/api/ai/${query}`;
     }
-    return `/api/ai${query}`;
+    return `/api/ai/${query}`;
   }
 
   const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-  return `${fallback.replace(/\/+$/, "")}/api/ai${query}`;
+  return `${fallback.replace(/\/+$/, "")}/api/ai/${query}`;
 };
 
 export const generateAiResponse = async (messages: ChatMessage[]) => {
@@ -48,12 +48,18 @@ export const generateAiResponse = async (messages: ChatMessage[]) => {
       body: JSON.stringify({ contents }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
+    const responseText = await response.text();
+    let data: any = null;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error(`Server returned non-JSON response: ${responseText.slice(0, 100)}`);
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't process that.";
   } catch (error: any) {
     console.error("Gemini API Error:", error);
@@ -78,8 +84,13 @@ export const streamAiResponse = async function* (messages: ChatMessage[], signal
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}`);
+      const text = await response.text().catch(() => "");
+      let errorMsg = `HTTP ${response.status}`;
+      try {
+        const json = JSON.parse(text);
+        if (json?.error) errorMsg = json.error;
+      } catch {}
+      throw new Error(errorMsg);
     }
 
     if (!response.body) throw new Error("No response body");

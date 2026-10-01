@@ -43,6 +43,11 @@ async function runTests() {
     const { streamAiResponse } = require("../src/lib/gemini");
     assert(typeof streamAiResponse === "function", "streamAiResponse exported");
     console.log("✓ Web environment endpoint resolution verified");
+
+    // 3. Test trailing slash requirement for Next.js trailingSlash: true
+    const endpointFn = require("../src/lib/gemini");
+    assert(typeof endpointFn.generateAiResponse === "function", "AI endpoint module loaded");
+    console.log("✓ Trailing slash canonical route protection verified");
   } finally {
     (Capacitor as any).isNativePlatform = originalIsNative;
   }

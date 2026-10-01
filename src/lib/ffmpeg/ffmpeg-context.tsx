@@ -98,15 +98,21 @@ const DEFAULT_CAPABILITIES: EngineCapabilities = {
   wasm: false,
 };
 
-const getEngineCapabilities = (): EngineCapabilities => ({
-  crossOriginIsolated:
-    typeof window !== "undefined" && window.crossOriginIsolated === true,
-  sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
-  webWorker: typeof Worker !== "undefined",
-  mediaRecorder: typeof MediaRecorder !== "undefined",
-  indexedDB: typeof indexedDB !== "undefined",
-  wasm: typeof WebAssembly !== "undefined",
-});
+let cachedClientCapabilities: EngineCapabilities | null = null;
+
+const getEngineCapabilities = (): EngineCapabilities => {
+  if (!cachedClientCapabilities && typeof window !== "undefined") {
+    cachedClientCapabilities = {
+      crossOriginIsolated: window.crossOriginIsolated === true,
+      sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+      webWorker: typeof Worker !== "undefined",
+      mediaRecorder: typeof MediaRecorder !== "undefined",
+      indexedDB: typeof indexedDB !== "undefined",
+      wasm: typeof WebAssembly !== "undefined",
+    };
+  }
+  return cachedClientCapabilities || DEFAULT_CAPABILITIES;
+};
 
 export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<EngineState>("idle");

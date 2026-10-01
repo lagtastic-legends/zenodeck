@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.6.4-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.4" />
+    <img src="https://img.shields.io/badge/Release-v3.6.5-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.5" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.4/zenodeck.apk">
-    <img src="https://img.shields.io/badge/Android%20APK-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.5/zenodeck.apk">
+    <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.4/zenodeck-v3.6.4.apk">
-    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.4-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.5/zenodeck-v3.6.5-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.6.5-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -57,18 +57,35 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 
 ## 🚀 Instant Download & Live Deployment
 
-| Platform | Access Link | Description |
+| Platform / Architecture | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.4/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. Runs on all phones. |
-| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.4.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.4/zenodeck-v3.6.4.apk) | Dedicated v3.6.4 release package with full version archive support. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.5/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.6.5-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.5/zenodeck-v3.6.5-arm64-v8a.apk) | Dedicated optimized build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.6.5-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.5/zenodeck-v3.6.5-armeabi-v7a.apk) | Dedicated build for legacy 32-bit Android phones and budget devices. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.6.5-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.5/zenodeck-v3.6.5-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.4)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.4) | Complete release packages, checksums, changelogs, and release assets. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.6.5)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.5) | Complete release packages, checksums, changelogs, and all architecture assets. |
 
 ---
 
-## 🌟 What's New in v3.6.4 — AI Assistant Resilient Failover & Tactile Update Dismissal
+## 🌟 What's New in v3.6.5 — Multi-Architecture APKs, Web Stability & AI Route Hardening
+
+### 📱 1. Multi-Architecture APKs for All Phone Types
+- **Optimized Per-Architecture Builds**: Gradle ABI splitting generates dedicated binaries for `arm64-v8a`, `armeabi-v7a`, and `x86_64`, in addition to the all-inclusive `universal` APK.
+- **CI/CD Automated Publishing**: Release workflow automatically stages and publishes every architecture binary to GitHub Releases with explicit direct links.
+
+### 🛡️ 2. Minified React Error #185 Infinite Loop Fix
+- **Singleton Capabilities**: Fixed `getEngineCapabilities()` in `src/lib/ffmpeg/ffmpeg-context.tsx` to cache a stable singleton object instead of creating fresh references on each render, eliminating `Maximum update depth exceeded`.
+
+### 🤖 3. AI Assistant (Ask Zeno) Route Hardening
+- **Canonical Trailing Slash Routing**: Direct routing to `/api/ai/` bypasses Next.js 308 redirect loops, resolving `"Unexpected token 'R', 'Redirecting...' is not valid JSON"`.
+- **Safe Non-JSON Parsing**: Structured response handling prevents client crashes if non-JSON network responses occur.
+
+### 🎮 4. Tactical Call of Duty-Style Auto-Login
+- **Fluid 60fps Tick Animation**: Polished progression bar and phased operator status sequence (`ESTABLISHING OPERATOR LINK…` -> `VERIFYING SECURITY CLEARANCE…` -> `DEPLOYING TO DASHBOARD…` -> `ACCESS GRANTED`).
+- **Tactile Fast Controls**: Quick account switching and manual override with zero stutter.
 
 ### 🤖 1. AI Assistant (Ask Omni) Fully Restored & Hardened
 - **Resilient Multi-Tier Model Failover**: Overcame upstream Google API 503 high-demand load shedding on `gemini-3.8-flash` with zero-delay fallback: `gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-flash-lite-latest` ➔ `gemini-flash-latest`.
