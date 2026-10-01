@@ -617,10 +617,10 @@ export function StudioRecorder() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => useNavStore.getState().navigate("editor")}
+                      onClick={() => useNavStore.getState().navigate("video-converter")}
                       className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-mono underline pt-0.5"
                     >
-                      Import recording into Video Editor <ArrowRight className="size-3" />
+                      Open recording in Media Studio <ArrowRight className="size-3" />
                     </button>
                   </div>
                 ) : mediaState === "denied" ? (
@@ -761,11 +761,11 @@ export function StudioRecorder() {
             mode === "screen" && isIOS && !Capacitor.isNativePlatform() ? (
               <button
                 type="button"
-                onClick={() => useNavStore.getState().navigate("editor")}
+                onClick={() => useNavStore.getState().navigate("video-converter")}
                 className="col-span-3 flex min-h-12 items-center justify-center gap-2.5 rounded-xl border border-primary/50 bg-gradient-to-r from-primary/90 to-plasma/80 font-display text-xs font-bold tracking-[0.2em] text-white transition-transform hover:scale-[1.01] active:scale-95 glow-box-violet"
               >
                 <ArrowRight className="size-4" />
-                OPEN VIDEO EDITOR TO IMPORT RECORDING
+                OPEN MEDIA STUDIO TO CONVERT RECORDING
               </button>
             ) : (
               <button

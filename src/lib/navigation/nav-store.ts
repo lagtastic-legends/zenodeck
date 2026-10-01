@@ -70,6 +70,7 @@ interface NavState {
 const getInitialView = (): string => {
   if (typeof window !== "undefined" && window.location.hash) {
     const raw = window.location.hash.replace(/^#/, "");
+    if (raw === "video-editor" || raw === "editor") return "video-converter";
     if (raw && raw !== DASHBOARD_VIEW) {
       return raw;
     }
@@ -96,8 +97,9 @@ export const useNavStore = create<NavState>((set, get) => ({
   isAudioMuted: getInitialAudioMuted(),
 
   navigate: (nextView, options) => {
+    const targetView = nextView === "video-editor" || nextView === "editor" ? "video-converter" : nextView;
     const currentView = get().view;
-    if (currentView === nextView) return;
+    if (currentView === targetView) return;
 
     const currentHistory = get().history;
     const newHistory = options?.replace
@@ -105,7 +107,7 @@ export const useNavStore = create<NavState>((set, get) => ({
       : [...currentHistory, currentView];
 
     set({
-      view: nextView,
+      view: targetView,
       history: newHistory,
       stepHandlers: [],
       dirtyGuards: [],
@@ -114,7 +116,7 @@ export const useNavStore = create<NavState>((set, get) => ({
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
       try {
-        const hash = nextView === DASHBOARD_VIEW ? "" : `#${nextView}`;
+        const hash = targetView === DASHBOARD_VIEW ? "" : `#${targetView}`;
         const newUrl = window.location.pathname + hash;
         if (options?.replace) {
           window.history.replaceState({ view: nextView }, "", newUrl);

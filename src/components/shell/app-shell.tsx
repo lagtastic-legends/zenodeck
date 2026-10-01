@@ -6,7 +6,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass, Database, Download, Film, Layers, Loader2, Scissors, Smartphone, Sparkles, Video, Youtube } from "lucide-react";
+import { Compass, Database, Download, Layers, Loader2, Scissors, Smartphone, Sparkles, Video, Youtube } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { AuthGateway } from "@/components/auth/auth-gateway";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -33,7 +33,6 @@ import { ToolErrorBoundary } from "@/components/shell/tool-error-boundary";
 
 /* Dynamic code-split tool modules to control memory & isolate thread workloads */
 const YouTubeDownloader = lazy(() => import("@/components/tools/youtube-downloader").then((m) => ({ default: m.YouTubeDownloader })));
-const VideoEditor = lazy(() => import("@/components/tools/video-editor").then((m) => ({ default: m.VideoEditor })));
 const MediaConverter = lazy(() => import("@/components/tools/media-converter").then((m) => ({ default: m.MediaConverter })));
 const VideoCompressor = lazy(() => import("@/components/tools/video-compressor").then((m) => ({ default: m.VideoCompressor })));
 const VideoMute = lazy(() => import("@/components/tools/video-mute").then((m) => ({ default: m.VideoMute })));
@@ -99,7 +98,6 @@ function ToolSkeleton() {
 /** tool id → module implementation (grows every phase) */
 const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "youtube-downloader": YouTubeDownloader,
-  "video-editor": VideoEditor,
   "video-converter": MediaConverter,
   "video-compressor": VideoCompressor,
   "video-mute": VideoMute,
@@ -291,7 +289,6 @@ export function AppShell() {
       onClick: () => toggleAi(),
     },
     { id: "matrix", label: "Tool Matrix", icon: Layers, onClick: () => reset() },
-    { id: "editor", label: "The Edit Bay", icon: Film, onClick: () => navigate("video-editor") },
     { id: "converter", label: "Media Studio", icon: Scissors, onClick: () => navigate("video-converter") },
     { id: "vault", label: "File Vault", icon: Database, onClick: () => navigate("vault") },
     { id: "recorder", label: "Studio Recorder", icon: Video, onClick: () => navigate("studio-recorder") },

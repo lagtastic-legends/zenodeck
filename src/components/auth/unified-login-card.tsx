@@ -31,10 +31,14 @@ import {
   Trash2,
   X,
   Gamepad2,
+  CheckCircle2,
+  Radio,
+  Zap,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth, type AuthUser } from "@/lib/auth/auth-context";
 import { UserAvatar } from "@/components/auth/user-avatar";
+import { useHaptics } from "@/hooks/use-haptics";
 
 export function GoogleMark({ className }: { className?: string }) {
   return (
@@ -70,6 +74,7 @@ export function UnifiedLoginCard({
   className = "",
   showSubtitle = true,
 }: UnifiedLoginCardProps) {
+  const haptics = useHaptics();
   const {
     savedAccounts,
     busy,
@@ -90,6 +95,8 @@ export function UnifiedLoginCard({
   const [emailError, setEmailError] = useState<string | null>(null);
   const [showDirectForm, setShowDirectForm] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionProgress, setTransitionProgress] = useState(0);
 
   const hasSavedAccounts = savedAccounts && savedAccounts.length > 0;
   const primaryAccount = hasSavedAccounts ? savedAccounts[0] : null;
@@ -114,46 +121,69 @@ export function UnifiedLoginCard({
     return null;
   });
 
+  const startLoginTransition = useCallback(
+    (acc: AuthUser) => {
+      setIsTransitioning(true);
+      void haptics.medium();
+      let current = 0;
+      const interval = setInterval(() => {
+        current += 25;
+        setTransitionProgress(Math.min(current, 100));
+        if (current >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            void haptics.success();
+            switchAccount(acc);
+            onSuccess?.();
+          }, 180);
+        }
+      }, 55);
+    },
+    [haptics, switchAccount, onSuccess]
+  );
+
   const handleSelectAccount = useCallback(
     (acc: AuthUser) => {
-      switchAccount(acc);
-      onSuccess?.();
+      startLoginTransition(acc);
     },
-    [switchAccount, onSuccess]
+    [startLoginTransition]
   );
 
   const cancelAutoLogin = useCallback(() => {
     setAutoLoginCountdown(null);
     setAutoLoginCancelled(true);
+    setIsTransitioning(false);
+    void haptics.light();
     if (typeof window !== "undefined") {
       try {
         sessionStorage.setItem("zenodeck_autologin_cancelled", "true");
       } catch {}
     }
-  }, []);
+  }, [haptics]);
 
   useEffect(() => {
     if (
       autoLoginCountdown === null &&
       !autoLoginCancelled &&
       autoLoginEnabled &&
-      primaryAccount
+      primaryAccount &&
+      !isTransitioning
     ) {
       const timer = setTimeout(() => {
         setAutoLoginCountdown(3);
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [autoLoginCountdown, autoLoginCancelled, autoLoginEnabled, primaryAccount]);
+  }, [autoLoginCountdown, autoLoginCancelled, autoLoginEnabled, primaryAccount, isTransitioning]);
 
   useEffect(() => {
-    if (autoLoginCountdown === null || autoLoginCountdown <= 0) return;
+    if (autoLoginCountdown === null || autoLoginCountdown <= 0 || isTransitioning) return;
 
     const timer = setTimeout(() => {
       if (autoLoginCountdown === 1) {
         setAutoLoginCountdown(0);
         if (primaryAccount) {
-          handleSelectAccount(primaryAccount);
+          startLoginTransition(primaryAccount);
         }
       } else {
         setAutoLoginCountdown((prev) => (prev !== null ? prev - 1 : null));
@@ -161,7 +191,7 @@ export function UnifiedLoginCard({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [autoLoginCountdown, primaryAccount, handleSelectAccount]);
+  }, [autoLoginCountdown, primaryAccount, isTransitioning, startLoginTransition]);
 
   const handleDirectEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,64 +254,134 @@ export function UnifiedLoginCard({
       </div>
 
       <div className="mt-5 sm:mt-6 space-y-3.5 sm:space-y-4">
+        {/* Smooth Transition Holographic HUD during Sign-In Transaction */}
+        {isTransitioning && primaryAccount && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/80 bg-gradient-to-br from-emerald-500/20 via-card/95 to-background p-4 shadow-2xl space-y-3"
+          >
+            {/* Animated Laser Progress Line */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-secondary/80">
+              <motion.div
+                className="h-full bg-gradient-to-r from-emerald-400 via-neon to-primary"
+                style={{ width: `${transitionProgress}%` }}
+                transition={{ ease: "easeOut", duration: 0.15 }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <div className="flex items-center gap-2">
+                <span className="flex size-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-emerald-300">
+                  SYNCHRONIZING OPERATOR SESSION…
+                </span>
+              </div>
+              <span className="font-mono text-[10px] font-bold text-emerald-400">
+                {transitionProgress}%
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-background/90 p-3 shadow-inner">
+              <div className="relative">
+                <UserAvatar user={primaryAccount} size="sm" showGoogleBadge={true} />
+                <span className="absolute -inset-1 rounded-full border border-emerald-400/50 animate-ping pointer-events-none" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-xs font-bold text-foreground">
+                  {primaryAccount.displayName || "Operator Profile"}
+                </p>
+                <p className="truncate font-mono text-[10px] text-muted-foreground">
+                  {primaryAccount.email}
+                </p>
+              </div>
+              <CheckCircle2 className="size-5 text-emerald-400 shrink-0 animate-bounce" />
+            </div>
+
+            <p className="text-center font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+              Credentials Verified · Deploying to ZenoDeck Suite
+            </p>
+          </motion.div>
+        )}
+
         {/* Call of Duty-Style Auto Login Sequence Banner */}
-        {autoLoginCountdown !== null && autoLoginCountdown > 0 && primaryAccount && (
+        {!isTransitioning && autoLoginCountdown !== null && autoLoginCountdown > 0 && primaryAccount && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -6 }}
-            className="relative overflow-hidden rounded-xl border-2 border-primary/70 bg-gradient-to-br from-primary/20 via-card/95 to-background p-3.5 shadow-xl"
+            transition={{ type: "spring", stiffness: 380, damping: 26 }}
+            className="relative overflow-hidden rounded-2xl border-2 border-primary/70 bg-gradient-to-br from-primary/20 via-card/95 to-background p-4 shadow-xl space-y-3"
           >
             {/* Animated Laser Progress Bar */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-secondary/60">
               <motion.div
-                className="h-full bg-gradient-to-r from-emerald-400 via-primary to-neon"
+                className="h-full bg-gradient-to-r from-emerald-400 via-primary to-neon shadow-[0_0_10px_rgba(0,240,255,0.7)]"
                 initial={{ width: "100%" }}
                 animate={{ width: "0%" }}
                 transition={{ duration: 3, ease: "linear" }}
               />
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-1 mb-2">
+            <div className="flex items-center justify-between gap-2 pt-1">
               <div className="flex items-center gap-1.5">
                 <Gamepad2 className="size-4 text-emerald-400 animate-pulse" />
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-                  AUTO-LOGIN SEQUENCE ACTIVE ({autoLoginCountdown}s)
+                <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-emerald-300">
+                  AUTO-SIGN IN ACTIVE
                 </span>
               </div>
-              <span className="rounded bg-primary/20 px-1.5 py-0.5 font-mono text-[8px] font-extrabold uppercase text-primary">
-                COD Game Mode
-              </span>
+              <div className="flex items-center gap-1.5">
+                <motion.span
+                  key={autoLoginCountdown}
+                  initial={{ scale: 1.25, opacity: 0.6 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-black text-emerald-300"
+                >
+                  {autoLoginCountdown}s
+                </motion.span>
+                <span className="rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[8px] font-extrabold uppercase tracking-wider text-primary">
+                  COD Fast Pass
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/80 p-2.5 shadow-inner">
-              <UserAvatar user={primaryAccount} size="sm" showGoogleBadge={true} />
+            <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/85 p-3 shadow-inner">
+              <div className="relative shrink-0">
+                <UserAvatar user={primaryAccount} size="sm" showGoogleBadge={true} />
+                <span className="absolute -inset-0.5 rounded-full border border-primary/50 animate-pulse pointer-events-none" />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-xs font-bold text-foreground">
-                  {primaryAccount.displayName || "Saved Account"}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate font-display text-xs font-bold text-foreground">
+                    {primaryAccount.displayName || "Operator Profile"}
+                  </p>
+                  <span className="rounded bg-primary/20 px-1 py-0.2 font-mono text-[8px] font-extrabold uppercase tracking-wider text-primary shrink-0">
+                    Default
+                  </span>
+                </div>
                 <p className="truncate font-mono text-[10px] text-muted-foreground">
                   {primaryAccount.email}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-2.5">
+            <div className="flex items-center gap-2 pt-0.5">
               <button
                 type="button"
-                onClick={() => handleSelectAccount(primaryAccount)}
-                className="flex-1 flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-primary py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 active:scale-98 transition-all cursor-pointer shadow-md"
+                onClick={() => startLoginTransition(primaryAccount)}
+                className="flex-1 flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary via-primary to-neon px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-md glow-box-violet"
               >
-                <span>Instant Sign In</span>
+                <span>Deploy Operator</span>
                 <ArrowRight className="size-3.5" />
               </button>
               <button
                 type="button"
                 onClick={cancelAutoLogin}
-                className="flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-border/80 bg-background/90 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-red-400/50 hover:text-red-300 active:scale-98 transition-all cursor-pointer"
-                title="Cancel automatic sign-in"
+                className="flex min-h-[40px] items-center justify-center gap-1 rounded-xl border border-border/80 bg-background/90 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-red-400/50 hover:text-red-300 active:scale-[0.98] transition-all cursor-pointer"
+                title="Switch operator or manual login"
               >
-                <span>Cancel</span>
+                <span>Switch</span>
               </button>
             </div>
           </motion.div>
@@ -292,7 +392,7 @@ export function UnifiedLoginCard({
           <button
             type="button"
             onClick={() => void handleGoogleSignIn()}
-            disabled={busy}
+            disabled={busy || isTransitioning}
             className="group relative flex min-h-[48px] w-full items-center justify-center gap-3 rounded-xl border border-border/80 bg-background hover:bg-secondary/60 hover:border-primary/50 px-4 py-3 text-xs sm:text-sm font-display font-semibold text-foreground shadow-sm active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
           >
             {busy ? (
@@ -308,7 +408,7 @@ export function UnifiedLoginCard({
               <button
                 type="button"
                 onClick={() => void handleGoogleRedirect()}
-                disabled={busy}
+                disabled={busy || isTransitioning}
                 className="font-mono text-[10px] text-muted-foreground/70 hover:text-primary transition-colors cursor-pointer"
               >
                 Having popup issues? Use Full-Page Sign-In
@@ -317,12 +417,12 @@ export function UnifiedLoginCard({
           )}
         </div>
 
-        {/* Saved Accounts on this Device */}
+        {/* Saved Operator Profiles on this Device */}
         {hasSavedAccounts && (
-          <div className="space-y-2 rounded-xl border border-border/60 bg-background/40 p-3">
+          <div className="space-y-2 rounded-2xl border border-border/60 bg-background/40 p-3 sm:p-3.5">
             <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-1 pb-1">
               <div className="flex items-center gap-1.5">
-                <span>Accounts on this device</span>
+                <span>Saved Operator Profiles</span>
                 <span className="rounded-full bg-secondary/80 px-1.5 py-0.2 text-[9px] font-bold text-foreground">
                   {savedAccounts.length}
                 </span>
@@ -331,20 +431,23 @@ export function UnifiedLoginCard({
               {/* Auto-Login On/Off Toggle Button */}
               <button
                 type="button"
-                onClick={() => setAutoLoginEnabled(!autoLoginEnabled)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[9px] font-bold transition-all cursor-pointer ${
+                onClick={() => {
+                  void haptics.light();
+                  setAutoLoginEnabled(!autoLoginEnabled);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   autoLoginEnabled
-                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40"
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(52,211,153,0.15)]"
                     : "bg-secondary text-muted-foreground border border-border/60"
                 }`}
-                title={autoLoginEnabled ? "Auto-Login on launch is enabled" : "Auto-Login is disabled"}
+                title={autoLoginEnabled ? "Auto-Login on launch is active" : "Auto-Login is disabled"}
               >
                 <span
                   className={`size-1.5 rounded-full ${
                     autoLoginEnabled ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"
                   }`}
                 />
-                <span>Auto-Login: {autoLoginEnabled ? "ON" : "OFF"}</span>
+                <span>Auto-Deploy: {autoLoginEnabled ? "ON" : "OFF"}</span>
               </button>
             </div>
 
@@ -352,7 +455,7 @@ export function UnifiedLoginCard({
               {savedAccounts.map((acc, index) => (
                 <div
                   key={acc.uid}
-                  className={`group flex items-center justify-between gap-2.5 rounded-lg border p-2 transition-all ${
+                  className={`group flex items-center justify-between gap-2.5 rounded-xl border p-2.5 transition-all ${
                     index === 0 && autoLoginEnabled
                       ? "border-primary/50 bg-primary/5 shadow-xs"
                       : "border-border/40 bg-card/60 hover:border-primary/40 hover:bg-card"
@@ -361,7 +464,7 @@ export function UnifiedLoginCard({
                   <button
                     type="button"
                     onClick={() => handleSelectAccount(acc)}
-                    disabled={busy}
+                    disabled={busy || isTransitioning}
                     className="flex flex-1 items-center gap-2.5 text-left min-w-0 cursor-pointer"
                     title={`Sign in as ${acc.displayName || acc.email}`}
                   >
@@ -369,11 +472,11 @@ export function UnifiedLoginCard({
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="truncate font-display text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {acc.displayName || "Google Account"}
+                          {acc.displayName || "Google Operator"}
                         </p>
                         {index === 0 && autoLoginEnabled && (
                           <span className="rounded bg-primary/20 px-1 py-0.2 font-mono text-[8px] font-extrabold uppercase tracking-wide text-primary shrink-0">
-                            Auto-Login
+                            Auto-Deploy
                           </span>
                         )}
                       </div>
@@ -387,16 +490,19 @@ export function UnifiedLoginCard({
                     <button
                       type="button"
                       onClick={() => handleSelectAccount(acc)}
-                      disabled={busy}
-                      className="flex min-h-[34px] items-center gap-1 rounded-md bg-primary/20 px-2.5 py-1 font-mono text-[10px] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                      disabled={busy || isTransitioning}
+                      className="flex min-h-[34px] items-center gap-1 rounded-lg bg-primary/20 px-2.5 py-1 font-mono text-[10px] font-bold text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
                     >
-                      <span>Sign in</span>
+                      <span>Connect</span>
                       <ArrowRight className="size-3" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeSavedAccount(acc.uid)}
-                      className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors cursor-pointer"
+                      onClick={() => {
+                        void haptics.light();
+                        removeSavedAccount(acc.uid);
+                      }}
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors cursor-pointer"
                       title="Remove from device list"
                       aria-label={`Remove ${acc.email} from saved accounts`}
                     >

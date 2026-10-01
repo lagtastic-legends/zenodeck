@@ -339,10 +339,10 @@ export function AuthGateway() {
               </div>
               <div>
                 <h3 className="font-display text-sm sm:text-base font-bold tracking-wide text-foreground">
-                  Automatic Updates
+                  OTA Firmware & Updates
                 </h3>
                 <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  OTA Release Distribution
+                  Over-The-Air Distribution
                 </p>
               </div>
             </div>
@@ -379,7 +379,7 @@ export function AuthGateway() {
             <div className="flex items-center justify-between py-0.5 border-b border-border/50">
               <span className="text-muted-foreground">Update Engine</span>
               <span className={autoUpdateEnabled ? "text-emerald-400 font-semibold" : "text-amber-400"}>
-                {autoUpdateEnabled ? "Enabled (OTA Auto-Scan)" : "Manual Check Only"}
+                {autoUpdateEnabled ? "Active (Background OTA)" : "Manual Check Only"}
               </span>
             </div>
             <div className="flex items-center justify-between py-0.5">
@@ -394,36 +394,30 @@ export function AuthGateway() {
               <div className="flex items-center justify-between">
                 <span className="font-display text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
                   <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                  New Version v{updateInfo.latestVersion} Ready
+                  New Release v{updateInfo.latestVersion} Ready
                 </span>
-                <button
-                  type="button"
-                  onClick={removeUpdate}
-                  className="flex items-center gap-1 text-[11px] font-mono text-red-400 hover:text-red-300 hover:underline cursor-pointer"
-                  title="Remove this update notice"
-                >
-                  <Trash2 className="size-3" />
-                  <span>Remove</span>
-                </button>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {updateInfo.apkSize ? `${(updateInfo.apkSize / (1024 * 1024)).toFixed(1)} MB` : "APK"}
+                </span>
               </div>
 
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsUpdateModalOpen(true)}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 transition-all cursor-pointer"
+                  className="flex-1 flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-primary py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 active:scale-98 transition-all cursor-pointer shadow-md"
                 >
                   <Download className="size-3.5" />
-                  <span>Install Update</span>
+                  <span>View & Install Update</span>
                 </button>
                 <button
                   type="button"
                   onClick={removeUpdate}
-                  className="flex items-center justify-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3.5 py-2 font-mono text-xs font-bold text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                  title="Remove update notification"
+                  className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background/80 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-98 transition-all cursor-pointer"
+                  title="Dismiss update notification"
                 >
                   <Trash2 className="size-3.5" />
-                  <span>Remove</span>
+                  <span>Dismiss</span>
                 </button>
               </div>
             </div>

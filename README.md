@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.6.2-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.2" />
+    <img src="https://img.shields.io/badge/Release-v3.6.3-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.3" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.3/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20APK-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck-v3.6.2.apk">
-    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.2-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.3/zenodeck-v3.6.3.apk">
+    <img src="https://img.shields.io/badge/Versioned%20APK-v3.6.3-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="Versioned APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -60,11 +60,32 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 | Platform | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. Runs on all phones. |
-| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.2.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.2/zenodeck-v3.6.2.apk) | Dedicated v3.6.2 release package with full version archive support. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.3/zenodeck.apk) | Production signed APK with bundled offline WASM core, native Android media permissions, and multi-threaded execution. Runs on all phones. |
+| **🏷️ Android Versioned APK** | [**Download zenodeck-v3.6.3.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.3/zenodeck-v3.6.3.apk) | Dedicated v3.6.3 release package with full version archive support. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.2)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.2) | Complete release packages, checksums, changelogs, and release assets. |
+| **📦 GitHub Releases & Source** | [**GitHub Releases Hub (v3.6.3)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.3) | Complete release packages, checksums, changelogs, and release assets. |
+
+---
+
+## 🌟 What's New in v3.6.3 — Streamlined Media Studio, Refined OTA Center & Tactile COD Auto-Login
+
+### ✂️ 1. Streamlined Media Studio Architecture & Video Editor Removal
+- **Streamlined Navigation**: Cleanly decoupled the redundant Video Editor from the workstation ribbon, tool registry, tool matrix, and quick dials to eliminate interface bloat.
+- **Fail-Safe Route Redirection**: Bookmarks and direct URLs navigating to `#video-editor` or `#editor` automatically and safely route to `video-converter` ("Media Studio").
+- **Studio Recorder Integration**: Screen recordings and camera footage directly route into Media Studio for conversion and processing.
+
+### ⚡ 2. Holographic OTA Update Center & Modal Window Refinement
+- **Glassmorphism HUD Interface**: Modern translucent backdrop (`backdrop-blur-2xl bg-card/95 border-primary/35`), luminous top border glow, and a live channel beacon.
+- **Version Comparison Hero Card**: Clear visual jump indicators (`v3.6.3` ➔ remote release) with OTA package size chips.
+- **Interactive Changelog Terminal**: Dedicated release notes viewer with scroll containers and GitHub verification indicators.
+- **OTA Progress Visualizer**: Dynamic animated progress bar with smooth percentage counters during OTA APK download.
+- **Polished Action Buttons**: Glowing "Install OTA Update Now" action, clean glass "Dismiss" cache-clearing trigger, and direct GitHub links.
+
+### 🎮 3. Call of Duty-Style Auto-Login & Smooth Transaction Transition
+- **Synchronizing Operator Session HUD**: 600ms animated transaction state with laser progress animation and verification checkmark upon login.
+- **Haptic Tactile Feedback**: Device vibration on countdown ticks, operator switches, and successful sign-in transitions.
+- **Refined Operator Typography**: Polished "AUTO-SIGN IN ACTIVE" beacon, "COD Fast Pass" badge, "Deploy Operator" button, and auto-deploy controls.
 
 ---
 

@@ -81,17 +81,6 @@ export const TOOL_REGISTRY: ToolMeta[] = [
     nativeOnly: true,
   },
   {
-    id: "video-editor",
-    name: "Video Editor",
-    description: "Timeline video editor: trim, split, color grade, titles & effects.",
-    category: "video",
-    icon: Film,
-    phase: 2,
-    status: "online",
-    accent: "blue",
-    requiresEngine: true,
-  },
-  {
     id: "video-converter",
     name: "Video Converter",
     description: "Transcode MP4, MOV, AVI, MKV & extract audio tracks.",
