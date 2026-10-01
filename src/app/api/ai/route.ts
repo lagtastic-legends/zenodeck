@@ -28,12 +28,12 @@ export async function POST(req: Request) {
     const { searchParams } = new URL(req.url);
     const isStream = searchParams.get("stream") === "true";
 
-    const endpoint = isStream 
-      ? "streamGenerateContent?alt=sse" 
-      : "generateContent";
+    const endpointPath = isStream 
+      ? `streamGenerateContent?alt=sse&key=${apiKey}` 
+      : `generateContent?key=${apiKey}`;
 
-    // Primary: Gemini 3.8 Flash. Fallback: Gemini 3.6 Flash if Google API sheds 503 load
-    const candidateModels = ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.6-flash"];
+    // Fast, resilient model hierarchy: try 3.8 first; if 503/busy, seamlessly failover to 3.6, flash-lite, and flash-latest
+    const candidateModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-flash-latest"];
     let response: Response | null = null;
     let lastErrorData = "";
 
@@ -46,18 +46,9 @@ export async function POST(req: Request) {
         },
       };
 
-      // Set low thinking level on Gemini 3.8 to minimize compute spikes that trigger 503s
-      if (model.startsWith("gemini-3.8")) {
-        payload.generationConfig = {
-          thinkingConfig: {
-            thinkingLevel: "low",
-          },
-        };
-      }
-
       try {
         const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:${endpoint}&key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:${endpointPath}`,
           {
             method: "POST",
             headers: {
@@ -73,12 +64,9 @@ export async function POST(req: Request) {
         }
 
         lastErrorData = await res.text();
-        // Transient 503 (High demand) or 429 (Rate limit): wait briefly and retry
-        if (res.status === 503 || res.status === 429) {
-          if (i < candidateModels.length - 1) {
-            await new Promise((r) => setTimeout(r, 400));
-            continue;
-          }
+        // If 503 (High demand), 429 (Rate limit), or 404 (unavailable), immediately try next model
+        if (res.status === 503 || res.status === 429 || res.status === 404) {
+          continue;
         } else {
           response = res;
           break;

@@ -413,11 +413,13 @@ export function AuthGateway() {
                 <button
                   type="button"
                   onClick={removeUpdate}
-                  className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background/80 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-98 transition-all cursor-pointer"
-                  title="Dismiss update notification"
+                  className="group flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-border/80 bg-background/80 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-98 transition-all cursor-pointer"
+                  title="Remove and dismiss update notification"
                 >
-                  <Trash2 className="size-3.5" />
-                  <span>Dismiss</span>
+                  <div className="grid size-4 place-items-center rounded-full bg-red-500/15 border border-red-500/30 text-red-400 transition-transform group-hover:scale-110">
+                    <Trash2 className="size-2.5" />
+                  </div>
+                  <span>Remove</span>
                 </button>
               </div>
             </div>

@@ -147,7 +147,7 @@ export function UpdateModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,24px)+1rem)] pb-[calc(env(safe-area-inset-bottom,16px)+1rem)]">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -168,7 +168,7 @@ export function UpdateModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 14 }}
           transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          className="relative w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg rounded-2xl sm:rounded-3xl border border-primary/35 bg-card/95 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[calc(100dvh-2.5rem)] overflow-y-auto overscroll-contain scrollbar-thin"
+          className="relative my-auto w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg rounded-2xl sm:rounded-3xl border border-primary/35 bg-card/95 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[calc(100dvh-2.5rem)] overflow-y-auto overscroll-contain scrollbar-thin"
         >
           {/* Subtle Ambient Top Glow Highlight */}
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
@@ -335,11 +335,13 @@ export function UpdateModal({
                     type="button"
                     onClick={handleRemoveUpdate}
                     disabled={isInstalling}
-                    className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-background/80 px-3.5 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                    title="Dismiss this update notification"
+                    className="group flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/80 px-3.5 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                    title="Dismiss and remove this update notification"
                   >
-                    <Trash2 className="size-3.5" />
-                    <span>Dismiss</span>
+                    <div className="grid size-5 place-items-center rounded-full bg-red-500/15 border border-red-500/30 text-red-400 transition-transform group-hover:scale-110">
+                      <Trash2 className="size-3" />
+                    </div>
+                    <span>Remove</span>
                   </button>
 
                   <a
@@ -372,7 +374,7 @@ export function UpdateModal({
                   </p>
                 </div>
 
-                <div className="pt-1">
+                <div className="flex items-center justify-center gap-2.5 pt-1">
                   <button
                     onClick={() => runCheck(true)}
                     disabled={isChecking}
@@ -380,6 +382,20 @@ export function UpdateModal({
                   >
                     <RefreshCw className={`size-3.5 text-primary ${isChecking ? "animate-spin" : ""}`} />
                     <span>Check for Updates</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRemoveUpdate}
+                    disabled={isChecking}
+                    className="group inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-98 transition-all cursor-pointer shadow-xs"
+                    title="Remove update notification and close"
+                    aria-label="Remove and dismiss update window"
+                  >
+                    <div className="grid size-5 place-items-center rounded-full bg-red-500/15 border border-red-500/30 text-red-400 transition-transform group-hover:scale-110">
+                      <Trash2 className="size-3" />
+                    </div>
+                    <span>Remove</span>
                   </button>
                 </div>
               </div>

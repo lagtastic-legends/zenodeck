@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+
 export type MessageRole = "user" | "model";
 
 export interface ChatMessage {
@@ -8,11 +10,27 @@ export interface ChatMessage {
 }
 
 const getAiEndpoint = (params = ""): string => {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return `/api/ai/${params}`;
+  const query = params ? (params.startsWith("?") ? params : `?${params}`) : "";
+  const isNative = typeof window !== "undefined" && Capacitor.isNativePlatform?.() === true;
+
+  // On native Android APK (where origin is localhost without local server), call production deployment
+  if (isNative) {
+    const remote = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
+    return `${remote.replace(/\/+$/, "")}/api/ai${query}`;
   }
+
+  // In browser environments
+  if (typeof window !== "undefined" && window.location?.origin) {
+    // If not local dev port 3000 and origin is localhost/capacitor, route to remote host
+    if (window.location.hostname === "localhost" && window.location.port !== "3000") {
+      const remote = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
+      return `${remote.replace(/\/+$/, "")}/api/ai${query}`;
+    }
+    return `/api/ai${query}`;
+  }
+
   const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-  return `${fallback}/api/ai/${params}`;
+  return `${fallback.replace(/\/+$/, "")}/api/ai${query}`;
 };
 
 export const generateAiResponse = async (messages: ChatMessage[]) => {

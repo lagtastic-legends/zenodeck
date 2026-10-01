@@ -15,7 +15,7 @@ import {
   CornerDownLeft,
 } from 'lucide-react';
 import { useAiStore } from '../store/useAiStore';
-import { streamAiResponse, type ChatMessage } from '../lib/gemini';
+import { streamAiResponse, generateAiResponse, type ChatMessage } from '../lib/gemini';
 import { useHaptics } from '@/hooks/use-haptics';
 import { AiMessageBubble } from './ai/ai-message-bubble';
 import { AiThinkingIndicator } from './ai/ai-thinking-indicator';
@@ -125,38 +125,68 @@ export default function AskOmni({ showTrigger = false }: AskOmniProps) {
           (m) => m && typeof m.content === 'string' && m.content.trim().length > 0
         );
 
-      const stream = streamAiResponse(currentMessages, controller.signal);
-
       let fullContent = '';
       let isFirstChunk = true;
+      let streamFailed = false;
 
-      for await (const chunk of stream) {
-        if (controller.signal.aborted) break;
+      try {
+        const stream = streamAiResponse(currentMessages, controller.signal);
 
-        if (isFirstChunk) {
-          setLoading(false);
-          setStreaming(true);
-          isFirstChunk = false;
-          fullContent = chunk;
-          addMessage({
-            role: 'model',
-            content: fullContent,
-            timestamp: Date.now(),
-          });
-        } else {
-          fullContent += chunk;
-          updateLastMessage(fullContent);
+        for await (const chunk of stream) {
+          if (controller.signal.aborted) break;
+
+          // If stream yielded a connection error, mark as failed to try non-streaming fallback
+          if (chunk.includes("[Connection failed:")) {
+            streamFailed = true;
+            break;
+          }
+
+          if (isFirstChunk) {
+            setLoading(false);
+            setStreaming(true);
+            isFirstChunk = false;
+            fullContent = chunk;
+            addMessage({
+              role: 'model',
+              content: fullContent,
+              timestamp: Date.now(),
+            });
+          } else {
+            fullContent += chunk;
+            updateLastMessage(fullContent);
+          }
         }
+      } catch (streamErr) {
+        streamFailed = true;
       }
 
-      // If stream ended without any chunks received and wasn't aborted
-      if (isFirstChunk && !controller.signal.aborted) {
+      // If stream ended without chunks or encountered connection issues, attempt non-streaming fallback
+      if ((isFirstChunk || streamFailed) && !controller.signal.aborted) {
+        setLoading(true);
+        setStreaming(false);
+        const fallbackText = await generateAiResponse(currentMessages);
         setLoading(false);
-        addMessage({
-          role: 'model',
-          content: "I apologize, but I couldn't generate a response. Please try asking again.",
-          timestamp: Date.now(),
-        });
+
+        if (fallbackText && !fallbackText.includes("Connection failed:")) {
+          if (isFirstChunk) {
+            addMessage({
+              role: 'model',
+              content: fallbackText,
+              timestamp: Date.now(),
+            });
+            isFirstChunk = false;
+          } else {
+            updateLastMessage(fallbackText);
+          }
+        } else {
+          if (isFirstChunk) {
+            addMessage({
+              role: 'model',
+              content: fallbackText || "I apologize, but I couldn't generate a response. Please try asking again.",
+              timestamp: Date.now(),
+            });
+          }
+        }
       }
     } catch (error: any) {
       if (!controller.signal.aborted) {
