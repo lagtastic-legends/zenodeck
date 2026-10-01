@@ -127,7 +127,7 @@ export function UnifiedLoginCard({
       void haptics.medium();
       let current = 0;
       const interval = setInterval(() => {
-        current += 25;
+        current += 4;
         setTransitionProgress(Math.min(current, 100));
         if (current >= 100) {
           clearInterval(interval);
@@ -135,9 +135,9 @@ export function UnifiedLoginCard({
             void haptics.success();
             switchAccount(acc);
             onSuccess?.();
-          }, 180);
+          }, 140);
         }
-      }, 55);
+      }, 16);
     },
     [haptics, switchAccount, onSuccess]
   );
@@ -266,7 +266,7 @@ export function UnifiedLoginCard({
               <motion.div
                 className="h-full bg-gradient-to-r from-emerald-400 via-neon to-primary"
                 style={{ width: `${transitionProgress}%` }}
-                transition={{ ease: "easeOut", duration: 0.15 }}
+                transition={{ ease: "linear", duration: 0.05 }}
               />
             </div>
 
@@ -274,7 +274,11 @@ export function UnifiedLoginCard({
               <div className="flex items-center gap-2">
                 <span className="flex size-2 rounded-full bg-emerald-400 animate-ping" />
                 <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-emerald-300">
-                  SYNCHRONIZING OPERATOR SESSION…
+                  {transitionProgress < 40
+                    ? "ESTABLISHING OPERATOR LINK…"
+                    : transitionProgress < 85
+                    ? "VERIFYING SECURITY CLEARANCE…"
+                    : "DEPLOYING TO DASHBOARD…"}
                 </span>
               </div>
               <span className="font-mono text-[10px] font-bold text-emerald-400">
@@ -327,7 +331,7 @@ export function UnifiedLoginCard({
               <div className="flex items-center gap-1.5">
                 <Gamepad2 className="size-4 text-emerald-400 animate-pulse" />
                 <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-emerald-300">
-                  AUTO-SIGN IN ACTIVE
+                  OPERATOR AUTO-DEPLOY
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -341,7 +345,7 @@ export function UnifiedLoginCard({
                   {autoLoginCountdown}s
                 </motion.span>
                 <span className="rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[8px] font-extrabold uppercase tracking-wider text-primary">
-                  COD Fast Pass
+                  Fast Pass
                 </span>
               </div>
             </div>
@@ -372,16 +376,16 @@ export function UnifiedLoginCard({
                 onClick={() => startLoginTransition(primaryAccount)}
                 className="flex-1 flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary via-primary to-neon px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-md glow-box-violet"
               >
-                <span>Deploy Operator</span>
+                <span>Deploy Now</span>
                 <ArrowRight className="size-3.5" />
               </button>
               <button
                 type="button"
                 onClick={cancelAutoLogin}
-                className="flex min-h-[40px] items-center justify-center gap-1 rounded-xl border border-border/80 bg-background/90 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-red-400/50 hover:text-red-300 active:scale-[0.98] transition-all cursor-pointer"
-                title="Switch operator or manual login"
+                className="flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-background/90 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-red-400/50 hover:text-red-300 active:scale-[0.98] transition-all cursor-pointer"
+                title="Switch operator account"
               >
-                <span>Switch</span>
+                <span>Switch Account</span>
               </button>
             </div>
           </motion.div>

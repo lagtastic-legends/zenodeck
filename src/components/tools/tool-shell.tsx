@@ -23,6 +23,17 @@ export function ToolShell({ toolId, children }: ToolShellProps) {
   const handleBack = useNavStore((s) => s.handleBack);
   const { state, boot, engine, appendLog } = useFFmpegEngine();
 
+  const requiresEngine = tool?.requiresEngine !== false;
+
+  useEffect(() => {
+    if (requiresEngine && state === "loading") {
+      return useNavStore.getState().registerDirtyGuard(() => ({
+        hasUnsaved: true,
+        message: "The WebAssembly engine is currently initializing. Leaving now will interrupt setup. Are you sure you want to go back?",
+      }));
+    }
+  }, [requiresEngine, state]);
+
   if (!tool) {
     return (
       <div className="panel-hud rounded-2xl p-8 text-center">
@@ -35,17 +46,6 @@ export function ToolShell({ toolId, children }: ToolShellProps) {
 
   const accent = (tool.accent && ACCENT_STYLES[tool.accent]) || ACCENT_STYLES.violet;
   const Icon = tool.icon;
-  /* Document/imaging tools run without the wasm engine. */
-  const requiresEngine = tool.requiresEngine !== false;
-
-  useEffect(() => {
-    if (requiresEngine && state === "loading") {
-      return useNavStore.getState().registerDirtyGuard(() => ({
-        hasUnsaved: true,
-        message: "The WebAssembly engine is currently initializing. Leaving now will interrupt setup. Are you sure you want to go back?",
-      }));
-    }
-  }, [requiresEngine, state]);
 
   return (
     <div className="space-y-6">

@@ -46,9 +46,12 @@ export function ScanToPdf() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const pagesRef = useRef(pages);
-  pagesRef.current = pages;
   const outputRef = useRef(output);
-  outputRef.current = output;
+
+  useEffect(() => {
+    pagesRef.current = pages;
+    outputRef.current = output;
+  }, [pages, output]);
 
   const busy = status === "working";
 

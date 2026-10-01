@@ -18,7 +18,7 @@ import {
   Smartphone,
   ArrowRight,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { OmniRecorder } from "@/lib/native-recorder";
@@ -90,12 +90,14 @@ export function StudioRecorder() {
   const [screenQuality, setScreenQuality] = useState<"720p" | "1080p" | "4k">("1080p");
   const [screenFps, setScreenFps] = useState<30 | 60>(30);
   const [cameraFacing, setCameraFacing] = useState<"user" | "environment">("user");
-  const [isIOS, setIsIOS] = useState(false);
-
-  useEffect(() => {
-    const checkIOS = typeof navigator !== "undefined" && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
-    setIsIOS(checkIOS);
-  }, []);
+  const isIOS = useSyncExternalStore(
+    () => () => {},
+    () =>
+      typeof navigator !== "undefined" &&
+      (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)),
+    () => false
+  );
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);

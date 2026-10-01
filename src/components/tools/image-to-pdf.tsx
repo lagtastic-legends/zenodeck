@@ -48,9 +48,12 @@ export function ImageToPdf() {
 
   /* Revoke dangling preview URLs & output URL */
   const imagesRef = useRef(images);
-  imagesRef.current = images;
   const outputRef = useRef(output);
-  outputRef.current = output;
+
+  useEffect(() => {
+    imagesRef.current = images;
+    outputRef.current = output;
+  }, [images, output]);
 
   useEffect(() => {
     return () => {

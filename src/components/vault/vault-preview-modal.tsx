@@ -219,15 +219,24 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   const haptics = useHaptics();
 
   useEffect(() => {
-    if (!item) return;
+    if (!item) {
+      setPreviewUrl(null);
+      return;
+    }
     const url = URL.createObjectURL(item.blob);
-    setPreviewUrl(url);
-    setImageZoom(1);
-    setImageRotation(0);
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setPreviewUrl(url);
+        setImageZoom(1);
+        setImageRotation(0);
+      }
+    });
 
     return () => {
+      cancelled = true;
       URL.revokeObjectURL(url);
-      setPreviewUrl(null);
     };
   }, [item]);
 

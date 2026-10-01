@@ -51,20 +51,48 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
-      - name: Stage Release Artifact
+      - name: Stage Release Artifacts for All Architectures
         run: |
           mkdir -p dist
-          cp android/app/build/outputs/apk/release/app-release.apk dist/zenodeck.apk
-          cp android/app/build/outputs/apk/release/app-release.apk dist/zenodeck-${{ github.ref_name }}.apk
+          APK_DIR="android/app/build/outputs/apk/release"
+
+          # 1. Universal APK (Compatible with all Android devices)
+          if [ -f "$APK_DIR/app-universal-release.apk" ]; then
+            cp "$APK_DIR/app-universal-release.apk" dist/zenodeck-universal.apk
+            cp "$APK_DIR/app-universal-release.apk" dist/zenodeck-${{ github.ref_name }}-universal.apk
+            cp "$APK_DIR/app-universal-release.apk" dist/zenodeck.apk
+          elif [ -f "$APK_DIR/app-release.apk" ]; then
+            cp "$APK_DIR/app-release.apk" dist/zenodeck-universal.apk
+            cp "$APK_DIR/app-release.apk" dist/zenodeck-${{ github.ref_name }}-universal.apk
+            cp "$APK_DIR/app-release.apk" dist/zenodeck.apk
+          fi
+
+          # 2. Modern 64-bit ARM Phones (arm64-v8a)
+          if [ -f "$APK_DIR/app-arm64-v8a-release.apk" ]; then
+            cp "$APK_DIR/app-arm64-v8a-release.apk" dist/zenodeck-${{ github.ref_name }}-arm64-v8a.apk
+          fi
+
+          # 3. 32-bit ARM Phones (armeabi-v7a)
+          if [ -f "$APK_DIR/app-armeabi-v7a-release.apk" ]; then
+            cp "$APK_DIR/app-armeabi-v7a-release.apk" dist/zenodeck-${{ github.ref_name }}-armeabi-v7a.apk
+          fi
+
+          # 4. Tablets, Chromebooks & Emulators (x86_64)
+          if [ -f "$APK_DIR/app-x86_64-release.apk" ]; then
+            cp "$APK_DIR/app-x86_64-release.apk" dist/zenodeck-${{ github.ref_name }}-x86_64.apk
+          fi
+
+          # Release notes selection
           if [ -f "RELEASE_NOTES_${{ github.ref_name }}.md" ]; then
             cp "RELEASE_NOTES_${{ github.ref_name }}.md" dist/RELEASE_NOTES.md
-          elif [ -f "RELEASE_NOTES_v3.4.6.md" ]; then
-            cp "RELEASE_NOTES_v3.4.6.md" dist/RELEASE_NOTES.md
-          elif [ -f "RELEASE_NOTES_v3.4.5.md" ]; then
-            cp "RELEASE_NOTES_v3.4.5.md" dist/RELEASE_NOTES.md
+          elif [ -f "RELEASE_NOTES_v3.6.4.md" ]; then
+            cp "RELEASE_NOTES_v3.6.4.md" dist/RELEASE_NOTES.md
           else
             cp "RELEASE_NOTES_v3.0.0.md" dist/RELEASE_NOTES.md
           fi
+
+          echo "Staged release artifacts:"
+          ls -la dist/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -74,7 +102,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/zenodeck.apk
-            dist/zenodeck-${{ github.ref_name }}.apk
+            dist/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

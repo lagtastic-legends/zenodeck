@@ -24,7 +24,7 @@ import {
   ScanLine,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import QRCode from "qrcode";
 import { OutputCard } from "@/components/media/output-card";
@@ -66,7 +66,8 @@ function QrScanner() {
   const [history, setHistory] = useState<ScanEntry[]>([]);
   const [copied, setCopied] = useState(false);
 
-  const viewfinderId = useRef(`omni-qr-viewfinder-${Math.random().toString(36).slice(2, 9)}`);
+  const rawId = useId();
+  const viewfinderId = `omni-qr-viewfinder-${rawId.replace(/:/g, "")}`;
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,7 +118,7 @@ function QrScanner() {
       }
       // Fresh instance each run — html5-qrcode dislikes reusing elements.
       await stopCamera();
-      scannerRef.current = new Html5Qrcode(viewfinderId.current);
+      scannerRef.current = new Html5Qrcode(viewfinderId);
       await scannerRef.current.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 240, height: 240 } },
@@ -142,7 +143,7 @@ function QrScanner() {
     setBusyFile(true);
     try {
       await stopCamera();
-      const scanner = new Html5Qrcode(viewfinderId.current, {
+      const scanner = new Html5Qrcode(viewfinderId, {
         formatsToSupport: undefined,
         verbose: false,
       });
@@ -227,7 +228,7 @@ function QrScanner() {
         </div>
 
         <div
-          id={viewfinderId.current}
+          id={viewfinderId}
           className="relative overflow-hidden rounded-lg border border-border/50 bg-black min-h-56 [&_video]:w-full"
           aria-label="QR viewfinder"
         />
@@ -399,7 +400,10 @@ function QrGenerator() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const outputRef = useRef<JobOutput | null>(null);
-  outputRef.current = output;
+
+  useEffect(() => {
+    outputRef.current = output;
+  }, [output]);
 
   useEffect(() => {
     return () => {
@@ -445,8 +449,8 @@ function QrGenerator() {
       if (outputRef.current) {
         try { URL.revokeObjectURL(outputRef.current.url); } catch {}
         outputRef.current = null;
+        setOutput(null);
       }
-      setOutput(null);
       return;
     }
 
