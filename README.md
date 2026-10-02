@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.6.6-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.6" />
+    <img src="https://img.shields.io/badge/Release-v3.6.7-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.7" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.6/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.6/zenodeck-v3.6.6-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.6.6-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.6.7-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -37,7 +37,7 @@
   <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml">
     <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml/badge.svg" alt="Release Build Status" />
   </a>
-  <img src="https://img.shields.io/badge/Tests-125%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-162%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor" />
@@ -60,17 +60,41 @@ Unlike traditional cloud converters and SaaS editing tools that upload your sens
 | Platform / Architecture | Access Link | Description |
 | :--- | :--- | :--- |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Live PWA with zero installation required. Instant launch in any modern browser. |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.6/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.6.6-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.6/zenodeck-v3.6.6-arm64-v8a.apk) | Dedicated optimized build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.6.6-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.6/zenodeck-v3.6.6-armeabi-v7a.apk) | Dedicated build for legacy 32-bit Android phones and budget devices. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.6.6-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.6/zenodeck-v3.6.6-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.6.7-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-arm64-v8a.apk) | Dedicated optimized build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.6.7-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-armeabi-v7a.apk) | Dedicated build for legacy 32-bit Android phones and budget devices. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.6.7-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web APK** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the web host. |
 | **🍏 Apple iOS Profile (iPhone & iPad)** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck to Home Screen in full-screen standalone mode. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.6.6)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.6) | Complete release packages, checksums, changelogs, and all architecture assets. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.6.7)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.7) | Complete release packages, checksums, changelogs, and all architecture assets. |
+
+---
+
+## 🌟 What's New in v3.6.7 — Advanced Audio Processing Suite, 8D Spatial Audio & AudioEffectsPanel
+
+### 🎧 1. Exact "Slowed & Reverb" Engine
+- **Signature Late-Night Filter Chain**: Utilizes exact filter chain `asetrate=44100*0.85,aresample=44100,aecho=0.8:0.9:1000:0.3`.
+- **Acoustic Transposition**: Drops playback speed and musical pitch synchronously to 85% with 1000ms delay room reverb simulating 100% room-scale late-night acoustics.
+- **WASM Command Generator**: `generateSlowedReverbCommand(inputFile, outputFile)` compiles argument arrays directly executable by `@ffmpeg/ffmpeg`.
+
+### 🌀 2. "8D Audio" Spatial Engine
+- **Binaural Orbital Modulation**: Utilizes exact filter chain `apulsator=mode=sine:hz=0.08:amount=0.85,aecho=0.8:0.9:1000:0.3`.
+- **Spatial Immersion**: Smooth 12.5-second sinusoidal rotation (0.08 Hz) at 85% depth followed by room reverb reflections creating lifelike 360-degree acoustic distance.
+- **WASM Command Generator**: `generate8DAudioCommand(inputFile, outputFile)` ready for client-side processing.
+
+### 🎛️ 3. Dark-Mode Audio Effects Panel (`AudioEffectsPanel.tsx`)
+- **Framer Motion Progress**: Dynamic progress bar with live percentage readout and WASM stage telemetry.
+- **Dual Action Controls**: Prominent "Apply Slowed & Reverb" and "Convert to 8D Audio" buttons.
+- **Instant Testing**: Built-in 3.5s harmonic A-minor synth sample generator allowing instant testing without uploading local files.
+- **Integrated Playback & Export**: HTML5 audio preview and one-click saving via `nativeSave`.
+
+### 🧪 4. 37-Point Automated Verification Suite
+- Comprehensive automated test suite in `scripts/test-audio-effects-engine.ts` validating filter strings, argument arrays, CLI syntax, error handling, and component registration.
 
 ---
 
 ## 🌟 What's New in v3.6.6 — Engine In-Memory Transfer, Watchdog Resilience, Zero-Loop Vault & Shell Decoupling
+
 
 ### ⚡ 1. Zero-Copy WebAssembly Engine In-Memory Transfer
 - **Eliminated Base64 IPC Bottlenecks**: Replaced legacy `data:application/wasm;base64,...` message serialization across Web Worker boundaries with direct `wasmBinary` transfer.

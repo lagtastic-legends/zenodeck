@@ -5,7 +5,33 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.7] — 2026-10-02
+
+### Added
+- **🎧 Advanced Audio Processing Suite**:
+  - **Phase 1: Slowed & Reverb Engine**:
+    - Created `generateSlowedReverbCommand(inputFile, outputFile)` with exact industry-standard filter chain:
+      `asetrate=44100*0.85,aresample=44100,aecho=0.8:0.9:1000:0.3`.
+    - Lowers playback speed and pitch simultaneously to 85% with 1000ms delay room reverb simulating 100% room-scale late-night acoustics.
+  - **Phase 2: 8D Audio Spatial Engine**:
+    - Created `generate8DAudioCommand(inputFile, outputFile)` with exact industry-standard filter chain:
+      `apulsator=mode=sine:hz=0.08:amount=0.85,aecho=0.8:0.9:1000:0.3`.
+    - Implemented binaural orbital circular panning (0.08 Hz / 12.5s cycle at 85% depth) with deep room echo for spatial distance.
+  - **Phase 3: Dark-Mode Audio Effects Panel**:
+    - Built `AudioEffectsPanel.tsx` in `src/components/audio/AudioEffectsPanel.tsx` using Tailwind CSS and Framer Motion.
+    - Prominent dual action buttons: "Apply Slowed & Reverb" and "Convert to 8D Audio".
+    - Framer Motion animated progress bar with live percentage counter and WASM stage telemetry.
+    - Built-in 3.5s synthetic A-minor harmonic chord generator for zero-input instant testing.
+    - Interactive HTML5 audio player preview with volume control and one-click saving via `nativeSave`.
+    - Registered under `audio-effects` in `TOOL_REGISTRY` and dynamically code-split in `AppShell`.
+  - **🧪 37-Point Automated Verification Suite**:
+    - Added `scripts/test-audio-effects-engine.ts` validating exact filter strings, argument arrays, CLI syntax, error handling, and UI exports.
+    - Integrated into `npm run test:ci` and `npm run test:all`.
+
+---
+
 ## [3.6.6] — 2026-10-02
+
 
 ### Added & Fixed
 - **⚡ WebAssembly Engine In-Memory Transfer**:
