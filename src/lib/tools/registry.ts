@@ -31,8 +31,10 @@ import {
   Waves,
   Scissors,
   Youtube,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
+
 import type { ToolCategory, ToolMeta } from "@/types/omni";
 import { Capacitor } from "@capacitor/core";
 
@@ -143,7 +145,18 @@ export const TOOL_REGISTRY: ToolMeta[] = [
     accent: "cyan",
   },
   {
+    id: "audio-effects",
+    name: "Audio Effects Suite",
+    description: "Industry-standard Slowed & Reverb and 8D Audio spatial processing.",
+    category: "audio",
+    icon: Sparkles,
+    phase: 3,
+    status: "online",
+    accent: "violet",
+  },
+  {
     id: "bass-booster",
+
     name: "Bass Booster",
     description: "Low-end amplifier with adjustable intensity.",
     category: "audio",

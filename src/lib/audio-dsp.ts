@@ -778,3 +778,18 @@ export const AUDIO_TOOLS_CATALOG: AudioToolMeta[] = [
     ],
   },
 ];
+
+/* -------------------------------------------------------------------------- */
+/* Exact Preset Engine Exports                                                */
+/* -------------------------------------------------------------------------- */
+export {
+  SLOWED_REVERB_FILTER,
+  EIGHT_D_AUDIO_FILTER,
+  getSlowedReverbFilter,
+  get8DAudioFilter,
+  generateSlowedReverbCommand,
+  generate8DAudioCommand,
+  type FFmpegAudioCommand,
+} from "./audio/effects-engine";
+
+

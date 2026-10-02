@@ -308,3 +308,18 @@ export function editorFilters(p: EditorParams): { filters: string[]; finalLength
 
   return { filters, finalLengthSec: finalLength };
 }
+
+/* ------------------------------------------------------------------ */
+/* Exact Preset Engine Exports                                        */
+/* ------------------------------------------------------------------ */
+export {
+  SLOWED_REVERB_FILTER,
+  EIGHT_D_AUDIO_FILTER,
+  getSlowedReverbFilter,
+  get8DAudioFilter,
+  generateSlowedReverbCommand,
+  generate8DAudioCommand,
+  type FFmpegAudioCommand,
+} from "./effects-engine";
+
+

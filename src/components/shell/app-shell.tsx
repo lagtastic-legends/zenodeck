@@ -57,6 +57,7 @@ const VaultView = lazy(() => import("@/components/vault/vault-view").then((m) =>
 const StudioRecorder = lazy(() => import("@/components/tools/studio-recorder").then((m) => ({ default: m.StudioRecorder })));
 const QrStudio = lazy(() => import("@/components/tools/qr-studio").then((m) => ({ default: m.QrStudio })));
 const UnifiedAudioStudio = lazy(() => import("@/components/audio/UnifiedAudioStudio").then((m) => ({ default: m.UnifiedAudioStudio })));
+const AudioEffectsPanel = lazy(() => import("@/components/audio/AudioEffectsPanel").then((m) => ({ default: m.AudioEffectsPanel })));
 
 const AudioDspTool = () => <UnifiedAudioStudio initialToolId="spatial-8d" />;
 const VocalRemoverTool = () => <UnifiedAudioStudio initialToolId="vocal-remover" />;
@@ -130,7 +131,9 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "noise-reducer": NoiseReducerTool,
   "pitch-shifter": PitchShifterTool,
   "tempo-changer": TempoChangerTool,
+  "audio-effects": AudioEffectsPanel,
 };
+
 
 function ToolView({ toolId }: { toolId: string }) {
   const resetNav = useNavStore((s) => s.reset);
