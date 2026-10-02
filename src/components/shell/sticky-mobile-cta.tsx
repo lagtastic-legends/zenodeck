@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
  * Automatically conceals itself when a tool is active to prevent blocking tool interactions.
  */
 export function StickyMobileCta() {
-  const { view, navigate } = useNavStore();
+  const view = useNavStore((s) => s.view);
+  const navigate = useNavStore((s) => s.navigate);
   const openSearch = useSearchStore((s) => s.open);
 
   if (view !== "dashboard") return null;

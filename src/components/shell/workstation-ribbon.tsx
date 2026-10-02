@@ -53,7 +53,7 @@ const VIEW_TITLES: Record<string, { label: string; tag: string }> = {
 };
 
 export function WorkstationRibbon() {
-  const { view } = useNavStore();
+  const view = useNavStore((s) => s.view);
   const {
     sidebarCollapsed,
     inspectorCollapsed,

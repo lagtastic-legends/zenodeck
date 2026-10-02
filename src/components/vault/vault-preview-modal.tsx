@@ -199,6 +199,8 @@ function MobileAudioPlayer({ src, title }: { src: string; title: string }) {
   );
 }
 
+const emptySubscribe = () => () => {};
+
 export const VaultPreviewModal = memo(function VaultPreviewModal({
   item,
   onClose,
@@ -209,7 +211,7 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   onDelete?: (id: string) => void;
 }) {
   const mounted = useSyncExternalStore(
-    () => () => {},
+    emptySubscribe,
     () => true,
     () => false
   );
@@ -217,6 +219,8 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   const [imageZoom, setImageZoom] = useState(1);
   const [imageRotation, setImageRotation] = useState(0);
   const haptics = useHaptics();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!item) {
@@ -255,20 +259,20 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   // Escape key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   // Hardware/Android back button integration
   useEffect(() => {
     if (!item) return;
     return useNavStore.getState().registerOverlay("vault-preview", () => {
-      onClose();
+      onCloseRef.current();
       return true;
     });
-  }, [item, onClose]);
+  }, [item]);
 
   if (!mounted) return null;
 

@@ -22,7 +22,7 @@ import {
   Upload,
   Sparkles,
 } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -243,14 +243,18 @@ export function VaultView() {
     return sorted;
   }, [items, kind, query, sort]);
 
-  const handleDelete = async (id: string) => {
+  const handleClosePreview = useCallback(() => {
+    setPreviewItem(null);
+  }, []);
+
+  const handleDelete = useCallback(async (id: string) => {
     const item = items.find((i) => i.id === id);
     await remove(id);
     if (item) {
       emitTelemetry(`[VAULT] Deleted ${item.name} (${formatBytes(item.size)}) from IndexedDB`, "warn");
     }
     toast({ title: "Removed from vault" });
-  };
+  }, [items, remove, toast]);
 
   const handleClear = async () => {
     const count = items.length;
@@ -511,8 +515,8 @@ export function VaultView() {
       {/* Phone-Fitted Full Screen / Dialog Preview Modal */}
       <VaultPreviewModal
         item={previewItem}
-        onClose={() => setPreviewItem(null)}
-        onDelete={(id) => void handleDelete(id)}
+        onClose={handleClosePreview}
+        onDelete={handleDelete}
       />
     </div>
   );

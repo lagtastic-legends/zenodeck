@@ -52,6 +52,11 @@ export function TopBar() {
   const storeUpdateInfo = useUpdateStore((s) => s.updateInfo);
   const setStoreUpdateInfo = useUpdateStore((s) => s.setUpdateInfo);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -211,7 +216,7 @@ export function TopBar() {
             </button>
           )}
 
-          {user ? (
+          {mounted && user ? (
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 type="button"
@@ -233,7 +238,7 @@ export function TopBar() {
                 <LogOut className="size-3.5" />
               </button>
             </div>
-          ) : (
+          ) : mounted ? (
             <button
               type="button"
               onClick={() => navigate("auth-gateway")}
@@ -241,6 +246,8 @@ export function TopBar() {
             >
               <span>Sign In</span>
             </button>
+          ) : (
+            <div className="h-8 w-20 rounded-full border border-border/40 bg-card/30" />
           )}
         </div>
       </div>

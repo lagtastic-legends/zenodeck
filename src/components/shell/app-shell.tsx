@@ -256,7 +256,9 @@ export function AppShell() {
     };
   }, []);
 
-  const { view, navigate, reset } = useNavStore();
+  const view = useNavStore((s) => s.view);
+  const navigate = useNavStore((s) => s.navigate);
+  const reset = useNavStore((s) => s.reset);
   const { isOpen: isAiOpen, toggleOpen: toggleAi } = useAiStore();
   const { mode, user } = useAuth();
   const isGuest =

@@ -45,7 +45,8 @@ const NAV_ITEMS: NavItem[] = [
 
 export function DesktopSidebar() {
   const { sidebarCollapsed, toggleSidebar, toggleInspector, toggleFocusMode } = useWorkstationStore();
-  const { view, navigate } = useNavStore();
+  const view = useNavStore((s) => s.view);
+  const navigate = useNavStore((s) => s.navigate);
   const { simdThreads, heapUsedMb, flushHeap } = useStdoutTelemetry();
   const { isOpen: isAiOpen, toggleOpen: toggleAi } = useAiStore();
   const { playHover, playClick, isAudioMuted, toggleAudioMuted, setAudioMuted } = useUIAudio();
