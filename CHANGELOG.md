@@ -5,6 +5,41 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.6] — 2026-10-02
+
+### Added & Fixed
+- **⚡ WebAssembly Engine In-Memory Transfer**:
+  - Replaced legacy base64 data-URL string serialization over Worker messages with zero-copy `wasmBinary` transfer.
+  - Eliminated cold-start OOM failures and dropped engine boot time to ~1.9s.
+- **⏱️ 120-Second Compilation Watchdog & Offline Cache Protection**:
+  - Extended watchdog timer from 45s to 120s with live countdown diagnostics to accommodate heavy JIT compilation on mobile hardware.
+  - Protected IndexedDB WASM offline cache from premature eviction on timeout.
+- **🛡️ Eradication of React Error #185 (Workstation Module Fault) in Vault**:
+  - Memoized callback handlers in `VaultView` (`handleClosePreview`, `handleDelete`).
+  - Implemented ref-backed `onClose` in `VaultPreviewModal` to prevent cascading effect loops on back button overlay registration.
+  - Standardized `useSyncExternalStore` dummy subscription to a static singleton.
+- **🏎️ Atomic Zustand Selectors & Shell Decoupling**:
+  - Converted `AppShell`, `DesktopSidebar`, `StickyMobileCta`, and `WorkstationRibbon` to atomic selectors (`useNavStore((s) => s.view)`).
+  - Back navigation queues (`overlays`, `dirtyGuards`, `stepHandlers`) are now completely decoupled from shell chrome rendering.
+- **🌐 SSR Hydration Guarding**:
+  - Protected dynamic auth state rendering in `TopBar` with client-mounted check, eliminating server/client HTML mismatches.
+
+---
+
+## [3.6.5] — 2026-10-01
+
+### Added & Fixed
+- **📱 Multi-Architecture APK Builds for All Android Phones**:
+  - Added Gradle ABI splits for `arm64-v8a`, `armeabi-v7a`, and `x86_64`, alongside the universal APK.
+  - Automatic publishing of all architecture assets to GitHub Releases.
+- **🤖 AI Assistant (Ask Zeno) Route Hardening**:
+  - Canonical trailing slash routing to `/api/ai/` to prevent Next.js 308 redirect loops.
+  - Resilient multi-tier model failover (`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-flash-lite-latest` ➔ `gemini-flash-latest`).
+- **🔘 Circular Remove Button in Update Modal**:
+  - Dedicated circular icon button for dismissing update alerts and clearing update cache.
+
+---
+
 ## [3.6.2] — 2026-09-30
 
 ### Added

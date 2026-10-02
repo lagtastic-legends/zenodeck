@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation & Architecture
+    url: https://github.com/lagtastic-legends/zenodeck#readme
+    about: Read ZenoDeck on-device architecture, build guides, and specifications.
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/lagtastic-legends/zenodeck/security/policy
+    about: Privately report a security issue or privacy concern.
+  - name: 💬 Community Discussions & Questions
+    url: https://github.com/lagtastic-legends/zenodeck/discussions
+    about: Ask questions, share ideas, and connect with other developers.
+  - name: 📧 Maintainer Support
+    url: mailto:support.zenodeck@gmail.com
+    about: Direct support from the ZenoDeck core engineering team.

@@ -85,8 +85,8 @@ jobs:
           # Release notes selection
           if [ -f "RELEASE_NOTES_${{ github.ref_name }}.md" ]; then
             cp "RELEASE_NOTES_${{ github.ref_name }}.md" dist/RELEASE_NOTES.md
-          elif [ -f "RELEASE_NOTES_v3.6.5.md" ]; then
-            cp "RELEASE_NOTES_v3.6.5.md" dist/RELEASE_NOTES.md
+          elif [ -f "RELEASE_NOTES_v3.6.6.md" ]; then
+            cp "RELEASE_NOTES_v3.6.6.md" dist/RELEASE_NOTES.md
           else
             cp "RELEASE_NOTES_v3.0.0.md" dist/RELEASE_NOTES.md
           fi
