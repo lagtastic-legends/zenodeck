@@ -56,6 +56,7 @@ export class AudioDspEngine {
   private spatialDirectGain: GainNode | null = null;
   private haasDelayNode: DelayNode | null = null;
   private haasDampFilter: BiquadFilterNode | null = null;
+  private haasPannerNode: StereoPannerNode | null = null;
   private haasWetGain: GainNode | null = null;
   private spatialSummer: GainNode | null = null;
   private spatialConfig: Spatial8DConfig = { ...DEFAULT_SPATIAL_8D };
@@ -412,6 +413,14 @@ export class AudioDspEngine {
     this.haasDampFilter.type = "lowpass";
     this.haasDampFilter.frequency.value = 4500;
 
+    // Contralateral reflection panner for psychoacoustic room bounce
+    if (typeof ctx.createStereoPanner === "function") {
+      this.haasPannerNode = ctx.createStereoPanner();
+      this.haasPannerNode.pan.value = 0.0;
+    } else {
+      this.haasPannerNode = null;
+    }
+
     this.haasWetGain = ctx.createGain();
     this.haasWetGain.gain.value = 0.0; // Inactive until 8D enabled
 
@@ -427,10 +436,15 @@ export class AudioDspEngine {
       this.spatialDirectGain.connect(this.spatialSummer);
     }
 
-    // Haas reflection wiring
+    // Haas reflection wiring: Delay -> DampFilter -> Contralateral Panner -> WetGain -> Summer
     this.spatialBlockInput.connect(this.haasDelayNode);
     this.haasDelayNode.connect(this.haasDampFilter);
-    this.haasDampFilter.connect(this.haasWetGain);
+    if (this.haasPannerNode) {
+      this.haasDampFilter.connect(this.haasPannerNode);
+      this.haasPannerNode.connect(this.haasWetGain);
+    } else {
+      this.haasDampFilter.connect(this.haasWetGain);
+    }
     this.haasWetGain.connect(this.spatialSummer);
   }
 
@@ -575,21 +589,28 @@ export class AudioDspEngine {
 
     if (config.enabled) {
       // Activate Haas wet reflection proportional to intensity
-      const haasLevel = 0.18 * Math.max(0.1, Math.min(1.0, config.intensity ?? 0.8));
-      if (this.haasWetGain) {
+      const haasLevel = 0.16 * Math.max(0.1, Math.min(1.0, config.intensity ?? 0.8));
+      if (this.haasWetGain && this.haasWetGain.gain) {
         this.setParamTarget(this.haasWetGain.gain, haasLevel, 0.02);
       }
       this.startSpatialLfo();
+      this.tickSpatialLfo();
     } else {
-      // Smoothly return panner to center and pinna to wide open
+      // Smoothly return panner to center, direct gain to unity, pinna to wide open, reflection to center/zero
       this.stopSpatialLfo();
       if (this.pannerNode && this.pannerNode.pan) {
         this.setParamTarget(this.pannerNode.pan, 0.0, 0.02);
       }
+      if (this.spatialDirectGain && this.spatialDirectGain.gain) {
+        this.setParamTarget(this.spatialDirectGain.gain, 1.0, 0.02);
+      }
       if (this.pinnaFilter && this.pinnaFilter.frequency) {
         this.setParamTarget(this.pinnaFilter.frequency, 20000, 0.02);
       }
-      if (this.haasWetGain) {
+      if (this.haasPannerNode && this.haasPannerNode.pan) {
+        this.setParamTarget(this.haasPannerNode.pan, 0.0, 0.02);
+      }
+      if (this.haasWetGain && this.haasWetGain.gain) {
         this.setParamTarget(this.haasWetGain.gain, 0.0, 0.02);
       }
     }
@@ -607,20 +628,43 @@ export class AudioDspEngine {
     const intensity = Math.max(0.0, Math.min(1.0, this.spatialConfig.intensity ?? 0.8));
     const theta = 2 * Math.PI * speed * t;
 
-    // Azimuth panning X: sin(theta) * intensity (-1.0 to +1.0)
+    // 1. Azimuth panning X: sin(theta) * intensity (-1.0 to +1.0)
     const panX = Math.max(-1.0, Math.min(1.0, Math.sin(theta) * intensity));
 
-    // Depth Y: cos(theta) (-1.0 = behind listener, +1.0 = in front)
+    // 2. Depth Y: cos(theta) (-1.0 = directly behind listener, +1.0 = directly in front)
     const cosY = Math.cos(theta);
 
-    // Pinna absorption: 12250 + 5750 * cosY Hz (6500 Hz behind to 18000 Hz in front)
+    // 3. Pinna absorption: modulates 6500 Hz behind to 18000 Hz in front
+    // Frequency dip accounts for acoustic shadow cast by human ear pinnae
     const cutoffHz = Math.max(6000, Math.min(20000, 12250 + 5750 * cosY));
+
+    // 4. Front/Back distance attenuation: direct path dips slightly when behind head
+    // cosY = +1 (front) -> directGain = 1.0 (0 dB attenuation)
+    // cosY = -1 (back)  -> directGain = 1.0 - 0.20 * intensity (~ -2 dB dip)
+    const directGain = Math.max(0.7, Math.min(1.0, 1.0 - 0.10 * (1.0 - cosY) * intensity));
+
+    // 5. Haas room reflection gain: subtly rises when sound source orbits behind head,
+    // creating an acoustic sensation of ambient room reverberation in the rear hemisphere
+    const baseHaas = 0.16 * intensity;
+    const haasGain = Math.max(0.0, Math.min(0.35, baseHaas * (1.0 + 0.3 * (1.0 - cosY))));
+
+    // 6. Contralateral reflection azimuth (early room bounce from opposing wall)
+    const reflPanX = Math.max(-1.0, Math.min(1.0, -panX * 0.5));
 
     if (this.pannerNode && this.pannerNode.pan) {
       this.setParamTarget(this.pannerNode.pan, panX, 0.03);
     }
+    if (this.spatialDirectGain && this.spatialDirectGain.gain) {
+      this.setParamTarget(this.spatialDirectGain.gain, directGain, 0.03);
+    }
     if (this.pinnaFilter && this.pinnaFilter.frequency) {
       this.setParamTarget(this.pinnaFilter.frequency, cutoffHz, 0.03);
+    }
+    if (this.haasWetGain && this.haasWetGain.gain) {
+      this.setParamTarget(this.haasWetGain.gain, haasGain, 0.03);
+    }
+    if (this.haasPannerNode && this.haasPannerNode.pan) {
+      this.setParamTarget(this.haasPannerNode.pan, reflPanX, 0.03);
     }
   }
 
@@ -747,6 +791,25 @@ export class AudioDspEngine {
    */
   public getSpatial8D(): Spatial8DConfig {
     return { ...this.spatialConfig };
+  }
+
+  /**
+   * Diagnostic inspection for real-time spatial node parameters (for telemetry and testing).
+   */
+  public getSpatialDiagnostics(): {
+    pan: number;
+    directGain: number;
+    pinnaCutoffHz: number;
+    haasWetGain: number;
+    haasReflectionPan: number;
+  } {
+    return {
+      pan: this.pannerNode?.pan.value ?? 0,
+      directGain: this.spatialDirectGain?.gain.value ?? 1,
+      pinnaCutoffHz: this.pinnaFilter?.frequency.value ?? 20000,
+      haasWetGain: this.haasWetGain?.gain.value ?? 0,
+      haasReflectionPan: this.haasPannerNode?.pan.value ?? 0,
+    };
   }
 
   /**

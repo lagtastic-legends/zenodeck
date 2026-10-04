@@ -328,6 +328,21 @@ async function runDspTests() {
   engine.tickSpatialLfo();
   assert(true, "tickSpatialLfo executes without errors");
 
+  const diag = engine.getSpatialDiagnostics();
+  assert(diag.pinnaCutoffHz >= 6000 && diag.pinnaCutoffHz <= 20000, `Pinna filter (${diag.pinnaCutoffHz.toFixed(0)} Hz) within acoustic human bounds`);
+  assert(diag.directGain >= 0.7 && diag.directGain <= 1.0, `Direct path gain (${diag.directGain.toFixed(3)}) within distance attenuation bounds`);
+  assert(diag.haasWetGain >= 0.0 && diag.haasWetGain <= 0.35, `Haas wet reflection gain (${diag.haasWetGain.toFixed(3)}) within calibrated limits`);
+  assert(Math.abs(diag.haasReflectionPan) <= 1.0, `Contralateral Haas reflection pan (${diag.haasReflectionPan.toFixed(3)}) within stereo boundaries`);
+
+  // Verify disabling 8D resets all spatial parameters cleanly to neutral
+  engine.setSpatial8D({ enabled: false, speedHz: 0.5, intensity: 0.9 });
+  const disabledDiag = engine.getSpatialDiagnostics();
+  assert(disabledDiag.pan === 0.0, "Disabling 8D returns panner to center 0.0");
+  assert(disabledDiag.directGain === 1.0, "Disabling 8D returns direct gain to unity 1.0");
+  assert(disabledDiag.pinnaCutoffHz === 20000, "Disabling 8D opens pinna filter to 20kHz");
+  assert(disabledDiag.haasWetGain === 0.0, "Disabling 8D mutes Haas reflection gain to 0.0");
+  assert(disabledDiag.haasReflectionPan === 0.0, "Disabling 8D centers contralateral reflection panner to 0.0");
+
   // Vocal Mode switching
   engine.setVocalMode("isolate");
   assert(engine.getVocalMode() === "isolate", "Vocal mode set to isolate");

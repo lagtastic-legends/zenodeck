@@ -13,6 +13,13 @@ import { useMediaJob } from "@/hooks/use-media-job";
 import { spatialFilters } from "@/lib/audio/filters";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
 
+const SPATIAL_PRESETS = [
+  { label: "Natural 360°", cycleSec: 8, intensity: 0.9 },
+  { label: "Slow Orbit", cycleSec: 12, intensity: 0.85 },
+  { label: "Hypnotic Dream", cycleSec: 16, intensity: 0.95 },
+  { label: "Fast Whirl", cycleSec: 5, intensity: 0.8 },
+] as const;
+
 export function Spatial8D() {
   const job = useMediaJob();
   const { busy, outputs, run, reset } = job;
@@ -67,6 +74,35 @@ export function Spatial8D() {
       runIcon={<Orbit className="size-4" />}
       controls={
         <ParamPanel title="rotation field">
+          <div className="mb-4">
+            <span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground block mb-2">
+              Calibrated DSP Profiles
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {SPATIAL_PRESETS.map((p) => {
+                const isActive = cycleSec === p.cycleSec && intensity === p.intensity;
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setCycleSec(p.cycleSec);
+                      setIntensity(p.intensity);
+                    }}
+                    className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all text-center border cursor-pointer ${
+                      isActive
+                        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm"
+                        : "bg-muted/40 text-muted-foreground border-border/40 hover:bg-muted hover:text-foreground"
+                    } disabled:opacity-50`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <ParamSlider
             label="Cycle length"
             value={cycleSec}
