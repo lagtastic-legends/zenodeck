@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.7.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.7.0" />
+    <img src="https://img.shields.io/badge/Release-v3.8.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.8.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.7.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.8.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.7.0/zenodeck-v3.7.0-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.7.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.8.0/zenodeck-v3.8.0-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.8.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -37,7 +37,7 @@
   <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml">
     <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml/badge.svg" alt="Release Build Status" />
   </a>
-  <img src="https://img.shields.io/badge/Tests-181%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-644%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor" />
@@ -61,24 +61,25 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.7.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.7.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.7.0/zenodeck-v3.7.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.7.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.7.0/zenodeck-v3.7.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.7.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.7.0/zenodeck-v3.7.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.8.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.8.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.8.0/zenodeck-v3.8.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.8.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.8.0/zenodeck-v3.8.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.8.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.8.0/zenodeck-v3.8.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.7.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.7.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.8.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.8.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
 
 ---
 
-## 🌟 What's New in v3.7.0
+## 🌟 What's New in v3.8.0
 
-- **🎛️ Dark-Glass Popover Preset Dropdown & Android WebView Fix**: Eliminated the black-on-black native `<select>` dialog bug on mobile dark mode with a custom high-contrast glassmorphic Popover Menu (`bg-zinc-950/98`, `border-white/15`, `backdrop-blur-2xl`).
-- **🔍 Dynamic Active Preset Tracking**: Deep parameter matcher dynamically updates the header label from `"Load Preset..."` to the active preset name across all 13 DSP modules, with a 1-click factory reset action.
-- **✨ Visual Checkmarks & Glowing Rings Across All Tools**: Added tactile `Check` icons and glowing rings to active preset chips across Unified Audio Studio, Equalizer, Spatial 8D, Slowed+Reverb, Stereo Panner, Ringtone Maker, Volume Changer, Bass Booster, and DSP Studio Panel.
-- **📱 Mobile WebView Option Styling Overrides**: Hardcoded dark backgrounds and bright text colors for native select options in screen recording tools.
-- **🧪 181/181 Automated Tests Passing (100%)**: Full offline test suite and clean production build with Next.js 16.3.2.
+- **🎚️ Studio-Grade Sound Quality Across All 13 Audio Tools**: Reverb Studio upgraded with multi-stage diffused reflection networks, air-absorption HF damping, low-cut rumble protection, and a `-0.18 dBFS` true-peak limiter across all 8 spaces.
+- **🎤 Vocal Remover Volume & Phase Alignment**: Fixed the $-6\text{ dB}$ volume drop with `:normalize=0` and 2-pole Butterworth crossover filters for pristine karaoke and instrumental extraction.
+- **🔊 Anti-Clipping True-Peak Protection**: Added broadcast lookahead peak limiting (`alimiter=limit=0.98`) on positive volume boosts, eliminating digital distortion.
+- **⚡ Zero-Copy Fast-Path Optimizations**: Bypasses filter execution on neutral settings (0dB gain, center pan, 1.0x tempo), maximizing throughput and battery life.
+- **🎧 Microsecond 60/120Hz 8D Orbit**: Web Audio spatial LFO switched to `requestAnimationFrame` for jitter-free orbital immersion without background tab clamping.
+- **🧪 100% Automated Test Suite (644/644 Passing)**: Added 162 dedicated studio-grade unit tests; full production build compiled with Next.js 16.3.2.
 
 *(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md)).*
 

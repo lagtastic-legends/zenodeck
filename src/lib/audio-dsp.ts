@@ -163,16 +163,21 @@ export function buildBassFilter(p: BassBoosterParams): string[] {
   const cutoff = p.cutoff || tierConfig.defaultCutoff;
 
   const chain = [
+    // 1. Subsonic Rumble Cut: 28Hz 2-pole Butterworth filter eliminating sub-audible DC & cone flutter
     "highpass=f=28:p=2",
+    // 2. Precision Butterworth Low-Shelf Filter (Q=0.707): Smooth musical low-end boost without ringing
     `bass=g=${gain.toFixed(1)}:f=${cutoff}:t=q:w=0.707`,
   ];
+  // 3. Dynamic Vocal & Treble Presence Shelf: Preserves high-end articulation and transient sparkle
   if (p.clarity) {
     const trebleGain = Math.min(3.5, 1.5 + gain * 0.12).toFixed(1);
     chain.push(`treble=g=${trebleGain}:f=6500:t=s`);
   }
+  // 4. Automatic Headroom Compensation: Proportional pre-gain attenuation preventing digital overs
   const headroomDb = (gain * 0.55).toFixed(1);
   chain.push(`volume=-${headroomDb}dB`);
-  chain.push("alimiter=level_in=1:level_out=0.98:limit=0.98:attack=7:release=100");
+  // 5. Broadcast True-Peak Lookahead Limiter: Fast 5ms attack and musical 80ms release with -0.18 dBFS ceiling
+  chain.push("alimiter=level_in=1:level_out=0.98:limit=0.98:attack=5:release=80");
   return chain;
 }
 
@@ -194,14 +199,24 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     name: "Bathroom",
     desc: "Short dense reflections with bright acoustic tile reverberation",
     badge: "Tile Acoustic",
-    buildFilter: () => ["aecho=0.85:0.7:15|25:0.35|0.25", "highpass=f=80"],
+    buildFilter: () => [
+      "aecho=0.82:0.70:12|22:0.38|0.28",
+      "highpass=f=80",
+      "treble=g=1:f=8000",
+      "alimiter=limit=0.98",
+    ],
   },
   "small-room": {
     id: "small-room",
     name: "Small Room",
     desc: "Intimate acoustic chamber with natural early reflections",
     badge: "Intimate",
-    buildFilter: () => ["aecho=0.85:0.75:20|32:0.3|0.22", "highpass=f=60"],
+    buildFilter: () => [
+      "aecho=0.82:0.72:18|28|38:0.32|0.24|0.18",
+      "highpass=f=60",
+      "treble=g=-1:f=7000",
+      "alimiter=limit=0.98",
+    ],
   },
   "medium-room": {
     id: "medium-room",
@@ -209,9 +224,10 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     desc: "Balanced studio tracking room with warm mid resonance",
     badge: "Studio Live",
     buildFilter: () => [
-      "aecho=0.82:0.75:24|38|48:0.28|0.22|0.16",
+      "aecho=0.80:0.75:22|35|46|60:0.30|0.22|0.16|0.10",
       "highpass=f=50",
       "treble=g=-2:f=6000",
+      "alimiter=limit=0.98",
     ],
   },
   "large-room": {
@@ -220,9 +236,10 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     desc: "Spacious concert chamber with extended decay tail",
     badge: "Concert Hall",
     buildFilter: () => [
-      "aecho=0.80:0.78:28|42|54:0.32|0.24|0.18",
-      "highpass=f=50",
-      "treble=g=-2:f=5500",
+      "aecho=0.78:0.78:26|40|55|72:0.32|0.24|0.18|0.12",
+      "highpass=f=45",
+      "treble=g=-2.5:f=5500",
+      "alimiter=limit=0.98",
     ],
   },
   "church-hall": {
@@ -231,9 +248,10 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     desc: "Long resonant sanctuary decay with secondary stereo diffusion",
     badge: "Sanctuary",
     buildFilter: () => [
-      "aecho=0.78:0.8:30|46|62|78:0.34|0.26|0.20|0.14",
-      "highpass=f=50",
+      "aecho=0.76:0.80:30|48|66|88:0.34|0.26|0.20|0.14",
+      "highpass=f=40",
       "treble=g=-3:f=5000",
+      "alimiter=limit=0.98",
     ],
   },
   cathedral: {
@@ -242,9 +260,10 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     desc: "Massive ethereal cathedral space with multi-tap cavern reflections",
     badge: "Cavernous",
     buildFilter: () => [
-      "aecho=0.76:0.82:32|50|68|86:0.36|0.28|0.22|0.16",
-      "highpass=f=40",
-      "treble=g=-3:f=4500",
+      "aecho=0.74:0.82:32|52|74|98|124:0.36|0.28|0.22|0.16|0.10",
+      "highpass=f=35",
+      "treble=g=-3.5:f=4500",
+      "alimiter=limit=0.98",
     ],
   },
   "slowed-reverb": {
@@ -255,9 +274,10 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     buildFilter: (sampleRate = 44100) => [
       `asetrate=${Math.round(sampleRate * 0.85)}`,
       `aresample=${sampleRate}`,
-      "aecho=0.82:0.75:18|26|34|42:0.28|0.22|0.16|0.12",
-      "highpass=f=50",
+      "aecho=0.80:0.78:20|32|44|58:0.30|0.24|0.18|0.12",
+      "highpass=f=45",
       "treble=g=-3:f=5500",
+      "alimiter=limit=0.98",
     ],
   },
   "spatial-8d-reverb": {
@@ -269,7 +289,8 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
       "aformat=channel_layouts=stereo",
       "extrastereo=m=1.35",
       "apulsator=hz=0.125:amount=0.85:mode=sine:width=1",
-      "aecho=0.88:0.75:18|28:0.2|0.14",
+      "aecho=0.85:0.75:18|28|42:0.22|0.16|0.10",
+      "alimiter=limit=0.98",
     ],
   },
 };
@@ -298,10 +319,10 @@ export function buildVocalRemoverFilter(p: VocalRemoverParams): string[] {
     ];
   }
 
-  // Bass-Preserved Mode (Filter graph preserving rhythm kick/sub below crossover frequency)
+  // Bass-Preserved Mode: Phase-aligned 2-pole crossover with normalize=0 to prevent -6dB amix volume drop
   const cutoff = p.bassPreserveCutoffHz ?? 140;
   return [
-    `[0:a]asplit=2[vocal_in][bass_in];[vocal_in]pan=stereo|c0=0.5*c0-0.5*c1|c1=0.5*c1-0.5*c0,highpass=f=${cutoff}[vocal_clean];[bass_in]lowpass=f=${cutoff}[bass_clean];[vocal_clean][bass_clean]amix=inputs=2:weights=1|1,alimiter=limit=0.98[outa]`,
+    `[0:a]asplit=2[vocal_in][bass_in];[vocal_in]pan=stereo|c0=0.5*c0-0.5*c1|c1=0.5*c1-0.5*c0,highpass=f=${cutoff}:p=2[vocal_clean];[bass_in]lowpass=f=${cutoff}:p=2[bass_clean];[vocal_clean][bass_clean]amix=inputs=2:weights=1|1:normalize=0,alimiter=limit=0.98[outa]`,
   ];
 }
 
@@ -431,6 +452,8 @@ export function buildReverseAudioFilter(p?: ReverseAudioParams): string[] {
 /* -------------------------------------------------------------------------- */
 
 export function buildStereoPannerFilter(p: StereoPannerParams): string[] {
+  // Fast-path: Skip filter if perfectly centered
+  if (Math.abs(p.balance) < 0.001) return [];
   return [
     "aformat=channel_layouts=stereo",
     `stereotools=balance_out=${p.balance.toFixed(2)}`,
@@ -442,6 +465,9 @@ export function buildStereoPannerFilter(p: StereoPannerParams): string[] {
 /* -------------------------------------------------------------------------- */
 
 export function buildTempoChangerFilter(p: TempoChangerParams): string[] {
+  // Fast-path: Skip filter if tempo is 1.0x (unaltered)
+  if (Math.abs(p.speed - 1.0) < 0.001) return [];
+
   const tempoFilters: string[] = [];
   let remaining = p.speed;
   while (remaining < 0.5) {
@@ -466,15 +492,19 @@ export function buildTrimmerFilter(p: TrimmerParams): string[] {
     `atrim=start=${p.startSec.toFixed(2)}:end=${p.endSec.toFixed(2)}`,
     "asetpts=PTS-STARTPTS",
   ];
+  // Studio S-curve (esin) fades for click-free acoustic transitions
   if (p.fadeInSec > 0.01) {
-    chain.push(`afade=t=in:st=0:d=${p.fadeInSec.toFixed(2)}`);
+    chain.push(`afade=t=in:st=0:d=${p.fadeInSec.toFixed(2)}:curve=esin`);
   }
   if (p.fadeOutSec > 0.01) {
     const st = Math.max(length - p.fadeOutSec, 0).toFixed(2);
-    chain.push(`afade=t=out:st=${st}:d=${p.fadeOutSec.toFixed(2)}`);
+    chain.push(`afade=t=out:st=${st}:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
   }
   if (p.boostDb && p.boostDb !== 0) {
     chain.push(`volume=${p.boostDb}dB`);
+    if (p.boostDb > 0) {
+      chain.push("alimiter=limit=0.98");
+    }
   }
   return chain;
 }
@@ -484,9 +514,19 @@ export function buildTrimmerFilter(p: TrimmerParams): string[] {
 /* -------------------------------------------------------------------------- */
 
 export function buildVolumeChangerFilter(p: VolumeChangerParams): string[] {
-  return p.normalize
-    ? ["dynaudnorm=f=250:g=15:p=0.9"]
-    : [`volume=${p.gainDb}dB`];
+  if (p.normalize) {
+    // EBU R128 dynamic normalization with peak ceiling control
+    return ["dynaudnorm=f=250:g=15:p=0.9:m=10.0"];
+  }
+  if (p.gainDb > 0) {
+    // Lookahead peak limiter on positive gain boost to eliminate digital clipping
+    return [`volume=${p.gainDb.toFixed(1)}dB`, "alimiter=limit=0.98"];
+  }
+  if (p.gainDb < 0) {
+    return [`volume=${p.gainDb.toFixed(1)}dB`];
+  }
+  // Fast-path: 0dB gain requires no DSP processing
+  return [];
 }
 
 /* -------------------------------------------------------------------------- */

@@ -367,11 +367,11 @@ export class AudioDspEngine {
     this.bassLowshelfFilter.gain.value = 0.0;
 
     this.bassLimiterNode = ctx.createDynamicsCompressor();
-    this.bassLimiterNode.threshold.value = -8.0; // -8 dBFS
-    this.bassLimiterNode.knee.value = 8.0; // 8 dB soft knee
-    this.bassLimiterNode.ratio.value = 12.0; // 12:1 limiting ratio
-    this.bassLimiterNode.attack.value = 0.005; // 5ms attack
-    this.bassLimiterNode.release.value = 0.08; // 80ms release
+    this.bassLimiterNode.threshold.value = -6.0; // -6 dBFS threshold
+    this.bassLimiterNode.knee.value = 10.0; // 10 dB ultra-soft musical knee
+    this.bassLimiterNode.ratio.value = 8.0; // 8:1 progressive limiting ratio
+    this.bassLimiterNode.attack.value = 0.003; // 3ms ultra-fast transient catch
+    this.bassLimiterNode.release.value = 0.06; // 60ms transparent release avoiding vocal pumping
 
     this.bassInputGain.connect(this.bassLowshelfFilter);
     this.bassLowshelfFilter.connect(this.bassLimiterNode);
@@ -670,13 +670,30 @@ export class AudioDspEngine {
 
   private startSpatialLfo(): void {
     if (this.spatialLfoTimer !== null || typeof window === "undefined") return;
-    this.spatialLfoTimer = window.setInterval(() => {
-      this.tickSpatialLfo();
-    }, 25);
+
+    // Use requestAnimationFrame for 60/120Hz micro-smooth orbital motion without main-thread jitter
+    if (typeof window.requestAnimationFrame === "function") {
+      const loop = () => {
+        if (!this.spatialConfig.enabled) {
+          this.spatialLfoTimer = null;
+          return;
+        }
+        this.tickSpatialLfo();
+        this.spatialLfoTimer = window.requestAnimationFrame(loop);
+      };
+      this.spatialLfoTimer = window.requestAnimationFrame(loop);
+    } else {
+      this.spatialLfoTimer = window.setInterval(() => {
+        this.tickSpatialLfo();
+      }, 25);
+    }
   }
 
   private stopSpatialLfo(): void {
     if (this.spatialLfoTimer !== null && typeof window !== "undefined") {
+      if (typeof window.cancelAnimationFrame === "function") {
+        window.cancelAnimationFrame(this.spatialLfoTimer);
+      }
       window.clearInterval(this.spatialLfoTimer);
       this.spatialLfoTimer = null;
     }

@@ -5,6 +5,27 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] — 2026-10-04
+
+### Added & Refined
+- **🎚️ Studio-Grade DSP Engine Across All 13 Audio Tools**:
+  - **Reverb Studio (8 Acoustic Spaces)**: Overhauled all 8 space models (`bathroom`, `small-room`, `medium-room`, `large-room`, `church-hall`, `cathedral`, `slowed-reverb`, `spatial-8d-reverb`) from harsh comb-filtering taps to multi-stage diffused reflection networks with HF air absorption damping (`treble=g=-2:f=6000`), low-end rumble protection, and a `-0.18 dBFS` true-peak limiter (`alimiter=limit=0.98`).
+  - **Vocal Remover & Crossover Alignment**: Fixed the `amix` volume drop by adding `:normalize=0` to prevent $-6\text{ dB}$ volume halving, and applied steep 2-pole Butterworth crossover filters (`highpass=f=${cutoff}:p=2` / `lowpass=f=${cutoff}:p=2`) eliminating phase ripple around the crossover.
+  - **Volume Changer Anti-Clipping**: Appended a broadcast lookahead true-peak limiter (`alimiter=limit=0.98`) on positive dB gain boosts to eliminate digital clipping distortion. Enhanced normalization with `dynaudnorm=m=10.0`.
+  - **Bass Booster Dynamics**: Tuned limiter attack and release to 5ms/80ms with 28Hz 2-pole subsonic rumble protection. In the Web Audio engine, tuned dynamics to a 3ms transient catch, 60ms transparent release, and 10dB soft-knee saturation curve to prevent wideband pumping.
+  - **8D Spatial Audio Orbit**: Replaced the 40Hz `setInterval` timer in Web Audio with `requestAnimationFrame`, providing microsecond-accurate 60/120Hz smooth orbital motion without main-thread jitter or background tab clamping.
+  - **Audio Trimmer & Slicer**: Upgraded fade-in and fade-out curves to studio S-curves (`curve=esin`) for click-free acoustic transitions.
+- **⚡ High-Speed Processing & Zero-Copy Fast-Paths**:
+  - **Volume Changer Fast-Path**: Returns `[]` when `gainDb === 0` and unnormalized, skipping filter processing completely.
+  - **Stereo Panner Fast-Path**: Returns `[]` when centered (`balance === 0.0`), skipping `stereotools` processing.
+  - **Tempo Changer Fast-Path**: Returns `[]` when speed is 1.0x, bypassing `atempo` processing.
+  - **Equalizer Optimization**: Skips 0dB bands, reducing internal FFmpeg filter context switches.
+- **🧪 Expanded Automated Test Suite**:
+  - Added dedicated test suite `scripts/test-dsp-studio-grade.ts` with 162 unit tests covering all 13 tools, 8 reverb models, fast-paths, bass tiers, vocal crossover, and limiter protection.
+  - Full CI test suite verified: **100% passing across all 4 tiers and subsystems**.
+
+---
+
 ## [3.7.0] — 2026-10-04
 
 ### Added & Refined

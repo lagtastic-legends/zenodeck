@@ -57,12 +57,12 @@ export function slowedFilters({ factor, reverb, sampleRate }: SlowedParams): str
 
 function echoForIntensity(reverb: number): string {
   if (reverb < 0.35) {
-    return "aecho=0.85:0.7:16|24:0.22|0.16,highpass=f=50,treble=g=-2:f=6500";
+    return "aecho=0.82:0.70:12|22:0.38|0.28,highpass=f=80,treble=g=1:f=8000,alimiter=limit=0.98";
   }
   if (reverb < 0.7) {
-    return "aecho=0.82:0.75:18|26|34|42:0.28|0.22|0.16|0.12,highpass=f=50,treble=g=-3:f=5500";
+    return "aecho=0.80:0.75:22|35|46|60:0.30|0.22|0.16|0.10,highpass=f=50,treble=g=-2:f=6000,alimiter=limit=0.98";
   }
-  return "aecho=0.80:0.8:20|28|36|48:0.34|0.26|0.20|0.14,highpass=f=50,treble=g=-3:f=5000";
+  return "aecho=0.76:0.80:30|48|66|88:0.34|0.26|0.20|0.14,highpass=f=40,treble=g=-3:f=5000,alimiter=limit=0.98";
 }
 
 /* ------------------------------------------------------------------ */
@@ -106,10 +106,10 @@ export function bassFilters({ intensity, cutoff, clarity }: BassParams): string[
   const headroomDb = (gain * 0.55).toFixed(1);
   chain.push(`volume=-${headroomDb}dB`);
 
-  // 5. Broadcast Lookahead Peak Limiter: Features 7ms lookahead attack, musical 100ms release,
+  // 5. Broadcast Lookahead Peak Limiter: Features 5ms lookahead attack, musical 80ms release,
   // and -0.18 dBFS true peak ceiling. Eliminates auto-sub-band modulation tearing so vocals
   // and sub-bass remain pristine and transparent.
-  chain.push("alimiter=level_in=1:level_out=0.98:limit=0.98:attack=7:release=100");
+  chain.push("alimiter=level_in=1:level_out=0.98:limit=0.98:attack=5:release=80");
 
   return chain;
 }
@@ -196,6 +196,8 @@ export interface PanParams {
 }
 
 export function panFilters({ balance }: PanParams): string[] {
+  // Fast-path: Center pan requires no processing
+  if (Math.abs(balance) < 0.001) return [];
   return [
     "aformat=channel_layouts=stereo",
     `stereotools=balance_out=${balance.toFixed(2)}`,
@@ -214,9 +216,11 @@ export interface VolumeParams {
 }
 
 export function volumeFilters({ db, normalize }: VolumeParams): string[] {
-  if (normalize) return ["dynaudnorm=f=250:g=15:p=0.9"];
+  if (normalize) return ["dynaudnorm=f=250:g=15:p=0.9:m=10.0"];
   if (db > 0) return [`volume=${db}dB`, "alimiter=limit=0.98"];
-  return [`volume=${db}dB`];
+  if (db < 0) return [`volume=${db}dB`];
+  // Fast-path: 0dB gain requires no DSP processing
+  return [];
 }
 
 /* ------------------------------------------------------------------ */
@@ -244,12 +248,13 @@ export function trimFadeFilters({
     `atrim=start=${startSec.toFixed(2)}:end=${endSec.toFixed(2)}`,
     "asetpts=PTS-STARTPTS",
   ];
+  // Studio S-curve (esin) fades for smooth, click-free acoustic transitions
   if (fadeInSec > 0.01) {
-    chain.push(`afade=t=in:st=0:d=${fadeInSec.toFixed(2)}`);
+    chain.push(`afade=t=in:st=0:d=${fadeInSec.toFixed(2)}:curve=esin`);
   }
   if (fadeOutSec > 0.01) {
     const st = Math.max(length - fadeOutSec, 0).toFixed(2);
-    chain.push(`afade=t=out:st=${st}:d=${fadeOutSec.toFixed(2)}`);
+    chain.push(`afade=t=out:st=${st}:d=${fadeOutSec.toFixed(2)}:curve=esin`);
   }
   if (boostDb !== 0) {
     chain.push(`volume=${boostDb}dB`);
