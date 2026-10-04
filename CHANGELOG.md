@@ -5,6 +5,32 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.9] — 2026-10-04
+
+### Added & Refined
+- **🎛️ Comprehensive Audio Preset Refinement Across All 13 DSP Modules**:
+  - **Calibrated Studio Presets**: Systematically overhauled presets across all 13 Web Audio / WASM modules in `AUDIO_TOOLS_CATALOG` (`src/lib/audio-dsp.ts`), providing musically tuned parameter points and descriptive tooltips:
+    - **3D / 8D Audio**: *Natural 360° Orbit (8s)*, *Hypnotic Dream (14s)*, *Fast Binaural Whirl (4s)*, *Subtle Ambient Drift (18s)*, *Max Immersion (6s)*.
+    - **Auto Panner**: *Lofi Drift (0.15 Hz)*, *Gentle Drift (0.25 Hz)*, *Rhythmic Pulse (0.5 Hz)*, *Fast Tremolo (2.0 Hz)*, *Stereo Strobe (4.0 Hz)*, *Triangle Ping-Pong (1.0 Hz)*.
+    - **Bass Booster**: Aligned with the 5 progressive tiers (*Audiophile Warmth +3.5dB*, *Punchy Kick +6dB*, *Deep Club +9dB*, *Heavy Sub 808 +12dB*, *Earthquake Max +15dB*).
+    - **Multi-Band Equalizer**: Added *Acoustic Warmth*, *Podcast / Speech*, *Hip-Hop / 808*, and *Loudness Smile* to the existing factory curves.
+    - **Noise Reducer**: Profiles for *Subtle Studio Clean (8dB)*, *Podcast Vocal Clean (14dB)*, *Heavy Hiss Kill (22dB)*, *AC & Fan Hum Removal (16dB)*, *Subsonic Guard (6dB)*, and *Cassette Tape Restore (18dB)*.
+    - **Pitch Shifter**: Musical intervals expanded to 10 semitone presets (-12 to +12, fifths, minor/major 2nds & 3rds, Nightcore, Chipmunk).
+    - **Reverb Studio**: 8 acoustic space models with physical reflection badges (*Tile Acoustic*, *Intimate*, *Studio Live*, *Concert Hall*, *Sanctuary*, *Cavernous*, *Late Night*, *360° Orbit*).
+    - **Reverse Audio, Stereo Panner, Tempo Changer, Trimmer, Vocal Remover, Volume Changer**: Calibrated for decibel headroom, EBU R128 loudness normalization, and musical subdivisions.
+- **📈 Expanded 6-Band Graphic Equalizer (`src/lib/audio/filters.ts`)**:
+  - Expanded `EQ_PRESETS` from 6 to 10 calibrated curves including *Acoustic Warmth*, *Podcast / Speech*, *Hip-Hop / 808*, and *Loudness Smile*.
+- **⚡ 1-Click Interactive Preset Rails Across All Audio UIs**:
+  - **Unified Audio Studio** (`src/components/audio/UnifiedAudioStudio.tsx`): Added a horizontal quick-preset chip rail directly beneath the active tool header with tactile haptics.
+  - **Slowed + Reverb** (`src/components/tools/slowed-reverb.tsx`): Added 5 signature chips (*Classic 85%*, *Lofi Chill*, *Late-Night Echo*, *Deep Sludge*, *Subtle Warmth*) with active highlight indicators.
+  - **Stereo Panner** (`src/components/tools/stereo-panner.tsx`): Upgraded to 5 standard pan markers (*Hard Left*, *Soft Left -0.35*, *Center*, *Soft Right +0.35*, *Hard Right*).
+  - **Ringtone Maker** (`src/components/tools/ringtone-maker.tsx`): Added quick length preset chips (*Alert 5s*, *Classic 20s*, *Standard 30s*, *iOS Max 39s*) with track duration auto-clamping.
+- **🧪 100% Automated Test Integrity & Production Build**:
+  - Full suite verified: **181/181 checks passing cleanly (100% pass rate)**.
+  - Production build compiled successfully with Next.js 16.3.2.
+
+---
+
 ## [3.6.8] — 2026-10-04
 
 ### Added & Refined
