@@ -128,6 +128,45 @@ export function RingtoneMaker() {
         />
 
         <ParamPanel title="precision cut">
+          {/* Quick Presets */}
+          <div className="space-y-1.5 pb-1">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              Length Presets
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: "Alert (5s)", len: 5, fin: 0.1, fout: 0.5, b: 4 },
+                { label: "Classic (20s)", len: 20, fin: 0.5, fout: 1.0, b: 4 },
+                { label: "Standard (30s)", len: 30, fin: 0.5, fout: 1.5, b: 3 },
+                { label: "iOS Max (39s)", len: 39, fin: 0.5, fout: 2.0, b: 2 },
+              ].map((p) => {
+                const targetEnd = duration > 0 ? Math.min(p.len, duration) : p.len;
+                const isActive = start === 0 && Math.abs(end - targetEnd) < 0.2;
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setStart(0);
+                      setEnd(targetEnd);
+                      setFadeIn(p.fin);
+                      setFadeOut(p.fout);
+                      setBoost(p.b);
+                    }}
+                    disabled={busy}
+                    className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                      isActive
+                        ? "border-primary/60 bg-primary/20 text-primary font-bold shadow-xs"
+                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] md:text-xs lg:text-[13px]">
               <span className="uppercase tracking-[0.14em] text-muted-foreground">start</span>

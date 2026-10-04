@@ -150,6 +150,10 @@ export const EQ_PRESETS: { name: string; gains: EqGains }[] = [
   { name: "Vocal", gains: [-2, 0, 4, 4, 3, 0] },
   { name: "Rock", gains: [5, 3, -1, -2, 3, 6] },
   { name: "Electronic", gains: [6, 4, 0, -2, 2, 5] },
+  { name: "Acoustic Warmth", gains: [3, 2, 1, 0, 2, 3] },
+  { name: "Podcast / Speech", gains: [-6, 2, 4, 3, -2, -4] },
+  { name: "Hip-Hop / 808", gains: [9, 7, 1, -1, 1, 4] },
+  { name: "Loudness Smile", gains: [6, 3, -2, -1, 3, 5] },
 ];
 
 export function eqFilters(gains: EqGains): string[] {

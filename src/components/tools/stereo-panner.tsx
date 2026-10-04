@@ -64,10 +64,12 @@ export function StereoPanner() {
       runIcon={<AudioLines className="size-4" />}
       controls={
         <ParamPanel title="image position">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-1.5 pb-1">
             {[
               { label: "Hard Left", val: -1 },
+              { label: "Soft Left", val: -0.35 },
               { label: "Center", val: 0 },
+              { label: "Soft Right", val: 0.35 },
               { label: "Hard Right", val: 1 },
             ].map((p) => (
               <button
@@ -75,9 +77,9 @@ export function StereoPanner() {
                 type="button"
                 onClick={() => setBalance(p.val)}
                 disabled={busy}
-                className={`rounded-full border px-3 py-1 font-mono text-[10px] md:text-xs uppercase tracking-[0.12em] transition-colors ${
-                  balance === p.val
-                    ? "border-primary/60 bg-primary/20 text-primary font-bold"
+                className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                  Math.abs(balance - p.val) < 0.02
+                    ? "border-primary/60 bg-primary/20 text-primary font-bold shadow-xs"
                     : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                 }`}
               >

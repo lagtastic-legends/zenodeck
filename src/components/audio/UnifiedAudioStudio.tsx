@@ -768,6 +768,28 @@ export function UnifiedAudioStudio({
               </div>
             </div>
 
+            {/* Quick Presets Horizontal Chip Rail */}
+            {activeToolMeta.presets.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scroll-hud">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground shrink-0 pr-1">
+                  Presets:
+                </span>
+                {activeToolMeta.presets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      void haptics.light();
+                      setParams((prev) => ({ ...prev, ...preset.params }));
+                    }}
+                    className="shrink-0 rounded-full border border-border/70 bg-background/50 px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground active:scale-95"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Dynamic Controls per Effect */}
             {activeEffect === "bass-booster" && (
               <div className="space-y-4">

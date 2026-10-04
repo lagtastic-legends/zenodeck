@@ -92,6 +92,42 @@ export function SlowedReverb() {
       runIcon={<AudioWaveform className="size-4" />}
       controls={
         <ParamPanel title="signature">
+          {/* Acoustic Presets */}
+          <div className="space-y-1.5 pb-1">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              Acoustic Presets
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: "Classic 85%", f: 0.85, r: 0.65 },
+                { label: "Lofi Chill (80%)", f: 0.8, r: 0.5 },
+                { label: "Late-Night Echo (75%)", f: 0.75, r: 0.85 },
+                { label: "Deep Sludge (65%)", f: 0.65, r: 0.7 },
+                { label: "Subtle Warmth (90%)", f: 0.9, r: 0.3 },
+              ].map((p) => {
+                const isActive = Math.abs(factor - p.f) < 0.01 && Math.abs(reverb - p.r) < 0.01;
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setFactor(p.f);
+                      setReverb(p.r);
+                    }}
+                    disabled={busy}
+                    className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                      isActive
+                        ? "border-primary/60 bg-primary/20 text-primary font-bold shadow-xs"
+                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <ParamSlider
             label="Speed"
             value={factor}
