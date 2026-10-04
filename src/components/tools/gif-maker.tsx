@@ -9,7 +9,7 @@
  */
 
 import { motion } from "framer-motion";
-import { ImagePlay } from "lucide-react";
+import { ImagePlay, Check } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
@@ -153,16 +153,30 @@ export function GifMaker() {
               Time range
             </p>
             <div className="flex gap-1.5">
-              {chips.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setRangePreset(c.id)}
-                  disabled={busy || !duration}
-                  className="rounded-full border border-border/70 bg-background/50 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-40"
-                >
-                  {c.label}
-                </button>
-              ))}
+              {chips.map((c) => {
+                const isSelected =
+                  duration > 0 &&
+                  (c.id === "full"
+                    ? start === 0 && Math.abs(end - duration) < 0.1
+                    : c.id === "first5"
+                    ? start === 0 && Math.abs(end - Math.min(5, duration)) < 0.1
+                    : Math.abs(start - Math.max(0, duration - 5)) < 0.1 && Math.abs(end - duration) < 0.1);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setRangePreset(c.id)}
+                    disabled={busy || !duration}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.12em] transition-all cursor-pointer disabled:opacity-40 ${
+                      isSelected
+                        ? "border-primary bg-primary/20 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.25)] ring-1 ring-primary/40"
+                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {isSelected && <Check className="size-2.5 text-primary shrink-0 stroke-[2.5]" />}
+                    <span>{c.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

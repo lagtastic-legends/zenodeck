@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Orbit } from "lucide-react";
+import { Orbit, Check, Sparkles } from "lucide-react";
 import { AudioWorkbench } from "@/components/audio/audio-workbench";
 import { ParamPanel, ParamSlider } from "@/components/audio/param-controls";
 import { useMediaJob } from "@/hooks/use-media-job";
@@ -80,7 +80,7 @@ export function Spatial8D() {
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {SPATIAL_PRESETS.map((p) => {
-                const isActive = cycleSec === p.cycleSec && intensity === p.intensity;
+                const isActive = cycleSec === p.cycleSec && Math.abs(intensity - p.intensity) < 0.02;
                 return (
                   <button
                     key={p.label}
@@ -90,13 +90,14 @@ export function Spatial8D() {
                       setCycleSec(p.cycleSec);
                       setIntensity(p.intensity);
                     }}
-                    className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all text-center border cursor-pointer ${
+                    className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all text-center border cursor-pointer ${
                       isActive
-                        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm"
+                        ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-[0_0_12px_rgba(6,182,212,0.25)] ring-1 ring-cyan-500/40 font-semibold"
                         : "bg-muted/40 text-muted-foreground border-border/40 hover:bg-muted hover:text-foreground"
                     } disabled:opacity-50`}
                   >
-                    {p.label}
+                    {isActive && <Check className="size-3 text-cyan-400 stroke-[2.5]" />}
+                    <span>{p.label}</span>
                   </button>
                 );
               })}

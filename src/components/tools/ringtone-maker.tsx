@@ -7,7 +7,7 @@
  */
 
 import { motion } from "framer-motion";
-import { BellRing } from "lucide-react";
+import { BellRing, Check, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
@@ -130,7 +130,8 @@ export function RingtoneMaker() {
         <ParamPanel title="precision cut">
           {/* Quick Presets */}
           <div className="space-y-1.5 pb-1">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="size-3 text-primary" />
               Length Presets
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -154,13 +155,14 @@ export function RingtoneMaker() {
                       setBoost(p.b);
                     }}
                     disabled={busy}
-                    className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-all cursor-pointer ${
                       isActive
-                        ? "border-primary/60 bg-primary/20 text-primary font-bold shadow-xs"
+                        ? "border-primary bg-primary/20 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.25)] ring-1 ring-primary/40"
                         : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                     }`}
                   >
-                    {p.label}
+                    {isActive && <Check className="size-3 text-primary shrink-0" />}
+                    <span>{p.label}</span>
                   </button>
                 );
               })}

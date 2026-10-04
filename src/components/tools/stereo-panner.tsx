@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { AudioLines } from "lucide-react";
+import { AudioLines, Check, Sparkles } from "lucide-react";
 import { AudioWorkbench } from "@/components/audio/audio-workbench";
 import { ParamPanel, ParamSlider } from "@/components/audio/param-controls";
 import { useMediaJob } from "@/hooks/use-media-job";
@@ -71,21 +71,25 @@ export function StereoPanner() {
               { label: "Center", val: 0 },
               { label: "Soft Right", val: 0.35 },
               { label: "Hard Right", val: 1 },
-            ].map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => setBalance(p.val)}
-                disabled={busy}
-                className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
-                  Math.abs(balance - p.val) < 0.02
-                    ? "border-primary/60 bg-primary/20 text-primary font-bold shadow-xs"
-                    : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+            ].map((p) => {
+              const isActive = Math.abs(balance - p.val) < 0.02;
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setBalance(p.val)}
+                  disabled={busy}
+                  className={`shrink-0 flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-all cursor-pointer ${
+                    isActive
+                      ? "border-primary bg-primary/25 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.3)] ring-1 ring-primary/40"
+                      : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-background/80"
+                  }`}
+                >
+                  {isActive && <Check className="size-2.5 shrink-0 text-primary stroke-[2.5]" />}
+                  <span>{p.label}</span>
+                </button>
+              );
+            })}
           </div>
           <ParamSlider
             label="Balance"

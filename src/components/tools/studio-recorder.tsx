@@ -662,17 +662,17 @@ export function StudioRecorder() {
                           onChange={(e) => setScreenQuality(e.target.value as "720p" | "1080p" | "4k")}
                           className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
                         >
-                          <option value="720p">720p (HD)</option>
-                          <option value="1080p">1080p (FHD)</option>
-                          <option value="4k">4K (UHD)</option>
+                          <option value="720p" className="bg-zinc-900 text-zinc-100">720p (HD)</option>
+                          <option value="1080p" className="bg-zinc-900 text-zinc-100">1080p (FHD)</option>
+                          <option value="4k" className="bg-zinc-900 text-zinc-100">4K (UHD)</option>
                         </select>
                         <select 
                           value={screenFps}
                           onChange={(e) => setScreenFps(Number(e.target.value) as 30 | 60)}
                           className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
                         >
-                          <option value={30}>30 FPS</option>
-                          <option value={60}>60 FPS</option>
+                          <option value={30} className="bg-zinc-900 text-zinc-100">30 FPS</option>
+                          <option value={60} className="bg-zinc-900 text-zinc-100">60 FPS</option>
                         </select>
                       </div>
                     )}
@@ -704,17 +704,17 @@ export function StudioRecorder() {
                           onChange={(e) => setScreenQuality(e.target.value as "720p" | "1080p" | "4k")}
                           className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
                         >
-                          <option value="720p">720p (HD)</option>
-                          <option value="1080p">1080p (FHD)</option>
-                          <option value="4k">4K (UHD)</option>
+                          <option value="720p" className="bg-zinc-900 text-zinc-100">720p (HD)</option>
+                          <option value="1080p" className="bg-zinc-900 text-zinc-100">1080p (FHD)</option>
+                          <option value="4k" className="bg-zinc-900 text-zinc-100">4K (UHD)</option>
                         </select>
                         <select 
                           value={screenFps}
                           onChange={(e) => setScreenFps(Number(e.target.value) as 30 | 60)}
                           className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
                         >
-                          <option value={30}>30 FPS</option>
-                          <option value={60}>60 FPS</option>
+                          <option value={30} className="bg-zinc-900 text-zinc-100">30 FPS</option>
+                          <option value={60} className="bg-zinc-900 text-zinc-100">60 FPS</option>
                         </select>
                       </div>
                     )}

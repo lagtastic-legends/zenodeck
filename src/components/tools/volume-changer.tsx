@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Volume2 } from "lucide-react";
+import { Volume2, Check, Sparkles } from "lucide-react";
 import { AudioWorkbench } from "@/components/audio/audio-workbench";
 import {
   ParamPanel,
@@ -70,32 +70,42 @@ export function VolumeChanger() {
       runIcon={<Volume2 className="size-4" />}
       controls={
         <ParamPanel title="gain stage">
-          <div className="flex flex-wrap gap-1.5 pb-1">
-            {[
-              { label: "-12 dB", dbVal: -12, norm: false },
-              { label: "-6 dB", dbVal: -6, norm: false },
-              { label: "0 dB (Flat)", dbVal: 0, norm: false },
-              { label: "+6 dB", dbVal: 6, norm: false },
-              { label: "+12 dB", dbVal: 12, norm: false },
-              { label: "Normalize", dbVal: 0, norm: true },
-            ].map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => {
-                  setNormalize(p.norm);
-                  setDb(p.dbVal);
-                }}
-                disabled={busy}
-                className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
-                  (p.norm && normalize) || (!normalize && !p.norm && db === p.dbVal)
-                    ? "border-primary/60 bg-primary/20 text-primary font-bold"
-                    : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          <div className="space-y-1.5 pb-1">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="size-3 text-primary" />
+              Gain Stage Presets
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: "-12 dB", dbVal: -12, norm: false },
+                { label: "-6 dB", dbVal: -6, norm: false },
+                { label: "0 dB (Flat)", dbVal: 0, norm: false },
+                { label: "+6 dB", dbVal: 6, norm: false },
+                { label: "+12 dB", dbVal: 12, norm: false },
+                { label: "Normalize", dbVal: 0, norm: true },
+              ].map((p) => {
+                const isActive = (p.norm && normalize) || (!normalize && !p.norm && db === p.dbVal);
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setNormalize(p.norm);
+                      setDb(p.dbVal);
+                    }}
+                    disabled={busy}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-all cursor-pointer ${
+                      isActive
+                        ? "border-primary bg-primary/20 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.25)] ring-1 ring-primary/40"
+                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {isActive && <Check className="size-3 text-primary shrink-0" />}
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <ParamSlider
             label="Volume"

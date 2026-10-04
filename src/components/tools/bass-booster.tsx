@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Speaker } from "lucide-react";
+import { Speaker, Check, Sparkles } from "lucide-react";
 import { AudioWorkbench } from "@/components/audio/audio-workbench";
 import {
   ParamPanel,
@@ -89,7 +89,10 @@ export function BassBooster() {
           {/* Refined Tier Selection ("Tear List") */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
-              <span>Acoustic Tier Preset</span>
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="size-3 text-primary" />
+                Acoustic Tier Preset
+              </span>
               {activeTier && (
                 <span className="text-primary font-bold">Tier {activeTier.tier} · {activeTier.gain}</span>
               )}
@@ -110,12 +113,13 @@ export function BassBooster() {
                     disabled={busy}
                     className={`flex flex-col text-left rounded-xl border p-2 sm:p-2.5 transition-all cursor-pointer ${
                       isSelected
-                        ? "border-primary/70 bg-primary/15 shadow-[0_0_12px_rgba(139,92,246,0.15)] ring-1 ring-primary/40"
+                        ? "border-primary bg-primary/20 shadow-[0_0_12px_rgba(139,92,246,0.25)] ring-1 ring-primary/50"
                         : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:bg-card hover:text-foreground"
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className={`font-display text-xs font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
+                      <span className={`font-display text-xs font-bold flex items-center gap-1.5 ${isSelected ? "text-primary" : "text-foreground"}`}>
+                        {isSelected && <Check className="size-3 text-primary shrink-0 stroke-[2.5]" />}
                         T{t.tier} · {t.label}
                       </span>
                       <span className="font-mono text-[9px] font-semibold text-primary/80">

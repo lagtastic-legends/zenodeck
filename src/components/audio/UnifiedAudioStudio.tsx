@@ -30,6 +30,7 @@ import {
   Download,
   FileAudio,
   Check,
+  ChevronDown,
   Grid,
 } from "lucide-react";
 import { DropZone } from "@/components/media/drop-zone";
@@ -565,6 +566,52 @@ export function UnifiedAudioStudio({
     [activeEffect]
   );
 
+  /* Active preset matcher across all 13 modules */
+  const currentPresetMatch = useMemo(() => {
+    if (!activeToolMeta?.presets) return null;
+    return (
+      activeToolMeta.presets.find((p) => {
+        return Object.entries(p.params).every(([k, v]) => {
+          const currentVal = params[k];
+          if (Array.isArray(v)) {
+            return (
+              Array.isArray(currentVal) &&
+              v.length === currentVal.length &&
+              v.every((val, i) => Math.abs(val - currentVal[i]) < 0.01)
+            );
+          }
+          if (typeof v === "number" && typeof currentVal === "number") {
+            return Math.abs(v - currentVal) < 0.01;
+          }
+          return currentVal === v;
+        });
+      }) || null
+    );
+  }, [activeToolMeta, params]);
+
+  /* Custom glassmorphic preset dropdown state */
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const presetDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        presetDropdownRef.current &&
+        !presetDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPresetMenu(false);
+      }
+    }
+    if (showPresetMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showPresetMenu]);
+
+  useEffect(() => {
+    setShowPresetMenu(false);
+  }, [activeEffect]);
+
   /* Dynamic real-time ETA calculation based on elapsed time and progress ratio */
   const etaSeconds = useMemo(() => {
     if (progress <= 3 || progress >= 100 || elapsedMs < 1000) return null;
@@ -740,53 +787,121 @@ export function UnifiedAudioStudio({
                 </div>
               </div>
 
-              {/* Quick Presets Dropdown */}
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider hidden sm:inline">
-                  Preset:
-                </span>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const preset = activeToolMeta.presets.find((p) => p.label === e.target.value);
-                    if (preset) {
-                      void haptics.light();
-                      setParams((prev) => ({ ...prev, ...preset.params }));
-                    }
+              {/* Custom Dark-Glass Preset Selector */}
+              <div className="relative shrink-0" ref={presetDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void haptics.light();
+                    setShowPresetMenu((prev) => !prev);
                   }}
-                  className="bg-background/80 border border-border/60 text-xs rounded-md px-2 py-1 font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition-all shadow-xs cursor-pointer ${
+                    currentPresetMatch
+                      ? "border-primary/50 bg-primary/15 text-primary font-semibold hover:border-primary hover:bg-primary/20"
+                      : "border-border/70 bg-background/80 text-foreground hover:border-primary/40 hover:bg-card"
+                  }`}
+                  aria-label="Preset Selection"
+                  aria-expanded={showPresetMenu}
                 >
-                  <option value="" disabled>
-                    Load Preset...
-                  </option>
-                  {activeToolMeta.presets.map((p) => (
-                    <option key={p.label} value={p.label}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
+                  <Sparkles className={`size-3.5 ${currentPresetMatch ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className="max-w-[120px] sm:max-w-[200px] truncate text-left">
+                    {currentPresetMatch ? currentPresetMatch.label : "Load Preset..."}
+                  </span>
+                  <ChevronDown
+                    className={`size-3 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                      showPresetMenu ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Animated Glassmorphic Menu */}
+                <AnimatePresence>
+                  {showPresetMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 4, scale: 0.96 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 top-full mt-1.5 z-50 min-w-[240px] max-w-[320px] max-h-[360px] overflow-y-auto rounded-xl border border-white/15 bg-zinc-950/98 p-1.5 shadow-2xl backdrop-blur-2xl ring-1 ring-black/60 scroll-hud"
+                    >
+                      <div className="px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 border-b border-white/10 mb-1 flex items-center justify-between">
+                        <span>{activeToolMeta.name} Presets</span>
+                        <span className="text-primary font-bold">{activeToolMeta.presets.length} Presets</span>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        {activeToolMeta.presets.map((preset) => {
+                          const isSelected = currentPresetMatch?.label === preset.label;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                void haptics.light();
+                                setParams((prev) => ({ ...prev, ...preset.params }));
+                                setShowPresetMenu(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left font-mono text-xs transition-colors cursor-pointer ${
+                                isSelected
+                                  ? "bg-primary/25 text-primary font-bold border border-primary/40 shadow-xs"
+                                  : "text-zinc-200 hover:bg-white/10 hover:text-white"
+                              }`}
+                            >
+                              <span className="truncate pr-2">{preset.label}</span>
+                              {isSelected && <Check className="size-3.5 text-primary shrink-0 stroke-[2.5]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="pt-1 mt-1 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void haptics.light();
+                            setParams(getDefaultAudioParams(activeEffect));
+                            setShowPresetMenu(false);
+                          }}
+                          className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left font-mono text-[11px] text-zinc-400 hover:bg-white/5 hover:text-zinc-200 transition-colors cursor-pointer"
+                        >
+                          <span>Reset to Factory Defaults</span>
+                          <RotateCcw className="size-3 opacity-70 shrink-0" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
             {/* Quick Presets Horizontal Chip Rail */}
             {activeToolMeta.presets.length > 0 && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scroll-hud">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground shrink-0 pr-1">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground shrink-0 pr-1 flex items-center gap-1">
+                  <Sparkles className="size-2.5 text-primary" />
                   Presets:
                 </span>
-                {activeToolMeta.presets.map((preset) => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => {
-                      void haptics.light();
-                      setParams((prev) => ({ ...prev, ...preset.params }));
-                    }}
-                    className="shrink-0 rounded-full border border-border/70 bg-background/50 px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground active:scale-95"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                {activeToolMeta.presets.map((preset) => {
+                  const isSelected = currentPresetMatch?.label === preset.label;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        setParams((prev) => ({ ...prev, ...preset.params }));
+                      }}
+                      className={`shrink-0 flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.1em] transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-primary bg-primary/25 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.3)] ring-1 ring-primary/50"
+                          : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-background/80"
+                      }`}
+                    >
+                      {isSelected && <Check className="size-2.5 shrink-0 text-primary stroke-[2.5]" />}
+                      <span>{preset.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -809,13 +924,16 @@ export function UnifiedAudioStudio({
                             void haptics.light();
                             updateParam("tier", tierNum);
                           }}
-                          className={`flex flex-col items-center justify-center p-2 rounded-lg border text-center transition-all ${
+                          className={`flex flex-col items-center justify-center p-2 rounded-lg border text-center transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-200 font-bold shadow-xs"
+                              ? "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-200 font-bold shadow-[0_0_10px_rgba(217,70,239,0.2)] ring-1 ring-fuchsia-500/40"
                               : "bg-background/40 hover:bg-background/80 border-border/50 text-muted-foreground"
                           }`}
                         >
-                          <span className="font-mono text-[10px]">T{tierNum}</span>
+                          <div className="flex items-center gap-1">
+                            {isSelected && <Check className="size-2.5 text-fuchsia-400 shrink-0 stroke-[2.5]" />}
+                            <span className="font-mono text-[10px]">T{tierNum}</span>
+                          </div>
                           <span className="font-bold text-xs">+{tier.gain}dB</span>
                         </button>
                       );
@@ -863,13 +981,16 @@ export function UnifiedAudioStudio({
                           void haptics.light();
                           updateParam("preset", spaceKey);
                         }}
-                        className={`flex flex-col text-left p-2.5 rounded-lg border transition-all ${
+                        className={`flex flex-col text-left p-2.5 rounded-lg border transition-all cursor-pointer ${
                           isSelected
-                            ? "bg-cyan-500/20 border-cyan-500 text-cyan-100 font-semibold shadow-xs"
+                            ? "bg-cyan-500/20 border-cyan-500 text-cyan-100 font-semibold shadow-[0_0_10px_rgba(6,182,212,0.2)] ring-1 ring-cyan-500/40"
                             : "bg-background/40 hover:bg-background/80 border-border/50 text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        <span className="text-xs font-medium">{space.name}</span>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-medium">{space.name}</span>
+                          {isSelected && <Check className="size-3 text-cyan-400 shrink-0 stroke-[2.5]" />}
+                        </div>
                         <span className="font-mono text-[9px] text-muted-foreground/80 mt-0.5">
                           {space.badge}
                         </span>
@@ -901,13 +1022,16 @@ export function UnifiedAudioStudio({
                             void haptics.light();
                             updateParam("mode", m.id);
                           }}
-                          className={`p-2.5 rounded-lg border text-left transition-all ${
+                          className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
                             isSelected
-                              ? "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-100 font-semibold shadow-xs"
+                              ? "bg-fuchsia-500/20 border-fuchsia-500 text-fuchsia-100 font-semibold shadow-[0_0_10px_rgba(217,70,239,0.2)] ring-1 ring-fuchsia-500/40"
                               : "bg-background/40 hover:bg-background/80 border-border/50 text-muted-foreground hover:text-foreground"
                           }`}
                         >
-                          <p className="text-xs font-medium">{m.label}</p>
+                          <div className="flex items-center justify-between w-full">
+                            <p className="text-xs font-medium">{m.label}</p>
+                            {isSelected && <Check className="size-3 text-fuchsia-400 shrink-0 stroke-[2.5]" />}
+                          </div>
                           <p className="font-mono text-[9px] text-muted-foreground/80">{m.sub}</p>
                         </button>
                       );

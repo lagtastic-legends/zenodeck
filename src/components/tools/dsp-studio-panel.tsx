@@ -17,6 +17,8 @@ import {
   Mic,
   MicOff,
   RotateCcw,
+  Check,
+  Sparkles,
 } from "lucide-react";
 import { useAudioDspStore } from "@/lib/audio/dsp-store";
 import {
@@ -185,21 +187,25 @@ export function DspStudioPanel({ audioRef, isOpen, onToggle }: DspStudioPanelPro
               className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none"
               style={{ scrollbarWidth: "none" }}
             >
-              {DSP_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => applyPreset(preset.id)}
-                  className={`shrink-0 rounded-full px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap transition-all cursor-pointer ${
-                    activePresetId === preset.id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted/60 text-muted-foreground hover:bg-muted"
-                  }`}
-                  title={preset.description}
-                >
-                  {preset.name}
-                </button>
-              ))}
+              {DSP_PRESETS.map((preset) => {
+                const isActive = activePresetId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset.id)}
+                    className={`inline-flex items-center gap-1 shrink-0 rounded-full px-2.5 py-1 font-mono text-[10px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-[0_0_10px_rgba(139,92,246,0.3)] ring-1 ring-primary/60"
+                        : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                    }`}
+                    title={preset.description}
+                  >
+                    {isActive && <Check className="size-3 shrink-0 stroke-[2.5]" />}
+                    <span>{preset.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* ── 10-Band EQ Sliders ── */}

@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { AudioWaveform } from "lucide-react";
+import { AudioWaveform, Check, Sparkles } from "lucide-react";
 import { AudioWorkbench } from "@/components/audio/audio-workbench";
 import { ParamPanel, ParamSlider } from "@/components/audio/param-controls";
 import { useMediaJob } from "@/hooks/use-media-job";
@@ -94,7 +94,8 @@ export function SlowedReverb() {
         <ParamPanel title="signature">
           {/* Acoustic Presets */}
           <div className="space-y-1.5 pb-1">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1">
+              <Sparkles className="size-2.5 text-primary" />
               Acoustic Presets
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -115,13 +116,14 @@ export function SlowedReverb() {
                       setReverb(p.r);
                     }}
                     disabled={busy}
-                    className={`rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                    className={`shrink-0 flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-all cursor-pointer ${
                       isActive
-                        ? "border-primary/60 bg-primary/20 text-primary font-bold shadow-xs"
-                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        ? "border-primary bg-primary/25 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.3)] ring-1 ring-primary/40"
+                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-background/80"
                     }`}
                   >
-                    {p.label}
+                    {isActive && <Check className="size-2.5 shrink-0 text-primary stroke-[2.5]" />}
+                    <span>{p.label}</span>
                   </button>
                 );
               })}

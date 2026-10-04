@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { SlidersVertical } from "lucide-react";
+import { SlidersVertical, Check, Sparkles } from "lucide-react";
 import { AudioWorkbench } from "@/components/audio/audio-workbench";
 import { ParamPanel, ParamSlider } from "@/components/audio/param-controls";
 import { useMediaJob } from "@/hooks/use-media-job";
@@ -73,17 +73,29 @@ export function EqualizerTool() {
       runIcon={<SlidersVertical className="size-4" />}
       controls={
         <ParamPanel title="6-band shaper">
-          <div className="scroll-hud flex gap-1.5 overflow-x-auto pb-1">
-            {EQ_PRESETS.map((p, i) => (
-              <button
-                key={p.name}
-                onClick={() => applyPreset(i)}
-                disabled={busy}
-                className="shrink-0 rounded-full border border-border/70 bg-background/50 px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-40"
-              >
-                {p.name}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scroll-hud">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground shrink-0 pr-1 flex items-center gap-1">
+              <Sparkles className="size-2.5 text-primary" />
+              Presets:
+            </span>
+            {EQ_PRESETS.map((p, i) => {
+              const isActive = gains.every((g, gi) => Math.abs(g - p.gains[gi]) < 0.1);
+              return (
+                <button
+                  key={p.name}
+                  onClick={() => applyPreset(i)}
+                  disabled={busy}
+                  className={`shrink-0 flex items-center gap-1 rounded-full border px-2.5 py-1 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.12em] transition-all cursor-pointer disabled:opacity-40 ${
+                    isActive
+                      ? "border-primary bg-primary/25 text-primary font-bold shadow-[0_0_10px_rgba(139,92,246,0.3)] ring-1 ring-primary/40"
+                      : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  {isActive && <Check className="size-2.5 shrink-0 text-primary stroke-[2.5]" />}
+                  <span>{p.name}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
             {EQ_BANDS.map((band, i) => (
