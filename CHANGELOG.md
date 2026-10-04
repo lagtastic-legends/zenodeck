@@ -5,6 +5,28 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.8] — 2026-10-04
+
+### Added & Refined
+- **🌐 8D Audio Spherical Spatialization (Real-Time Web Audio DSP Graph)**:
+  - **3D Spherical Orbit Modeling**: Upgraded orbital LFO from 1D flat panning to full 3D binaural spatialization using azimuth angle \(\theta\) (\(X = \sin\theta\)) and depth (\(Y = \cos\theta\)).
+  - **Front/Back Distance Attenuation**: Implemented dynamic direct path attenuation via `spatialDirectGain` to apply \(-1.5\text{ dB}\) to \(-2.0\text{ dB}\) reduction when audio orbits behind the head, eliminating flat lateral sliding.
+  - **Contralateral Early Room Reflections**: Wired a dedicated `haasPannerNode` on the 22ms damped (4.5 kHz lowpass) Haas reflection line, steering room reflections to the opposing stereo hemisphere (\(-\text{panX} \times 0.5\)).
+  - **Dynamic Rear-Hemisphere Diffusion**: Modulated `haasWetGain` to increase diffuse room reflections by \(+30\%\) to \(+60\%\) when direct sound is behind the listener.
+  - **Zero-Glitch De-Zippering & Transparent Reset**: Ramped all spatial parameters with `setTargetAtTime` (25ms–30ms time constants); disabling 8D audio cleanly resets all nodes to transparent unity.
+  - **Real-Time Diagnostic Telemetry**: Added `getSpatialDiagnostics()` exposing real-time pan, direct gain, pinna cutoff, Haas reflection gain, and reflection pan.
+- **🎚️ Calibrated 8D Profiles in Standalone 8D Tool**:
+  - Added 1-click preset selector pills in `Spatial8D` (`src/components/tools/spatial-8d.tsx`):
+    - **Natural 360°** (8s cycle · 90% intensity)
+    - **Slow Orbit** (12s cycle · 85% intensity)
+    - **Hypnotic Dream** (16s cycle · 95% intensity)
+    - **Fast Whirl** (5s cycle · 80% intensity)
+- **🧪 Expanded Test Suite & Verification**:
+  - Expanded `scripts/test-dsp-m1.ts` to 120 tests with assertions verifying pinna frequency limits, distance attenuation ranges, Haas wet gain bounds, contralateral reflection panning, and clean reset states.
+  - Total automated CI suite elevated to **167 tests passing (100% pass rate)**.
+
+---
+
 ## [3.6.7] — 2026-10-02
 
 ### Added

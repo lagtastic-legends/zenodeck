@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.6.7-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.7" />
+    <img src="https://img.shields.io/badge/Release-v3.6.8-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.6.8" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.8/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.6.7-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.8/zenodeck-v3.6.8-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.6.8-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -37,7 +37,7 @@
   <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml">
     <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml/badge.svg" alt="Release Build Status" />
   </a>
-  <img src="https://img.shields.io/badge/Tests-162%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-167%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor" />
@@ -61,25 +61,25 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.6.7-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.6.7-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.6.7-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.7/zenodeck-v3.6.7-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.8/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.6.8-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.8/zenodeck-v3.6.8-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.6.8-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.8/zenodeck-v3.6.8-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.6.8-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.6.8/zenodeck-v3.6.8-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.6.7)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.7) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.6.8)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.6.8) | Full release notes, raw SHA256 checksums, and source tarballs. |
 
 ---
 
-## 🌟 What's New in v3.6.7
+## 🌟 What's New in v3.6.8
 
-- **🎧 Exact Slowed & Reverb Engine**: Implemented `generateSlowedReverbCommand(inputFile, outputFile)` utilizing exact industry-standard filter chain `asetrate=44100*0.85,aresample=44100,aecho=0.8:0.9:1000:0.3` (85% tempo & pitch drop with 1000ms room-scale delay).
-- **🌀 Exact 8D Audio Spatial Engine**: Implemented `generate8DAudioCommand(inputFile, outputFile)` with `apulsator=mode=sine:hz=0.08:amount=0.85,aecho=0.8:0.9:1000:0.3` (12.5-second sinusoidal orbital binaural pan at 85% depth).
-- **🎛️ Dark-Mode Audio Effects Panel (`AudioEffectsPanel.tsx`)**: High-contrast glassmorphic React component with Framer Motion progress telemetry, instant synth audio testing, HTML5 audio preview, and `nativeSave` download.
-- **⚡ Zero-Copy WASM Transfer & 120s Watchdog**: Direct in-memory `wasmBinary` transfer into Web Workers (~1.9s engine boot, zero Base64 IPC heap bloat) with 120s JIT compilation watchdog and IndexedDB cache eviction guard.
-- **🛡️ Eradication of React Error #185**: Resolved infinite update depth loops in Local Vault via memoized callbacks and static external store subscriptions.
-- **🧪 162-Point Automated CI Suite**: 100% green tests covering audio filter graphs, container muxing, APK chunked saving, and AI route failover.
+- **🌐 3D Spherical 8D Audio & Distance Modeling**: Upgraded real-time Web Audio graph from 1D lateral panning to full 3D binaural spatialization using azimuth angle \(\theta\) (\(X = \sin\theta\)) and front/back depth (\(Y = \cos\theta\)) with dynamic direct-path attenuation (\(-1.5\text{ dB}\) to \(-2.0\text{ dB}\) dip behind the skull) preventing flat lateral sliding.
+- **🏛️ Contralateral Early Room Reflections**: Implemented a dedicated secondary panner routing 22ms damped Haas reflections to the opposing stereo hemisphere (\(-\text{panX} \times 0.5\)) with automatic rear-hemisphere ambient room diffusion gain.
+- **🎚️ Calibrated 8D Profiles in UI**: Added 1-click preset selector pills in the 8D Spatial Workbench (Natural 360°, Slow Orbit, Hypnotic Dream, Fast Whirl).
+- **📊 Real-Time DSP Telemetry & Diagnostics**: Added `getSpatialDiagnostics()` exposing real-time pan, direct gain, pinna cutoff, Haas reflection gain, and reflection pan for testing and live meters.
+- **🎧 Advanced Audio Effects Suite**: Industry-standard Slowed & Reverb (`asetrate=44100*0.85,aresample=44100,aecho=0.8:0.9:1000:0.3`) and 8D Spatial Engine (`apulsator=mode=sine:hz=0.08:amount=0.85,aecho=0.8:0.9:1000:0.3`) with dark-mode `AudioEffectsPanel.tsx`.
+- **🧪 167-Point Automated Test Suite**: 100% green tests covering audio filter graphs, container muxing, APK chunked saving, and AI route failover.
 
 *(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md)).*
 
@@ -99,7 +99,7 @@ flowchart TD
         WA["Web Audio API (Real-Time DSP Node Chain)"]
         WA --> EQ["10-Band ISO Equalizer (31Hz – 16kHz)"]
         WA --> Bass["Dynamic Bass Boost + 8kHz Clarity Shelf"]
-        WA --> Spatial["Real-Time 8D Orbital LFO Panner"]
+        WA --> Spatial["Spherical 8D Orbit + Contralateral Reflections"]
         WA --> Vocal["Center Vocal Isolation & OOPS Cancellation"]
     end
 
@@ -200,7 +200,7 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Run Verification Suite (162 Tests)
+### 3. Run Verification Suite (167 Tests)
 ```bash
 # TypeScript strict type checking
 npm run typecheck
