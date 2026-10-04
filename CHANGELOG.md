@@ -5,6 +5,30 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] — 2026-10-04
+
+### Added & Refined
+- **🎛️ Dark-Glass Popover Preset Dropdown & Mobile Dark-Mode Fix**:
+  - **Eliminated Android WebView Dark-Mode Bug**: Replaced native HTML `<select>` in `UnifiedAudioStudio.tsx` with a custom high-contrast glassmorphic Popover Menu (`bg-zinc-950/98`, `border-white/15`, `backdrop-blur-2xl`), eliminating the black-on-black unreadable text dialog on Android WebViews.
+  - **Dynamic Active Preset Tracking**: Implemented deep parameter inspection with floating-point tolerance (`Math.abs(v - currentVal) < 0.01`) across all 13 DSP modules in `AUDIO_TOOLS_CATALOG`. The dropdown button dynamically updates from `"Load Preset..."` to the active preset label (e.g. `"Sub Kick (45 Hz)"`, `"Concert Hall"`).
+  - **Active State Indicators**: Integrated high-contrast `Check` icon (`size-3.5 stroke-[2.5] text-primary`) and glowing border into selected preset rows, plus a 1-click "Reset to Factory Defaults" action with `RotateCcw`.
+- **⚡ Enhanced Active State Indicators Across All Standalone Audio Tools**:
+  - **Equalizer Studio (`equalizer-tool.tsx`)**: Multi-band active state matching with `Check` icon and glowing primary ring.
+  - **Spatial 8D Audio (`spatial-8d.tsx`)**: Active cyan glowing ring and `Check` icon indicator.
+  - **Slowed & Reverb (`slowed-reverb.tsx`)**: Active acoustic preset chips with checkmark and glowing ring.
+  - **Stereo Panner (`stereo-panner.tsx`)**: 5 pan balance markers with active checkmark and glow.
+  - **Ringtone Maker (`ringtone-maker.tsx`)**: Length presets (`Alert`, `Classic`, `Standard`, `iOS Max`) with active checkmark and glow.
+  - **Volume Changer (`volume-changer.tsx`)**: Gain staging chips (`-12 dB`, `-6 dB`, `Flat`, `+6 dB`, `+12 dB`, `Normalize`) with active checkmark and glow.
+  - **Bass Booster (`bass-booster.tsx`)**: Acoustic tier cards with active `Check` icon badge and fuchsia glow ring.
+  - **DSP Studio Panel (`dsp-studio-panel.tsx`)**: 10-band DSP master preset chips rail with active `Check` icon and glowing ring.
+  - **GIF Maker (`gif-maker.tsx`)**: Time range presets (`Full`, `First 5s`, `Last 5s`) with active `Check` icon and glow.
+  - **Studio Recorder (`studio-recorder.tsx`)**: Screen quality and FPS dropdown options explicitly styled with `bg-zinc-900 text-zinc-100` for mobile WebViews.
+- **🧪 100% CI Suite Integrity & Production Build**:
+  - Full suite verified: **181/181 automated tests passing cleanly (100% pass rate)**.
+  - Production build compiled successfully with Next.js 16.3.2.
+
+---
+
 ## [3.6.9] — 2026-10-04
 
 ### Added & Refined

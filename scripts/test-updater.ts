@@ -27,7 +27,7 @@ function runTests() {
   console.log("✓ isNewerVersion comparisons passed");
 
   // 3. Test current version
-  assert(APP_VERSION === "3.6.9", "APP_VERSION must be 3.6.9");
+  assert(APP_VERSION === "3.7.0", "APP_VERSION must be 3.7.0");
   console.log("✓ APP_VERSION config constant verified: " + APP_VERSION);
 
   // 4. Test dismissUpdateNotification logic
