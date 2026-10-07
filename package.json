@@ -3,7 +3,7 @@
   "version": "3.8.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev --webpack -p 3000",
     "build": "next build --webpack",
     "build:mobile": "npx tsx scripts/build-mobile-export.ts",
     "start": "next start -p 3000",

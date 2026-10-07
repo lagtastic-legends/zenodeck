@@ -53,7 +53,7 @@ export const zenoTapClient = {
    */
   async requestUploadTicket(): Promise<UploadTicketResponse> {
     const userId = getStoredUserId();
-    const res = await fetch("/api/zenotap/v1/deck/upload-ticket", {
+    const res = await fetch("/api/zenotap/v1/deck/upload-ticket/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -86,7 +86,7 @@ export const zenoTapClient = {
 
     // 3. Post to upload route
     const userId = getStoredUserId();
-    const res = await fetch("/api/zenotap/v1/deck/upload", {
+    const res = await fetch("/api/zenotap/v1/deck/upload/", {
       method: "POST",
       headers: {
         "x-zenotap-user-id": userId,
@@ -108,7 +108,7 @@ export const zenoTapClient = {
    */
   async fetchCloudDeck(): Promise<CloudDeckItem[]> {
     const userId = getStoredUserId();
-    const res = await fetch("/api/zenotap/v1/deck", {
+    const res = await fetch("/api/zenotap/v1/deck/", {
       headers: {
         "x-zenotap-user-id": userId,
       },
@@ -127,7 +127,7 @@ export const zenoTapClient = {
    */
   async deleteCloudGif(id: string): Promise<boolean> {
     const userId = getStoredUserId();
-    const res = await fetch(`/api/zenotap/v1/deck?id=${encodeURIComponent(id)}`, {
+    const res = await fetch(`/api/zenotap/v1/deck/?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: {
         "x-zenotap-user-id": userId,
@@ -142,7 +142,7 @@ export const zenoTapClient = {
    */
   async createDevicePairCode(): Promise<PairCodeResponse> {
     const userId = getStoredUserId();
-    const res = await fetch("/api/zenotap/v1/device/pair", {
+    const res = await fetch("/api/zenotap/v1/device/pair/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

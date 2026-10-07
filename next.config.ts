@@ -40,6 +40,7 @@ const nextConfig: NextConfig = {
   output: isMobileExport ? "export" : "standalone",
   images: { unoptimized: true },
   trailingSlash: true,
+  skipTrailingSlashRedirect: true,
   async headers() {
     if (isMobileExport) return [];
     return [
