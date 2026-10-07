@@ -5,4 +5,6 @@
     <string name="package_name">com.omnitool.app</string>
     <string name="custom_url_scheme">com.omnitool.app</string>
     <string name="default_web_client_id">1006411301114-q48l1fmvbiba3rq6u1s59qgl13c57sd1.apps.googleusercontent.com</string>
+    <string name="keyboard_name">ZenoDeck Keyboard</string>
+    <string name="subtype_en_us">English (US)</string>
 </resources>

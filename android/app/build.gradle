@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 // =====================================================================
 // OMNI TOOL — conditional Firebase wiring.
@@ -53,6 +54,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+    kotlinOptions {
+        jvmTarget = "21"
+    }
     splits {
         abi {
             enable true
@@ -72,7 +76,9 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.core:core-ktx:$androidxCoreVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.recyclerview:recyclerview:$androidxRecyclerViewVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation 'com.github.HBiSoft:HBRecorder:3.0.5'

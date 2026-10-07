@@ -30,3 +30,32 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ZenoTapDeckItem {
+  id           String   @id @default(cuid())
+  userId       String
+  filename     String
+  originalName String
+  url          String
+  size         Int
+  width        Int?
+  height       Int?
+  mimeType     String   @default("image/gif")
+  tags         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ZenoTapDeviceLink {
+  id         String   @id @default(cuid())
+  userId     String
+  pairCode   String   @unique
+  syncToken  String   @unique
+  deviceName String?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}

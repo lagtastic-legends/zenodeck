@@ -6,12 +6,13 @@
  */
 
 import { motion } from "framer-motion";
-import { Check, Database, Download, FileAudio, FileImage, FileText, FileVideo, Sparkles, X, Edit2 } from "lucide-react";
+import { Check, Database, Download, FileAudio, FileImage, FileText, FileVideo, Sparkles, X, Edit2, Keyboard } from "lucide-react";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { formatBytes } from "@/lib/format";
 import { useVault } from "@/lib/vault/vault-context";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { useHaptics } from "@/hooks/use-haptics";
+import { saveGifToKeyboardDeck } from "@/lib/zenodeck-bridge";
 import type { JobOutput } from "@/hooks/use-media-job";
 
 interface OutputCardProps {
@@ -35,11 +36,22 @@ export function OutputCard({ output, extra, badge, badgeTone = "pulse", onClear 
   const { save } = useVault();
   const haptics = useHaptics();
   const [vaultState, setVaultState] = useState<"idle" | "saved">("idle");
+  const [deckState, setDeckState] = useState<"idle" | "pinned">("idle");
   const [currentName, setCurrentName] = useState(output.name);
   const onClearRef = useRef(onClear);
   onClearRef.current = onClear;
   const outputRef = useRef(output);
   outputRef.current = output;
+
+  const pinToKeyboard = async () => {
+    try {
+      await saveGifToKeyboardDeck(output.blob, currentName);
+      void haptics.success();
+      setDeckState("pinned");
+    } catch (e) {
+      console.error("Failed to pin to keyboard deck:", e);
+    }
+  };
 
   useEffect(() => {
     setCurrentName(output.name);
@@ -166,7 +178,7 @@ export function OutputCard({ output, extra, badge, badgeTone = "pulse", onClear 
 
       {extra}
 
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className={`grid ${output.mime === "image/gif" ? "grid-cols-[1fr_auto_auto]" : "grid-cols-[1fr_auto]"} gap-2`}>
         <button
           onClick={() => void import("@/lib/native-save").then(m => m.nativeSave(output.blob, currentName))}
           className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-pulse/40 bg-pulse/15 font-display text-xs font-bold tracking-[0.18em] text-pulse transition-colors hover:bg-pulse/25"
@@ -174,6 +186,25 @@ export function OutputCard({ output, extra, badge, badgeTone = "pulse", onClear 
           <Download className="size-4" />
           SAVE TO DEVICE
         </button>
+        {output.mime === "image/gif" && (
+          <motion.button
+            onClick={() => void pinToKeyboard()}
+            disabled={deckState === "pinned"}
+            whileTap={deckState === "pinned" ? undefined : { scale: 0.96 }}
+            aria-label={deckState === "pinned" ? "Pinned to keyboard" : "Pin to keyboard"}
+            title="Pin to ZenoDeck Keyboard for 1-tap messaging injection"
+            className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 font-display text-xs font-bold tracking-[0.18em] transition-colors ${
+              deckState === "pinned"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                : "border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+            }`}
+          >
+            {deckState === "pinned" ? <Check className="size-4" strokeWidth={3} /> : <Keyboard className="size-4" />}
+            <span className="hidden sm:inline">
+              {deckState === "pinned" ? "PINNED" : "PIN TO IME"}
+            </span>
+          </motion.button>
+        )}
         <motion.button
           onClick={() => void saveToVault()}
           disabled={vaultState === "saved"}

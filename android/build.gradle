@@ -8,6 +8,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21'
         // google-services plugin for Firebase Auth (@capacitor-firebase/authentication).
         // NOTE: the plugin is only *applied* in app/build.gradle when
         // google-services.json exists — this classpath line is inert without it.

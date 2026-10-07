@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Download, LogOut, ShieldAlert, ShieldCheck, RefreshCw } from "lucide-react";
+import { Download, LogOut, ShieldAlert, ShieldCheck, RefreshCw, Keyboard } from "lucide-react";
 import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useAuth } from "@/lib/auth/auth-context";
 import { SearchPalette } from "@/components/shell/search-palette";
@@ -13,6 +13,7 @@ import { usePwaStore } from "@/lib/pwa/pwa-store";
 import { checkForUpdates, type AppUpdateInfo } from "@/lib/updater";
 import { useUpdateStore } from "@/lib/update-store";
 import { UpdateModal } from "@/components/dialogs/update-modal";
+import { ZenoTapDeckManager } from "@/components/zenotap/zenotap-deck-manager";
 import { useState, useEffect } from "react";
 import type { EngineState } from "@/types/omni";
 
@@ -52,6 +53,7 @@ export function TopBar() {
   const storeUpdateInfo = useUpdateStore((s) => s.updateInfo);
   const setStoreUpdateInfo = useUpdateStore((s) => s.setUpdateInfo);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isDeckManagerOpen, setIsDeckManagerOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -216,6 +218,16 @@ export function TopBar() {
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={() => setIsDeckManagerOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer"
+            title="Manage ZenoTap Keyboard Deck & Device Pairing"
+          >
+            <Keyboard className="size-3 shrink-0 text-indigo-400" />
+            <span className="hidden xs:inline sm:inline">ZenoTap</span>
+          </button>
+
           {mounted && user ? (
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
@@ -259,6 +271,11 @@ export function TopBar() {
         onRefresh={() => {
           void checkForUpdates(true).then(setStoreUpdateInfo);
         }}
+      />
+
+      <ZenoTapDeckManager
+        open={isDeckManagerOpen}
+        onOpenChange={setIsDeckManagerOpen}
       />
     </motion.header>
   );

@@ -9,6 +9,7 @@ import android.webkit.WebView;
 import androidx.core.splashscreen.SplashScreen;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.WebViewListener;
+import com.omnitool.app.keyboard.ZenoDeckKeyboardBridgePlugin;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "ZenoDeckNative";
@@ -17,6 +18,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this);
         registerPlugin(OmniRecorderPlugin.class);
+        registerPlugin(ZenoDeckKeyboardBridgePlugin.class);
         super.onCreate(savedInstanceState);
         
         if (bridge != null) {
