@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { downloadMediaWithPython, isValidMediaInput } from "@/lib/media/python-engine";
-import { resolveYouTubeVideo } from "@/lib/youtube/innertube";
+import { resolveYouTubeVideo, buildCandidateUrls } from "@/lib/youtube/innertube";
 import { resolveMediaUrl } from "@/lib/media/universal-resolver";
 import fs from "fs";
 
@@ -93,17 +93,40 @@ async function handleDownload(url: string, quality = "best", format?: string) {
 
       const streamUrl = chosen?.videoFormat?.url || chosen?.audioFormat?.url;
       if (streamUrl) {
-        const isIos = streamUrl.includes("c=IOS") || streamUrl.includes("sparams=");
-        const upstream = await fetch(streamUrl, {
-          headers: {
-            "User-Agent": isIos
-              ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
-              : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            Accept: "*/*",
-          },
-        });
+        const candidateUrls = buildCandidateUrls(streamUrl);
+        let upstream: Response | null = null;
 
-        if (upstream.ok && upstream.body) {
+        for (const cand of candidateUrls.slice(0, 3)) {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 6000);
+            const isIos = cand.includes("c=IOS") || cand.includes("sparams=");
+            const isAndroid = cand.includes("c=ANDROID");
+            const ua = isIos
+              ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
+              : isAndroid
+              ? "com.google.android.youtube/21.26.364 (Linux; U; Android 14) gzip"
+              : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+            const res = await fetch(cand, {
+              headers: {
+                "User-Agent": ua,
+                Accept: "*/*",
+              },
+              signal: controller.signal,
+            });
+            clearTimeout(timer);
+
+            if (res.ok && res.body) {
+              upstream = res;
+              break;
+            }
+          } catch {
+            // failover to next candidate edge
+          }
+        }
+
+        if (upstream && upstream.ok && upstream.body) {
           const ext = chosen.container || (format === "mp3" ? "mp3" : "mp4");
           const safeTitle = (info.title || "video").replace(/[^\w\s.-]/g, "_").trim().slice(0, 60);
           const filename = `${safeTitle} [${chosen.label}].${ext}`;
@@ -161,9 +184,14 @@ async function handleDownload(url: string, quality = "best", format?: string) {
     console.warn("TypeScript stream fallback error:", fbErr?.message);
   }
 
+  const fallbackErrMsg =
+    result?.error && !result.error.includes("ENOENT")
+      ? result.error
+      : "Could not stream video directly. The requested format may be restricted or unavailable.";
+
   return NextResponse.json(
-    { error: result?.error || "Failed to download media via yt-dlp engine." },
-    { status: 500, headers: corsHeaders }
+    { error: fallbackErrMsg },
+    { status: 502, headers: corsHeaders }
   );
 }
 

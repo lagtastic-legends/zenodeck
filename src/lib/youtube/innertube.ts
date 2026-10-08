@@ -371,6 +371,27 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
   },
 ];
 
+const ANDROID_OFFICIAL_CONFIG: InnerTubeClientConfig = {
+  name: "ANDROID_OFFICIAL",
+  headers: {
+    "Content-Type": "application/json",
+    "User-Agent": "com.google.android.youtube/21.26.364 (Linux; U; Android 11) gzip",
+    "X-YouTube-Client-Name": "3",
+    "X-YouTube-Client-Version": "21.26.364",
+  },
+  context: {
+    client: {
+      clientName: "ANDROID",
+      clientVersion: "21.26.364",
+      androidSdkVersion: 30,
+      userAgent: "com.google.android.youtube/21.26.364 (Linux; U; Android 11) gzip",
+      osName: "Android",
+      osVersion: "11",
+      hl: "en",
+    },
+  },
+};
+
 /**
  * Resolves video details and extracts complete 4K 60fps streaming manifest
  */
@@ -382,78 +403,122 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
 
   const diagnosticAttempts: any[] = [];
   let playerResponse: any = null;
+  let androidFormats: any[] = [];
   const visitorData = await getVisitorData();
 
-  for (const clientConfig of INNERTUBE_CLIENTS) {
+  // Concurrently query Android official client to obtain unthrottled itag 18 (pre-muxed 360p with ratebypass=yes)
+  const androidPromise = (async () => {
     try {
-      const reqHeaders: Record<string, string> = {
-        ...clientConfig.headers,
+      const androidHeaders: Record<string, string> = {
+        ...ANDROID_OFFICIAL_CONFIG.headers,
       };
-
-      if (visitorData) {
-        reqHeaders["X-Goog-Visitor-Id"] = visitorData;
-      }
-
       if (clientIp) {
-        reqHeaders["X-Forwarded-For"] = clientIp;
-        reqHeaders["X-Real-IP"] = clientIp;
-        reqHeaders["CF-Connecting-IP"] = clientIp;
+        androidHeaders["X-Forwarded-For"] = clientIp;
+        androidHeaders["X-Real-IP"] = clientIp;
       }
-
-      const clientContext = {
-        ...clientConfig.context,
-        client: {
-          ...clientConfig.context.client,
-          ...(visitorData ? { visitorData } : {}),
-        },
-      };
-
       const res = await universalFetch("https://www.youtube.com/youtubei/v1/player", {
         method: "POST",
-        headers: reqHeaders,
+        headers: androidHeaders,
         body: JSON.stringify({
           videoId,
-          context: clientContext,
-          playbackContext: {
-            contentPlaybackContext: {
-              html5Preference: "HTML5_PREF_WANTS",
-              signatureTimestamp: 20000,
-            },
-          },
+          context: ANDROID_OFFICIAL_CONFIG.context,
         }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.playabilityStatus?.status === "OK") {
+          return data;
+        }
+      }
+    } catch (e: any) {
+      console.warn("Android official player query skipped:", e?.message);
+    }
+    return null;
+  })();
 
-      if (!res.ok) {
+  const iosPromise = (async () => {
+    for (const clientConfig of INNERTUBE_CLIENTS) {
+      try {
+        const reqHeaders: Record<string, string> = {
+          ...clientConfig.headers,
+        };
+
+        if (visitorData) {
+          reqHeaders["X-Goog-Visitor-Id"] = visitorData;
+        }
+
+        if (clientIp) {
+          reqHeaders["X-Forwarded-For"] = clientIp;
+          reqHeaders["X-Real-IP"] = clientIp;
+          reqHeaders["CF-Connecting-IP"] = clientIp;
+        }
+
+        const clientContext = {
+          ...clientConfig.context,
+          client: {
+            ...clientConfig.context.client,
+            ...(visitorData ? { visitorData } : {}),
+          },
+        };
+
+        const res = await universalFetch("https://www.youtube.com/youtubei/v1/player", {
+          method: "POST",
+          headers: reqHeaders,
+          body: JSON.stringify({
+            videoId,
+            context: clientContext,
+            playbackContext: {
+              contentPlaybackContext: {
+                html5Preference: "HTML5_PREF_WANTS",
+                signatureTimestamp: 20000,
+              },
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          diagnosticAttempts.push({
+            client: clientConfig.name,
+            httpStatus: res.status,
+            statusText: res.statusText,
+          });
+          continue;
+        }
+
+        const data = await res.json();
+        const status = data.playabilityStatus?.status;
+        const reason = data.playabilityStatus?.reason;
+
         diagnosticAttempts.push({
           client: clientConfig.name,
           httpStatus: res.status,
-          statusText: res.statusText,
+          status,
+          reason,
         });
-        continue;
+
+        if (status === "OK" && (data.streamingData?.formats || data.streamingData?.adaptiveFormats)) {
+          return data;
+        }
+      } catch (err: any) {
+        diagnosticAttempts.push({
+          client: clientConfig.name,
+          error: err?.message || String(err),
+        });
       }
-
-      const data = await res.json();
-      const status = data.playabilityStatus?.status;
-      const reason = data.playabilityStatus?.reason;
-
-      diagnosticAttempts.push({
-        client: clientConfig.name,
-        httpStatus: res.status,
-        status,
-        reason,
-      });
-
-      if (status === "OK" && (data.streamingData?.formats || data.streamingData?.adaptiveFormats)) {
-        playerResponse = data;
-        break;
-      }
-    } catch (err: any) {
-      diagnosticAttempts.push({
-        client: clientConfig.name,
-        error: err?.message || String(err),
-      });
     }
+    return null;
+  })();
+
+  const [androidData, iosData] = await Promise.all([androidPromise, iosPromise]);
+
+  if (androidData) {
+    androidFormats = [
+      ...(androidData.streamingData?.formats || []),
+      ...(androidData.streamingData?.adaptiveFormats || []),
+    ].filter((f: any) => f.url);
   }
+
+  playerResponse = iosData || androidData;
 
   if (!playerResponse) {
     const isBotBlocked = diagnosticAttempts.some(
@@ -474,7 +539,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     );
   }
 
-  const details = playerResponse.videoDetails || {};
+  const details = playerResponse.videoDetails || androidData?.videoDetails || {};
   const title = details.title || "YouTube Video";
   const author = details.author || details.channelTitle || "Unknown Artist";
   const durationSeconds = Number(details.lengthSeconds) || 0;
@@ -489,11 +554,14 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   const rawAdaptive: any[] = playerResponse.streamingData?.adaptiveFormats || [];
   const rawCombined: any[] = playerResponse.streamingData?.formats || [];
 
-  // Parse all formats
+  // Parse all formats, merging androidFormats (e.g. itag 18 with ratebypass) and deduplicating
   const parsedFormats: YouTubeFormatMeta[] = [];
+  const allRawFormats = [...androidFormats, ...rawCombined, ...rawAdaptive];
+  const seenItags = new Set<number>();
 
-  for (const f of [...rawCombined, ...rawAdaptive]) {
-    if (!f.url) continue;
+  for (const f of allRawFormats) {
+    if (!f.url || seenItags.has(f.itag)) continue;
+    seenItags.add(f.itag);
 
     const mime = f.mimeType || "";
     const container = mime.includes("video/mp4")
@@ -715,9 +783,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   }
 
   // 6. 360p Standard Quality
-  const fmt360 = findFormat(300, 399);
+  // If pre-muxed combined itag 18 is available, prioritize it directly (unthrottled ratebypass stream)
+  const fmt18 = parsedFormats.find((f) => f.itag === 18 && f.url);
+  const fmt360 = fmt18 || findFormat(300, 399);
   if (fmt360) {
-    const pairedAudio = getPairedAudio(fmt360);
+    const isCombined18 = fmt360.itag === 18;
+    const pairedAudio = isCombined18 ? undefined : getPairedAudio(fmt360);
     const vSize = fmt360.contentLength || 0;
     const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
@@ -729,8 +800,8 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       is4K: false,
       is60fps: false,
       isAudioOnly: false,
-      container: getContainerForVideo(fmt360),
-      approxSizeBytes: vSize + aSize,
+      container: "mp4",
+      approxSizeBytes: isCombined18 ? vSize : vSize + aSize,
       videoFormat: fmt360,
       audioFormat: pairedAudio,
     });
@@ -761,8 +832,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   }
 
   // 7. Direct Audio Extraction Qualities (Multi-tier bitrates & native/lossless formats)
-  if (bestAudio) {
-    const bestM4a = bestAacAudio || audioFormats.find((f) => f.container === "m4a") || bestAudio;
+  const effectiveAudio = bestAudio || fmt18;
+  if (effectiveAudio) {
+    const bestM4a = bestAacAudio || audioFormats.find((f) => f.container === "m4a") || effectiveAudio;
+    const baseAudioLen = effectiveAudio.contentLength || 0;
 
     // 6a. 320 kbps Studio Master MP3
     qualities.push({
@@ -779,8 +852,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes:
         durationSeconds > 0
           ? Math.round((320 * 1000 * durationSeconds) / 8)
-          : (bestAudio.contentLength || 0),
-      audioFormat: bestAudio,
+          : baseAudioLen,
+      videoFormat: fmt18,
+      audioFormat: bestAudio || effectiveAudio,
     });
 
     // 6b. 256 kbps High Fidelity MP3
@@ -798,8 +872,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes:
         durationSeconds > 0
           ? Math.round((256 * 1000 * durationSeconds) / 8)
-          : Math.round((bestAudio.contentLength || 0) * 0.8),
-      audioFormat: bestAudio,
+          : Math.round(baseAudioLen * 0.8),
+      videoFormat: fmt18,
+      audioFormat: bestAudio || effectiveAudio,
     });
 
     // 6c. 192 kbps Standard HQ MP3
@@ -817,8 +892,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes:
         durationSeconds > 0
           ? Math.round((192 * 1000 * durationSeconds) / 8)
-          : Math.round((bestAudio.contentLength || 0) * 0.6),
-      audioFormat: bestAudio,
+          : Math.round(baseAudioLen * 0.6),
+      videoFormat: fmt18,
+      audioFormat: bestAudio || effectiveAudio,
     });
 
     // 6d. 128 kbps Compact MP3
@@ -836,8 +912,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes:
         durationSeconds > 0
           ? Math.round((128 * 1000 * durationSeconds) / 8)
-          : Math.round((bestAudio.contentLength || 0) * 0.4),
-      audioFormat: bestAudio,
+          : Math.round(baseAudioLen * 0.4),
+      videoFormat: fmt18,
+      audioFormat: bestAudio || effectiveAudio,
     });
 
     // 6e. Native AAC / M4A (Original Stream Copy)
@@ -851,7 +928,8 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       is60fps: false,
       isAudioOnly: true,
       container: "m4a",
-      approxSizeBytes: bestM4a.contentLength || bestAudio.contentLength || 0,
+      approxSizeBytes: bestM4a.contentLength || baseAudioLen,
+      videoFormat: fmt18,
       audioFormat: bestM4a,
     });
 
@@ -869,8 +947,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes:
         durationSeconds > 0
           ? Math.round(44100 * 2 * 2 * durationSeconds)
-          : (bestAudio.contentLength ? bestAudio.contentLength * 4 : 0),
-      audioFormat: bestAudio,
+          : baseAudioLen * 4,
+      videoFormat: fmt18,
+      audioFormat: bestAudio || effectiveAudio,
     });
   }
 

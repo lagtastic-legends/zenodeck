@@ -250,35 +250,46 @@ async function probeStreamSizeSafe(
   knownSize?: number,
   signal?: AbortSignal
 ): Promise<number> {
-  const maxProbes = knownSize && knownSize > 1024 * 1024 ? 1 : Math.min(candidateUrls.length, 2);
-  for (let i = 0; i < maxProbes; i++) {
-    const directUrl = candidateUrls[i];
-    if (signal?.aborted) return knownSize || 0;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1500);
-      const onParentAbort = () => controller.abort();
-      signal?.addEventListener("abort", onParentAbort, { once: true });
+  if (candidateUrls.length <= 1) {
+    return knownSize || 0;
+  }
 
+  // Race up to 3 candidate CDN edge nodes with a 2-second timeout per probe.
+  // Whichever candidate node answers first with valid data gets promoted to index 0,
+  // completely bypassing unresponsive or packet-dropping edge nodes.
+  const candidatesToProbe = candidateUrls.slice(0, 3);
+  const probeTasks = candidatesToProbe.map(async (directUrl, index) => {
+    if (signal?.aborted) throw new Error("Download aborted");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    const onParentAbort = () => controller.abort();
+    signal?.addEventListener("abort", onParentAbort, { once: true });
+
+    try {
       const chunk = await fetchChunkUniversal({
         candidateUrl: directUrl,
         rangeHeader: "bytes=0-0",
         signal: controller.signal,
       });
 
+      if (chunk && chunk.byteLength > 0) {
+        return index;
+      }
+      throw new Error("Empty probe chunk");
+    } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", onParentAbort);
-
-      if (chunk && chunk.byteLength > 0) {
-        if (i > 0) {
-          const [working] = candidateUrls.splice(i, 1);
-          candidateUrls.unshift(working);
-        }
-        return knownSize || 0;
-      }
-    } catch {
-      // Continue to next candidate
     }
+  });
+
+  try {
+    const winningIndex = await Promise.any(probeTasks);
+    if (winningIndex > 0) {
+      const [winningUrl] = candidateUrls.splice(winningIndex, 1);
+      candidateUrls.unshift(winningUrl);
+    }
+  } catch {
+    // If all probes time out or fail, keep original order and proceed
   }
 
   return knownSize || 0;
@@ -331,10 +342,16 @@ async function downloadStreamResilient({
   }
 
   // 2. Progressive Sized Chunk Partitioning
-  // 512KB for streams < 10MB; 1MB for larger streams.
-  // This guarantees fast packet-by-packet UI feedback (0% -> 2% -> 5% -> ...)
-  // while preventing Android WebView base64 IPC bridge congestion.
-  const CHUNK_SIZE = totalSize > 10 * 1024 * 1024 ? 1024 * 1024 : 512 * 1024;
+  // For streams with ratebypass=yes or itag 18, use larger 2MB chunks for max throughput.
+  // Otherwise, use 1MB for >10MB or 512KB for smaller files to keep UI responsive.
+  const isRateBypass = streamUrl.includes("ratebypass=yes") || streamUrl.includes("itag=18");
+  const CHUNK_SIZE = isRateBypass
+    ? totalSize > 20 * 1024 * 1024
+      ? 2 * 1024 * 1024
+      : 1024 * 1024
+    : totalSize > 10 * 1024 * 1024
+      ? 1024 * 1024
+      : 512 * 1024;
   const numChunks = Math.ceil(totalSize / CHUNK_SIZE);
   const outputBuffer = new Uint8Array(totalSize);
 
@@ -389,6 +406,10 @@ async function downloadStreamResilient({
           clearTimeout(timeoutTimer);
           signal?.removeEventListener("abort", onParentAbort);
           lastErr = err;
+          // Immediately rotate active candidate index so subsequent chunks don't hit the failed node
+          if (candidateUrls.length > 1) {
+            activeCandidateIndex = (activeCandidateIndex + 1) % candidateUrls.length;
+          }
           if (attempt < 2 && !signal?.aborted) {
             await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
           }
@@ -447,7 +468,7 @@ export async function downloadYouTubeStream({
   const is4K = option.is4K;
   const is60fps = option.is60fps;
 
-  const totalEstBytes = option.approxSizeBytes || 50 * 1024 * 1024;
+  let totalEstBytes = option.approxSizeBytes || 50 * 1024 * 1024;
   let downloadedBytes = 0;
   let lastSampleTime = performance.now();
   let bytesSinceLastSample = 0;
@@ -509,19 +530,41 @@ export async function downloadYouTubeStream({
   // Case A: Audio Only
   // -------------------------------------------------------------
   if (isAudioOnly) {
-    const audioFmt = option.audioFormat || option.videoFormat;
+    let audioFmt = option.audioFormat || option.videoFormat;
     if (!audioFmt) {
       throw new Error("Missing audio stream URL for download.");
     }
 
-    const audioData = await downloadStreamResilient({
-      streamUrl: audioFmt.url,
-      knownSize: audioFmt.contentLength,
-      maxWorkers: Math.min(maxParallelWorkers, 4),
-      label: "audio",
-      onChunkBytes: handleChunk,
-      signal,
-    });
+    let audioData: Uint8Array;
+    try {
+      audioData = await downloadStreamResilient({
+        streamUrl: audioFmt.url,
+        knownSize: audioFmt.contentLength,
+        maxWorkers: Math.min(maxParallelWorkers, 4),
+        label: "audio",
+        onChunkBytes: handleChunk,
+        signal,
+      });
+    } catch (audioErr: any) {
+      if (option.videoFormat?.url && option.videoFormat.url !== audioFmt.url && !signal?.aborted) {
+        console.warn("Primary audio stream failed, falling back to resilient stream:", audioErr?.message);
+        audioFmt = option.videoFormat;
+        downloadedBytes = 0;
+        if (audioFmt.contentLength) {
+          totalEstBytes = audioFmt.contentLength;
+        }
+        audioData = await downloadStreamResilient({
+          streamUrl: audioFmt.url,
+          knownSize: audioFmt.contentLength,
+          maxWorkers: Math.min(maxParallelWorkers, 4),
+          label: "resilient audio",
+          onChunkBytes: handleChunk,
+          signal,
+        });
+      } else {
+        throw audioErr;
+      }
+    }
 
     const isSourceM4a =
       audioFmt.container === "m4a" ||

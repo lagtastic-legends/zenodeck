@@ -501,32 +501,68 @@ export function YouTubeDownloader() {
         `/api/youtube/download?url=${encodeURIComponent(inputUrl.trim() || videoInfo.videoId)}&quality=${encodeURIComponent(qualityParam)}&format=${encodeURIComponent(selectedQuality.container)}`
       );
 
-      const streamBytes = await fetchStreamWithProgress(
-        fallbackUrl,
-        (received, total) => {
-          const tot = total || selectedQuality.approxSizeBytes || 0;
-          const pct = tot > 0 ? Math.min(95, Math.max(10, Math.round((received / tot) * 90))) : Math.min(85, Math.round(received / (1024 * 1024)));
+      let streamBytes: Uint8Array;
+      try {
+        streamBytes = await fetchStreamWithProgress(
+          fallbackUrl,
+          (received, total) => {
+            const tot = total || selectedQuality.approxSizeBytes || 0;
+            const pct = tot > 0 ? Math.min(95, Math.max(10, Math.round((received / tot) * 90))) : Math.min(85, Math.round(received / (1024 * 1024)));
+            setProgress({
+              phase: "downloading",
+              progress: pct,
+              speedMbps: 0,
+              downloadedBytes: received,
+              totalBytes: tot,
+              activeThreads: 1,
+              etaSeconds: 0,
+              statusMessage: `Streaming media: ${(received / (1024 * 1024)).toFixed(1)} MB transferred…`,
+            });
+            void updateDownloadNotification({
+              id: 7777,
+              title: `Downloading ${selectedQuality.badge || selectedQuality.label}`,
+              itemTitle: videoInfo.title,
+              progress: pct,
+              speedMbps: 0,
+              isComplete: false,
+            });
+          },
+          abortControllerRef.current?.signal
+        );
+      } catch (streamErr: any) {
+        // If remote server stream failed, attempt secondary on-device fallback to unthrottled 360p stream
+        const fastOption = videoInfo.qualities.find((q) => q.videoFormat?.itag === 18 && q.videoFormat?.url);
+        if (fastOption && fastOption !== selectedQuality && !abortControllerRef.current?.signal.aborted) {
+          console.warn("Server fallback failed, falling back to direct unthrottled on-device stream:", streamErr?.message);
           setProgress({
             phase: "downloading",
-            progress: pct,
+            progress: 15,
             speedMbps: 0,
-            downloadedBytes: received,
-            totalBytes: tot,
+            downloadedBytes: 0,
+            totalBytes: fastOption.approxSizeBytes || 0,
             activeThreads: 1,
             etaSeconds: 0,
-            statusMessage: `Streaming media: ${(received / (1024 * 1024)).toFixed(1)} MB transferred…`,
+            statusMessage: "Resuming via unthrottled stream (360p MP4)…",
           });
-          void updateDownloadNotification({
-            id: 7777,
-            title: `Downloading ${selectedQuality.badge || selectedQuality.label}`,
-            itemTitle: videoInfo.title,
-            progress: pct,
-            speedMbps: 0,
-            isComplete: false,
+          const fastResult = await downloadYouTubeStream({
+            option: fastOption,
+            videoTitle: videoInfo.title,
+            author: videoInfo.author,
+            thumbnailUrl: videoInfo.thumbnailUrl,
+            engine: activeEngine,
+            maxParallelWorkers: 3,
+            onProgress: (p) => setProgress(p),
+            signal: abortControllerRef.current?.signal,
           });
-        },
-        abortControllerRef.current?.signal
-      );
+          currentResultUrlRef.current = fastResult.url;
+          setDownloadResult(fastResult);
+          await nativeSave(fastResult.blob, fastResult.filename);
+          void haptics.success();
+          playSuccess();
+          return;
+        }
+        throw streamErr;
+      }
 
       const mimeType = selectedQuality.isAudioOnly
         ? (selectedQuality.container === "mp3" ? "audio/mpeg" : "audio/mp4")
@@ -590,7 +626,7 @@ export function YouTubeDownloader() {
       });
     };
 
-    // Watchdog: If direct chunk streaming hasn't received any bytes within 5.5s, switch to high-speed stream
+    // Watchdog: If direct chunk streaming hasn't received any bytes within 8s, switch to high-speed stream
     stallWatchdogTimer = setTimeout(() => {
       if (!didFallback) {
         console.warn("Direct stream stalled at 0% — switching to high-speed server stream");
@@ -607,7 +643,7 @@ export function YouTubeDownloader() {
           setIsDownloading(false);
         });
       }
-    }, 5500);
+    }, 8000);
 
     try {
       const result = await downloadYouTubeStream({

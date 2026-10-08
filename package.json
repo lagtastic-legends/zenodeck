@@ -1,6 +1,6 @@
 {
   "name": "zenodeck",
-  "version": "3.9.1",
+  "version": "3.9.2",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack -p 3000",

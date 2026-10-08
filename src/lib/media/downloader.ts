@@ -33,9 +33,13 @@ export async function fetchStreamWithProgress(
 ): Promise<Uint8Array> {
   const directUrl = url.startsWith("http") ? url : getYouTubeApiUrl(url);
 
+  let lastStatus = 0;
+  let serverErrMsg: string | null = null;
+
   // 1. Primary: Streaming fetch reader for progress tracking and CORS endpoints
   try {
     const res = await fetch(directUrl, { signal: abortSignal });
+    lastStatus = res.status;
     if (res.ok && res.body) {
       const contentLength = res.headers.get("content-length");
       const total = contentLength ? parseInt(contentLength, 10) : undefined;
@@ -60,6 +64,11 @@ export async function fetchStreamWithProgress(
         offset += chunk.length;
       }
       return result;
+    } else {
+      const errJson = await res.json().catch(() => null);
+      if (errJson?.error) {
+        serverErrMsg = errJson.error;
+      }
     }
   } catch (fetchErr: any) {
     if (abortSignal?.aborted) throw fetchErr;
@@ -76,6 +85,7 @@ export async function fetchStreamWithProgress(
         connectTimeout: 8000,
         readTimeout: 45000,
       });
+      lastStatus = nativeRes.status;
       if (nativeRes.status === 200 || nativeRes.status === 206) {
         if (typeof nativeRes.data === "string") {
           const binaryStr = atob(nativeRes.data);
@@ -101,7 +111,11 @@ export async function fetchStreamWithProgress(
     }
   }
 
-  throw new Error(`Failed to download stream from ${directUrl}`);
+  const endpointLabel = directUrl.includes("?") ? directUrl.split("?")[0] : directUrl;
+  throw new Error(
+    serverErrMsg ||
+    `Failed to download stream (${lastStatus ? `HTTP ${lastStatus}` : "connection timeout"}) from ${endpointLabel}`
+  );
 }
 
 /**
