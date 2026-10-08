@@ -10,6 +10,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+import type { PlatformType } from "@/lib/media/types";
+
 export interface DownloadHistoryItem {
   id: string;
   videoId: string;
@@ -24,8 +26,9 @@ export interface DownloadHistoryItem {
   isAudioOnly: boolean;
   audioStreamUrl?: string;
   localFileName?: string;
-  platform?: "youtube" | "tiktok" | "instagram" | "twitter" | "reddit";
+  platform?: PlatformType;
 }
+
 
 interface HistoryStore {
   items: DownloadHistoryItem[];

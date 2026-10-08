@@ -232,16 +232,41 @@ export async function downloadUniversalMedia(
     percent: 25,
   });
 
-  const bytes = await fetchStreamWithProgress(option.downloadUrl, (rec, tot) => {
-    const pct = tot ? Math.min(85, 25 + Math.round((rec / tot) * 60)) : 55;
+  let bytes: Uint8Array;
+  try {
+    if (!option.downloadUrl) {
+      throw new Error("No direct download URL provided");
+    }
+    bytes = await fetchStreamWithProgress(option.downloadUrl, (rec, tot) => {
+      const pct = tot ? Math.min(85, 25 + Math.round((rec / tot) * 60)) : 55;
+      onProgress({
+        phase: "downloading",
+        message: `Downloading: ${Math.round(rec / 1024 / 1024)} MB transferred…`,
+        percent: pct,
+        transferredBytes: rec,
+        totalBytes: tot,
+      });
+    }, options?.abortSignal);
+  } catch (directErr) {
+    console.warn("Direct stream fetch failed, falling back to yt-dlp server downloader:", directErr);
     onProgress({
       phase: "downloading",
-      message: `Downloading: ${Math.round(rec / 1024 / 1024)} MB transferred…`,
-      percent: pct,
-      transferredBytes: rec,
-      totalBytes: tot,
+      message: "Downloading high-speed stream via yt-dlp engine…",
+      percent: 40,
     });
-  }, options?.abortSignal);
+    const fallbackUrl = `/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(option.badge || option.resolution || "best")}`;
+    bytes = await fetchStreamWithProgress(fallbackUrl, (rec, tot) => {
+      const pct = tot ? Math.min(85, 40 + Math.round((rec / tot) * 45)) : 65;
+      onProgress({
+        phase: "downloading",
+        message: `yt-dlp stream: ${Math.round(rec / 1024 / 1024)} MB received…`,
+        percent: pct,
+        transferredBytes: rec,
+        totalBytes: tot,
+      });
+    }, options?.abortSignal);
+  }
+
 
   const mimeType = option.isAudioOnly ? (option.ext === "mp3" ? "audio/mpeg" : "audio/mp4") : "video/mp4";
   const blob = new Blob([bytes.buffer as ArrayBuffer], { type: mimeType });

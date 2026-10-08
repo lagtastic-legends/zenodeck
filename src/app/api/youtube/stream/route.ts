@@ -18,16 +18,39 @@ export async function OPTIONS() {
 function isAllowedHost(urlStr: string): boolean {
   try {
     const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
     return (
-      parsed.hostname.endsWith(".googlevideo.com") ||
-      parsed.hostname.endsWith(".youtube.com") ||
-      parsed.hostname === "googlevideo.com" ||
-      parsed.hostname === "youtube.com"
+      host.endsWith(".googlevideo.com") ||
+      host.endsWith(".youtube.com") ||
+      host === "googlevideo.com" ||
+      host === "youtube.com" ||
+      host.endsWith(".tiktokcdn.com") ||
+      host.endsWith(".byteoversea.com") ||
+      host.endsWith(".ibytedtos.com") ||
+      host.endsWith(".tikwm.com") ||
+      host.endsWith(".cdninstagram.com") ||
+      host.endsWith(".fbcdn.net") ||
+      host.endsWith(".facebook.com") ||
+      host.endsWith(".instagram.com") ||
+      host.endsWith(".twimg.com") ||
+      host.endsWith(".twitter.com") ||
+      host.endsWith(".x.com") ||
+      host.endsWith(".v.redd.it") ||
+      host.endsWith(".reddit.com") ||
+      host.endsWith(".redd.it") ||
+      host.endsWith(".vimeocdn.com") ||
+      host.endsWith(".vimeo.com") ||
+      host.endsWith(".akamaized.net") ||
+      host.endsWith(".ttvnw.net") ||
+      host.endsWith(".twitch.tv") ||
+      host.endsWith(".pinimg.com") ||
+      host.endsWith(".pinterest.com")
     );
   } catch {
     return false;
   }
 }
+
 
 async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
   try {

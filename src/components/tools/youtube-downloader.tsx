@@ -195,7 +195,7 @@ export function YouTubeDownloader() {
     const playlistId = extractPlaylistId(urlToResolve);
 
     if (!detected && !videoId && !playlistId) {
-      setResolveError("Please enter a valid video link from YouTube, TikTok, Instagram, Twitter / X, or Reddit.");
+      setResolveError("Please enter a valid video link from YouTube, TikTok, Instagram, Twitter / X, Reddit, Facebook, Vimeo, Twitch, or any supported social media.");
       void haptics.warning();
       return;
     }
@@ -224,7 +224,7 @@ export function YouTubeDownloader() {
           is4K: false,
           is60fps: false,
           isAudioOnly: !!q.isAudioOnly,
-          container: q.ext,
+          container: (q.ext as "mp4" | "webm" | "mp3" | "m4a" | "wav") || "mp4",
           approxSizeBytes: q.fileSize || 0,
           audioBitrate: q.bitrate,
           videoFormat: q.isAudioOnly ? undefined : ({ url: q.downloadUrl } as any),
@@ -739,15 +739,28 @@ export function YouTubeDownloader() {
               <span>X / Twitter</span>
             </span>
             <span className="flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-orange-400">
-              <span>Reddit Audio Mux</span>
+              <span>Reddit Mux</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-400">
+              <span>Facebook</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-teal-400">
+              <span>Vimeo</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-purple-400">
+              <span>Twitch</span>
+            </span>
+            <span className="flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+              <span>yt-dlp Core</span>
             </span>
           </div>
           <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             Universal Media Downloader
           </h1>
           <p className="font-mono text-xs text-muted-foreground">
-            High-speed video & audio downloads · YouTube 4K, Watermark-Free TikTok, Reels, Twitter & Reddit
+            High-speed video & audio downloads · YouTube 4K, Watermark-Free TikTok, Reels, Twitter, Reddit, Facebook, Vimeo & 1,700+ sites
           </p>
+
         </div>
 
         <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
@@ -831,7 +844,7 @@ export function YouTubeDownloader() {
       <div className="panel-hud rounded-2xl border border-primary/20 bg-card/50 p-4 sm:p-5 shadow-elevation1 space-y-3">
         <div className="flex items-center justify-between">
           <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Enter Media Link (YouTube, TikTok, Instagram, Twitter/X, Reddit)
+            Enter Media Link (YouTube, TikTok, Instagram, Twitter/X, Reddit, Facebook, Vimeo, Twitch…)
           </label>
           {detectPlatform(inputUrl) && (
             <span
@@ -858,7 +871,7 @@ export function YouTubeDownloader() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleResolve();
               }}
-              placeholder="Paste YouTube, TikTok, Instagram, X/Twitter, or Reddit link…"
+              placeholder="Paste YouTube, TikTok, Instagram, X/Twitter, Reddit, Facebook, Vimeo or any video link…"
               disabled={isResolving || isDownloading}
               className={`w-full rounded-xl border border-border/80 bg-background/80 py-2.5 pl-10 ${
                 inputUrl.length > 0 ? "pr-28" : "pr-20"
