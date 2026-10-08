@@ -22,13 +22,22 @@ import { spawnSync } from "child_process";
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const BACKUP_DIR = path.join(PROJECT_ROOT, ".next", "mobile-export-backup");
+const API_DIR = path.join(PROJECT_ROOT, "src", "app", "api");
 
-// Target routes that require static stubbing during static export
-const TARGET_ROUTES = [
-  path.join(PROJECT_ROOT, "src/app/api/youtube/info/route.ts"),
-  path.join(PROJECT_ROOT, "src/app/api/youtube/stream/route.ts"),
-  path.join(PROJECT_ROOT, "src/app/api/youtube/playlist/route.ts"),
-];
+function findAllApiRoutes(dir: string): string[] {
+  let results: string[] = [];
+  if (!fs.existsSync(dir)) return results;
+  const list = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of list) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results = results.concat(findAllApiRoutes(fullPath));
+    } else if (entry.isFile() && (entry.name === "route.ts" || entry.name === "route.js")) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
 
 const STATIC_STUB_CONTENT = `import { NextResponse } from "next/server";
 
@@ -38,13 +47,38 @@ export function GET() {
   return NextResponse.json({ status: "static-export" });
 }
 
+export function POST() {
+  return NextResponse.json({ status: "static-export" });
+}
+
+export function PUT() {
+  return NextResponse.json({ status: "static-export" });
+}
+
+export function DELETE() {
+  return NextResponse.json({ status: "static-export" });
+}
+
+export function PATCH() {
+  return NextResponse.json({ status: "static-export" });
+}
+
+export function HEAD() {
+  return new NextResponse(null, { status: 200 });
+}
+
 export function OPTIONS() {
   return new NextResponse(null, { status: 204 });
 }
 `;
 
 const fileBackups = new Map<string, string>();
+let discoveredRoutes: string[] = [];
 let isRestored = false;
+
+function getBackupFileName(filePath: string): string {
+  return path.relative(PROJECT_ROOT, filePath).replace(/[\\/:]/g, "_");
+}
 
 function backupAndSubstituteRoutes(): void {
   console.log("▸ [mobile-export] Stashing dynamic route handlers for static export...");
@@ -53,7 +87,9 @@ function backupAndSubstituteRoutes(): void {
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
   }
 
-  for (const filePath of TARGET_ROUTES) {
+  discoveredRoutes = findAllApiRoutes(API_DIR);
+
+  for (const filePath of discoveredRoutes) {
     if (!fs.existsSync(filePath)) {
       console.warn(`▸ [mobile-export] Warning: Target route not found: ${filePath}`);
       continue;
@@ -63,7 +99,7 @@ function backupAndSubstituteRoutes(): void {
     fileBackups.set(filePath, originalContent);
 
     // Also persist to disk backup in .next/ for crash resilience
-    const backupFileName = path.basename(path.dirname(filePath)) + "_" + path.basename(filePath);
+    const backupFileName = getBackupFileName(filePath);
     const diskBackupPath = path.join(BACKUP_DIR, backupFileName);
     fs.writeFileSync(diskBackupPath, originalContent, "utf8");
 
@@ -90,8 +126,8 @@ function restoreOriginalRoutes(): void {
 
   // Also check if any disk backups exist in case in-memory was empty
   if (fileBackups.size === 0 && fs.existsSync(BACKUP_DIR)) {
-    for (const filePath of TARGET_ROUTES) {
-      const backupFileName = path.basename(path.dirname(filePath)) + "_" + path.basename(filePath);
+    for (const filePath of discoveredRoutes) {
+      const backupFileName = getBackupFileName(filePath);
       const diskBackupPath = path.join(BACKUP_DIR, backupFileName);
       if (fs.existsSync(diskBackupPath)) {
         const content = fs.readFileSync(diskBackupPath, "utf8");
