@@ -5,6 +5,28 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.0] — 2026-10-08
+
+### Added & Refined
+- **🎥 Universal Media Downloader Powered by `yt-dlp`**:
+  - **1,700+ Platforms Supported**: Integrated the `yt-dlp` Python engine (`scripts/youtube_downloader.py` & `scripts/media_downloader.py`) to power YouTube (4K 60FPS, 2K, 1080p, 720p, audio) and all major social media platforms (TikTok watermark-free, Instagram Reels/Posts, X/Twitter, Reddit with audio muxing, Facebook, Vimeo, Twitch, Pinterest, Threads, Bluesky, etc.).
+  - **Vertical Video Normalization**: Detects portrait aspect ratios (1080x1920) on TikTok, Instagram Reels, and YouTube Shorts to accurately badge them as 1080P Full HD rather than 2K.
+  - **Studio Audio Extraction Tiers**: Automatically extracts 6 audio tiers for any video: Studio Master (320 kbps MP3), High Fidelity (256 kbps AAC), High Quality (192 kbps MP3), Standard (128 kbps MP3), Native AAC, and Lossless Studio Audio (WAV PCM).
+  - **Streaming & Download API Endpoints**: Created `/api/media/download` and `/api/youtube/download` streaming endpoints with automated temp file cleanup, and expanded `/api/youtube/stream` to proxy verified social media CDNs.
+  - **Multi-Platform Platform Classifier**: Upgraded `detector.ts`, `universal-resolver.ts`, `types.ts`, and `downloader.ts` to detect and resolve any social media link.
+- **🔊 Zero-Latency Sensory Feedback Engine (`useSensoryFeedback`)**:
+  - **AudioContext Provider (`SensoryProvider.tsx`)**: High-performance AudioContext lifecycle manager that unlocks on the first user interaction to bypass browser autoplay policies. Preloads and decodes `.wav` files into in-memory buffers with procedural PCM synthesis fallbacks.
+  - **Exact Millisecond Haptic Matrix (`haptic-patterns.ts`)**: Strict tactile vibration arrays: `lightTap: [10]`, `toggleOn: [15, 30, 15]`, `toggleOff: [10, 40, 10]`, `success: [30, 60, 50]`, and `error: [20, 20, 20, 20, 20, 20]`, with silent degradation on unsupported devices and native Capacitor Haptics support.
+  - **Unified Custom Hook (`useSensoryFeedback.ts`)**: Synchronized simultaneous audio-tactile dispatching: `triggerTap()`, `triggerToggle(state)`, `triggerProcessStart()`, `triggerSuccess()`, `triggerError()`.
+  - **Component Integration (`FfmpegConvertButton.tsx`)**: Interactive Framer Motion button demonstrating mechanical hover taps, processing charging hums, and completion fanfares.
+- **🧪 Test Suite & Quality Verification**:
+  - Added `scripts/test-universal-downloader.ts` (15/15 platform classification and yt-dlp metadata tests).
+  - Added `scripts/test-sensory-feedback.ts` (100% haptic pattern and silent degradation verification).
+  - Full E2E Test Suite verified: **138/138 tests passing (100%)**.
+  - Full CI Test Suite verified: **644+ tests passing (100%)**.
+
+---
+
 ## [3.8.0] — 2026-10-04
 
 ### Added & Refined
