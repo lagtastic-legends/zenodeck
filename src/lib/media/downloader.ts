@@ -9,6 +9,8 @@ import type { UniversalMediaInfo, UniversalQualityOption } from "./types";
 import { nativeSave } from "@/lib/native-save";
 import { updateDownloadNotification } from "@/lib/notifications";
 import { getOrInitTurboEngine } from "@/lib/youtube/turbo-downloader";
+import { getYouTubeApiUrl } from "@/lib/youtube/innertube";
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 
 export interface MediaDownloadProgress {
   phase: "downloading" | "muxing" | "saving" | "complete";
@@ -24,69 +26,82 @@ import type { TurboDownloadResult } from "@/lib/youtube/turbo-downloader";
 /**
  * Downloads a media stream using progressive fetching.
  */
-async function fetchStreamWithProgress(
+export async function fetchStreamWithProgress(
   url: string,
   onProgress?: (receivedBytes: number, totalBytes?: number) => void,
   abortSignal?: AbortSignal
 ): Promise<Uint8Array> {
-  const res = await universalFetch(url, {
-    signal: abortSignal,
-  });
+  const directUrl = url.startsWith("http") ? url : getYouTubeApiUrl(url);
 
-  if (!res.ok) {
-    throw new Error(`Stream download failed with status ${res.status}`);
+  // 1. Primary: Streaming fetch reader for progress tracking and CORS endpoints
+  try {
+    const res = await fetch(directUrl, { signal: abortSignal });
+    if (res.ok && res.body) {
+      const contentLength = res.headers.get("content-length");
+      const total = contentLength ? parseInt(contentLength, 10) : undefined;
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          if (onProgress) onProgress(received, total);
+        }
+      }
+
+      const result = new Uint8Array(received);
+      let offset = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+      }
+      return result;
+    }
+  } catch (fetchErr: any) {
+    if (abortSignal?.aborted) throw fetchErr;
+    console.warn("fetch stream reader error, falling back:", fetchErr?.message);
   }
 
-  // Check if browser native fetch body is readable stream
-  const responseAny = res as any;
-  if (responseAny._res && typeof responseAny._res.blob === "function") {
-    const blob = await responseAny._res.blob();
-    const buf = await blob.arrayBuffer();
-    return new Uint8Array(buf);
-  }
-
-  // For CapacitorHttp or standard response
-  if (typeof responseAny.blob === "function") {
-    const blob = await responseAny.blob();
-    const buf = await blob.arrayBuffer();
-    return new Uint8Array(buf);
-  }
-
-  // Fallback: standard fetch if in browser
-  const directRes = await fetch(url, { signal: abortSignal });
-  if (!directRes.ok) {
-    throw new Error(`Direct stream fetch failed with status ${directRes.status}`);
-  }
-
-  const contentLength = directRes.headers.get("content-length");
-  const total = contentLength ? parseInt(contentLength, 10) : undefined;
-
-  if (!directRes.body) {
-    const buf = await directRes.arrayBuffer();
-    return new Uint8Array(buf);
-  }
-
-  const reader = directRes.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.length;
-      if (onProgress) onProgress(received, total);
+  // 2. Fallback: CapacitorHttp on native mobile for non-CORS external CDN URLs
+  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+    try {
+      const nativeRes = await CapacitorHttp.request({
+        url: directUrl,
+        method: "GET",
+        responseType: "arraybuffer",
+        connectTimeout: 8000,
+        readTimeout: 45000,
+      });
+      if (nativeRes.status === 200 || nativeRes.status === 206) {
+        if (typeof nativeRes.data === "string") {
+          const binaryStr = atob(nativeRes.data);
+          const len = binaryStr.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          if (onProgress) onProgress(bytes.byteLength, bytes.byteLength);
+          return bytes;
+        } else if (nativeRes.data instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(nativeRes.data);
+          if (onProgress) onProgress(bytes.byteLength, bytes.byteLength);
+          return bytes;
+        } else if (nativeRes.data instanceof Uint8Array) {
+          if (onProgress) onProgress(nativeRes.data.byteLength, nativeRes.data.byteLength);
+          return nativeRes.data;
+        }
+      }
+    } catch (nativeErr: any) {
+      if (abortSignal?.aborted) throw nativeErr;
+      console.warn("Native CapacitorHttp request failed:", nativeErr?.message);
     }
   }
 
-  const result = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result;
+  throw new Error(`Failed to download stream from ${directUrl}`);
 }
 
 /**
@@ -254,7 +269,7 @@ export async function downloadUniversalMedia(
       message: "Downloading high-speed stream via yt-dlp engine…",
       percent: 40,
     });
-    const fallbackUrl = `/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(option.badge || option.resolution || "best")}`;
+    const fallbackUrl = getYouTubeApiUrl(`/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(option.badge || option.resolution || "best")}`);
     bytes = await fetchStreamWithProgress(fallbackUrl, (rec, tot) => {
       const pct = tot ? Math.min(85, 40 + Math.round((rec / tot) * 45)) : 65;
       onProgress({

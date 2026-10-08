@@ -5,6 +5,16 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.1] — 2026-10-08
+
+### Fixed & Enhanced
+- **🚀 Elimination of 0% Download Freeze on Android APK & Web**:
+  - **Hard Timeout & Abort Race in `fetchChunkUniversal`**: Wrapped `CapacitorHttp.request` in an explicit `Promise.race` with abort signal listener and timeout guard (2.5s for probe, 7s for chunk). Fixed unbounded native blocking on Java OkHttp threads when CDN sockets stall or carrier throttling occurs.
+  - **Repaired Mobile Stream Proxy Fallback**: Fixed `getProxiedStreamUrl` on native mobile platforms to properly point to `getYouTubeApiUrl(/api/youtube/stream?url=...)` with CORS headers rather than returning raw CDN URLs which failed browser CORS in the Android WebView.
+  - **Dual-Engine Auto-Fallback & 0% Stall Watchdog**: Equipped `YouTubeDownloader` with an automated 5.5-second stall watchdog. If direct client-side chunk streaming stalls at 0% or throws an error (e.g. carrier/CDN IP blocks), the downloader seamlessly transitions to the high-speed server stream engine without user intervention, streaming with live telemetry and auto-saving via `nativeSave`.
+  - **Universal Stream Route Resilience**: Upgraded `/api/media/download` and `/api/youtube/download` with resilient pure TypeScript stream fallbacks for serverless environments (e.g. Vercel) where `python3` binaries are not present, eliminating `spawn python3 ENOENT` errors.
+  - **Fixed Relative Fallback URL in Universal Downloader**: Wrapped `/api/media/download` in `getYouTubeApiUrl` to prevent invalid relative URI failures inside native mobile WebViews.
+
 ## [3.9.0] — 2026-10-08
 
 ### Added & Refined

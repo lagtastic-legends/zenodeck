@@ -80,7 +80,7 @@ import {
   type DetectedPlatformResult,
 } from "@/lib/media/detector";
 import { resolveMediaUrl } from "@/lib/media/universal-resolver";
-import { downloadUniversalMedia } from "@/lib/media/downloader";
+import { downloadUniversalMedia, fetchStreamWithProgress } from "@/lib/media/downloader";
 import type {
   UniversalMediaInfo,
   UniversalQualityOption,
@@ -480,6 +480,135 @@ export function YouTubeDownloader() {
 
     abortControllerRef.current = new AbortController();
 
+    let didFallback = false;
+    let stallWatchdogTimer: any = null;
+
+    const triggerYtDlpStreamFallback = async (reason?: string) => {
+      console.warn("Direct turbo streaming stalled or failed, activating high-speed stream fallback:", reason);
+      setProgress({
+        phase: "downloading",
+        progress: 10,
+        speedMbps: 0,
+        downloadedBytes: 0,
+        totalBytes: selectedQuality.approxSizeBytes || 0,
+        activeThreads: 1,
+        etaSeconds: 0,
+        statusMessage: "Connecting to high-speed stream engine…",
+      });
+
+      const qualityParam = selectedQuality.badge || selectedQuality.resolutionLabel || selectedQuality.label || "best";
+      const fallbackUrl = getYouTubeApiUrl(
+        `/api/youtube/download?url=${encodeURIComponent(inputUrl.trim() || videoInfo.videoId)}&quality=${encodeURIComponent(qualityParam)}&format=${encodeURIComponent(selectedQuality.container)}`
+      );
+
+      const streamBytes = await fetchStreamWithProgress(
+        fallbackUrl,
+        (received, total) => {
+          const tot = total || selectedQuality.approxSizeBytes || 0;
+          const pct = tot > 0 ? Math.min(95, Math.max(10, Math.round((received / tot) * 90))) : Math.min(85, Math.round(received / (1024 * 1024)));
+          setProgress({
+            phase: "downloading",
+            progress: pct,
+            speedMbps: 0,
+            downloadedBytes: received,
+            totalBytes: tot,
+            activeThreads: 1,
+            etaSeconds: 0,
+            statusMessage: `Streaming media: ${(received / (1024 * 1024)).toFixed(1)} MB transferred…`,
+          });
+          void updateDownloadNotification({
+            id: 7777,
+            title: `Downloading ${selectedQuality.badge || selectedQuality.label}`,
+            itemTitle: videoInfo.title,
+            progress: pct,
+            speedMbps: 0,
+            isComplete: false,
+          });
+        },
+        abortControllerRef.current?.signal
+      );
+
+      const mimeType = selectedQuality.isAudioOnly
+        ? (selectedQuality.container === "mp3" ? "audio/mpeg" : "audio/mp4")
+        : (selectedQuality.container === "webm" ? "video/webm" : "video/mp4");
+
+      const blob = new Blob([streamBytes.buffer as ArrayBuffer], { type: mimeType });
+      const safeTitle = (videoInfo.title || "video").replace(/[<>:"/\\|?*]/g, "_").trim().slice(0, 60);
+      const filename = `${safeTitle} [${selectedQuality.label}].${selectedQuality.container}`;
+      const url = URL.createObjectURL(blob);
+
+      const fbResult: TurboDownloadResult = {
+        blob,
+        url,
+        filename,
+        fileSizeBytes: blob.size,
+        mimeType,
+        is4K: selectedQuality.is4K,
+        is60fps: selectedQuality.is60fps,
+      };
+
+      currentResultUrlRef.current = fbResult.url;
+      setDownloadResult(fbResult);
+      await nativeSave(blob, filename);
+
+      void haptics.success();
+      playSuccess();
+
+      // Record to History Vault
+      historyStore.addItem({
+        videoId: videoInfo.videoId,
+        title: videoInfo.title,
+        author: videoInfo.author,
+        thumbnailUrl: videoInfo.thumbnailUrl,
+        durationFormatted: videoInfo.durationFormatted,
+        qualityBadge: selectedQuality.badge,
+        format: selectedQuality.container,
+        fileSizeBytes: blob.size,
+        isAudioOnly: selectedQuality.isAudioOnly,
+        audioStreamUrl: selectedQuality.isAudioOnly ? url : undefined,
+        localFileName: filename,
+        platform: "youtube",
+      });
+
+      void updateDownloadNotification({
+        id: 7777,
+        title: "Download Complete",
+        itemTitle: filename,
+        progress: 100,
+        isComplete: true,
+      });
+
+      setProgress({
+        phase: "complete",
+        progress: 100,
+        speedMbps: 0,
+        downloadedBytes: blob.size,
+        totalBytes: blob.size,
+        activeThreads: 0,
+        etaSeconds: 0,
+        statusMessage: "Download complete!",
+      });
+    };
+
+    // Watchdog: If direct chunk streaming hasn't received any bytes within 5.5s, switch to high-speed stream
+    stallWatchdogTimer = setTimeout(() => {
+      if (!didFallback) {
+        console.warn("Direct stream stalled at 0% — switching to high-speed server stream");
+        didFallback = true;
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
+        void triggerYtDlpStreamFallback("Direct stream stalled at 0%").catch((err) => {
+          if (err.name !== "AbortError" && err.message !== "Download aborted") {
+            setResolveError(err.message || "Download failed.");
+            void haptics.error();
+            playError();
+          }
+        }).finally(() => {
+          setIsDownloading(false);
+        });
+      }
+    }, 5500);
+
     try {
       const result = await downloadYouTubeStream({
         option: selectedQuality,
@@ -489,6 +618,10 @@ export function YouTubeDownloader() {
         engine: activeEngine,
         maxParallelWorkers: workersCount,
         onProgress: (p) => {
+          if (p.downloadedBytes > 0 && stallWatchdogTimer) {
+            clearTimeout(stallWatchdogTimer);
+            stallWatchdogTimer = null;
+          }
           setProgress(p);
           void updateDownloadNotification({
             id: 7777,
@@ -502,8 +635,12 @@ export function YouTubeDownloader() {
         signal: abortControllerRef.current.signal,
       });
 
+      if (stallWatchdogTimer) clearTimeout(stallWatchdogTimer);
+      if (didFallback) return;
+
       currentResultUrlRef.current = result.url;
       setDownloadResult(result);
+      await nativeSave(result.blob, result.filename);
       void haptics.success();
       playSuccess();
 
@@ -533,14 +670,31 @@ export function YouTubeDownloader() {
         isComplete: true,
       });
     } catch (err: any) {
-      if (err.message !== "Download aborted") {
-        console.error("Download error:", err);
-        setResolveError(err.message || "Download failed. Please try a different quality tier.");
-        void haptics.error();
-        playError();
+      if (stallWatchdogTimer) clearTimeout(stallWatchdogTimer);
+      if (didFallback) return;
+
+      if (err.name === "AbortError" || err.message === "Download aborted") {
+        return;
+      }
+
+      console.warn("Direct download failed, attempting high-speed stream fallback:", err);
+      try {
+        didFallback = true;
+        abortControllerRef.current = new AbortController();
+        await triggerYtDlpStreamFallback(err.message || "Direct stream error");
+      } catch (fallbackErr: any) {
+        if (fallbackErr.name !== "AbortError" && fallbackErr.message !== "Download aborted") {
+          console.error("Both direct streaming and stream fallback failed:", fallbackErr);
+          setResolveError(fallbackErr.message || "Download failed. Please try a different quality tier.");
+          void haptics.error();
+          playError();
+        }
       }
     } finally {
-      setIsDownloading(false);
+      if (stallWatchdogTimer) clearTimeout(stallWatchdogTimer);
+      if (!didFallback) {
+        setIsDownloading(false);
+      }
     }
   };
 

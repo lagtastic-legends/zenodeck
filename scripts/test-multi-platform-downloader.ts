@@ -90,11 +90,14 @@ async function runTests() {
   assert(PLATFORM_CONFIGS.twitter.name === "X / Twitter", "Twitter config present");
   assert(PLATFORM_CONFIGS.reddit.name === "Reddit", "Reddit config present");
 
-  const inv1 = detectPlatform("https://google.com/search?q=test");
-  assert(inv1 === null, "Rejects Google search URL");
+  const inv1 = detectPlatform("not-a-valid-url-input");
+  assert(inv1 === null, "Rejects invalid non-URL string");
 
-  const inv2 = detectPlatform("https://github.com/microsoft/vscode");
-  assert(inv2 === null, "Rejects GitHub repository URL");
+  const inv2 = detectPlatform("ftp://example.com/file");
+  assert(inv2 === null, "Rejects non-HTTP URL protocol");
+
+  const gen1 = detectPlatform("https://google.com/search?q=test");
+  assert(gen1?.platform === "social", "Routes generic HTTP to universal social yt-dlp handler");
 
   console.log("\n==================================================================");
   console.log(`  RESULTS: ${passed} PASSED, ${failed} FAILED`);

@@ -114,7 +114,7 @@ export interface TurboDownloadResult {
 }
 
 /**
- * Builds the stream proxy URL for web CORS compatibility or returns direct URL for native mobile
+ * Builds the stream proxy URL for web CORS compatibility and mobile proxy fallback
  */
 function getProxiedStreamUrl(directUrl: string): string {
   if (directUrl.startsWith("data:") || directUrl.startsWith("blob:")) {
@@ -124,17 +124,13 @@ function getProxiedStreamUrl(directUrl: string): string {
   if (typeof window === "undefined") {
     return directUrl;
   }
-  // On native mobile (Capacitor Android / iOS), direct URL is handled natively
-  if (Capacitor.isNativePlatform()) {
-    return directUrl;
-  }
   return getYouTubeApiUrl(`/api/youtube/stream?url=${encodeURIComponent(directUrl)}`);
 }
 
 /**
  * Universally fetches a byte range chunk.
- * - On native mobile (Capacitor Android/iOS), uses native CapacitorHttp to bypass
- *   browser CORS completely and avoid remote IP binding mismatch (403).
+ * - On native mobile (Capacitor Android/iOS), uses native CapacitorHttp with timeout race.
+ *   If direct fetch fails/times out, falls back to the stream proxy (/api/youtube/stream).
  * - On web, uses the CORS/CORP stream proxy (/api/youtube/stream).
  * - On Node.js, uses direct fetch with appropriate User-Agent.
  */
@@ -147,6 +143,8 @@ async function fetchChunkUniversal({
   rangeHeader?: string;
   signal?: AbortSignal;
 }): Promise<Uint8Array> {
+  if (signal?.aborted) throw new Error("Download aborted");
+
   const isIos = candidateUrl.includes("c=IOS") || candidateUrl.includes("sparams=");
   const defaultUa = isIos
     ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
@@ -159,14 +157,36 @@ async function fetchChunkUniversal({
     headers["Range"] = rangeHeader;
   }
 
-  // 1. Native mobile (Capacitor Android / iOS)
+  const isProbe = rangeHeader === "bytes=0-0";
+  const nativeTimeoutMs = isProbe ? 2500 : 7000;
+
+  // 1. Native mobile (Capacitor Android / iOS) with hard timeout & abort race
   if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
     try {
-      const res = await CapacitorHttp.request({
+      const nativePromise = CapacitorHttp.request({
         url: candidateUrl,
         method: "GET",
         headers,
         responseType: "arraybuffer",
+        connectTimeout: 3000,
+        readTimeout: nativeTimeoutMs,
+      } as any);
+
+      let nativeTimer: any;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        nativeTimer = setTimeout(() => reject(new Error("Native HTTP timeout")), nativeTimeoutMs);
+      });
+
+      const abortPromise = new Promise<never>((_, reject) => {
+        if (signal?.aborted) {
+          reject(new Error("Download aborted"));
+          return;
+        }
+        signal?.addEventListener("abort", () => reject(new Error("Download aborted")), { once: true });
+      });
+
+      const res = await Promise.race([nativePromise, timeoutPromise, abortPromise]).finally(() => {
+        if (nativeTimer) clearTimeout(nativeTimer);
       });
 
       if (res.status === 200 || res.status === 206) {
@@ -177,33 +197,47 @@ async function fetchChunkUniversal({
           for (let i = 0; i < len; i++) {
             bytes[i] = binaryStr.charCodeAt(i);
           }
-          return bytes;
+          if (bytes.byteLength > 0) return bytes;
         } else if (res.data instanceof ArrayBuffer) {
-          return new Uint8Array(res.data);
+          if (res.data.byteLength > 0) return new Uint8Array(res.data);
         } else if (res.data instanceof Uint8Array) {
-          return res.data;
+          if (res.data.byteLength > 0) return res.data;
         }
       }
       throw new Error(`Native HTTP failed with status ${res.status}`);
     } catch (nativeErr: any) {
-      console.warn("CapacitorHttp chunk fetch error, falling back:", nativeErr?.message);
+      if (signal?.aborted) throw nativeErr;
+      console.warn("CapacitorHttp chunk fetch error, falling back to stream proxy:", nativeErr?.message);
     }
   }
 
-  // 2. Web browser or Node.js
+  // 2. Stream proxy fallback (Web browser or native proxy endpoint)
   const targetUrl = getProxiedStreamUrl(candidateUrl);
-  const fetchOpts: RequestInit = {
-    signal,
-    headers,
-  };
+  const proxyTimeoutMs = isProbe ? 3000 : 8000;
+  const proxyController = new AbortController();
+  const proxyTimer = setTimeout(() => proxyController.abort(), proxyTimeoutMs);
 
-  const res = await fetch(targetUrl, fetchOpts);
-  if (!res.ok && res.status !== 206) {
-    throw new Error(`Fetch failed (HTTP ${res.status})`);
+  if (signal?.aborted) proxyController.abort();
+  signal?.addEventListener("abort", () => proxyController.abort(), { once: true });
+
+  try {
+    const res = await fetch(targetUrl, {
+      signal: proxyController.signal,
+      headers,
+    });
+    clearTimeout(proxyTimer);
+
+    if (!res.ok && res.status !== 206) {
+      throw new Error(`Proxy stream fetch failed (HTTP ${res.status})`);
+    }
+
+    const buf = await res.arrayBuffer();
+    return new Uint8Array(buf);
+  } catch (proxyErr: any) {
+    clearTimeout(proxyTimer);
+    if (signal?.aborted) throw new Error("Download aborted");
+    throw proxyErr;
   }
-
-  const buf = await res.arrayBuffer();
-  return new Uint8Array(buf);
 }
 
 /**
@@ -216,14 +250,15 @@ async function probeStreamSizeSafe(
   knownSize?: number,
   signal?: AbortSignal
 ): Promise<number> {
-  for (let i = 0; i < candidateUrls.length; i++) {
+  const maxProbes = knownSize && knownSize > 1024 * 1024 ? 1 : Math.min(candidateUrls.length, 2);
+  for (let i = 0; i < maxProbes; i++) {
     const directUrl = candidateUrls[i];
     if (signal?.aborted) return knownSize || 0;
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
+      const timer = setTimeout(() => controller.abort(), 1500);
       const onParentAbort = () => controller.abort();
-      signal?.addEventListener("abort", onParentAbort);
+      signal?.addEventListener("abort", onParentAbort, { once: true });
 
       const chunk = await fetchChunkUniversal({
         candidateUrl: directUrl,
@@ -235,7 +270,6 @@ async function probeStreamSizeSafe(
       signal?.removeEventListener("abort", onParentAbort);
 
       if (chunk && chunk.byteLength > 0) {
-        // Candidate is responsive! Promote to front of candidateUrls array
         if (i > 0) {
           const [working] = candidateUrls.splice(i, 1);
           candidateUrls.unshift(working);
