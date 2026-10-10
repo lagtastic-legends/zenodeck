@@ -32,6 +32,8 @@ import {
   Check,
   ChevronDown,
   Grid,
+  Layers,
+  Disc,
 } from "lucide-react";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
@@ -43,6 +45,8 @@ import {
   ParamToggle,
 } from "@/components/audio/param-controls";
 import { BinauralRadar } from "@/components/audio/binaural-radar";
+import { FXRackStudio } from "@/components/audio/FXRackStudio";
+import { StemMixerConsole } from "@/components/audio/StemMixerConsole";
 import { useAudioProcessor } from "@/hooks/useAudioProcessor";
 import { useHaptics } from "@/hooks/use-haptics";
 import {
@@ -77,10 +81,18 @@ const BITRATE_OPTIONS = [
 
 export function UnifiedAudioStudio({
   initialToolId = "bass-booster",
+  initialStudioMode,
 }: {
-  initialToolId?: AudioEffectType;
+  initialToolId?: AudioEffectType | "fx-rack" | "stem-separator";
+  initialStudioMode?: "single" | "fx-rack" | "stem-mixer";
 }) {
   const haptics = useHaptics();
+  const [studioMode, setStudioMode] = useState<"single" | "fx-rack" | "stem-mixer">(() => {
+    if (initialStudioMode) return initialStudioMode;
+    if (initialToolId === "fx-rack") return "fx-rack";
+    if (initialToolId === "stem-separator") return "stem-mixer";
+    return "single";
+  });
   const {
     phase,
     busy,
@@ -98,9 +110,13 @@ export function UnifiedAudioStudio({
   const [duration, setDuration] = useState(0);
 
   /* Active Effect and Parameters */
-  const [activeEffect, setActiveEffect] = useState<AudioEffectType>(initialToolId);
+  const [activeEffect, setActiveEffect] = useState<AudioEffectType>(() =>
+    initialToolId === "fx-rack" || initialToolId === "stem-separator" ? "bass-booster" : initialToolId
+  );
   const [params, setParams] = useState<Record<string, any>>(() =>
-    getDefaultAudioParams(initialToolId)
+    getDefaultAudioParams(
+      initialToolId === "fx-rack" || initialToolId === "stem-separator" ? "bass-booster" : initialToolId
+    )
   );
   const [showGridDrawer, setShowGridDrawer] = useState(false);
 
@@ -110,6 +126,14 @@ export function UnifiedAudioStudio({
 
   /* Synchronize tool when initialToolId prop changes */
   useEffect(() => {
+    if (initialToolId === "fx-rack") {
+      setStudioMode("fx-rack");
+      return;
+    }
+    if (initialToolId === "stem-separator") {
+      setStudioMode("stem-mixer");
+      return;
+    }
     if (initialToolId && initialToolId !== activeEffect) {
       setActiveEffect(initialToolId);
       setParams(getDefaultAudioParams(initialToolId));
@@ -661,7 +685,7 @@ export function UnifiedAudioStudio({
                   Unified Audio DSP Suite
                 </h1>
                 <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 font-mono text-[10px] uppercase font-semibold text-primary">
-                  13 Engines
+                  {studioMode === "single" ? "13 Engines" : studioMode === "fx-rack" ? "Modular Rack" : "4 Stems"}
                 </span>
               </div>
               <p className="font-mono text-xs text-muted-foreground mt-0.5">
@@ -669,54 +693,224 @@ export function UnifiedAudioStudio({
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Toggle Grid Drawer Button */}
+        {/* Studio Mode Selector Tabs */}
+        <div className="flex flex-wrap items-center gap-2 pt-4 mt-4 border-t border-border/50">
           <button
             type="button"
             onClick={() => {
               void haptics.light();
-              setShowGridDrawer((v) => !v);
+              setStudioMode("single");
             }}
-            className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg font-mono text-xs font-semibold bg-background/80 hover:bg-background border border-border/70 text-foreground transition-all duration-150 hover:border-primary/50 shadow-xs"
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-xs font-semibold transition-all cursor-pointer ${
+              studioMode === "single"
+                ? "bg-primary text-primary-foreground shadow-glow"
+                : "bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60"
+            }`}
           >
-            <Grid className="size-3.5 text-primary" />
-            {showGridDrawer ? "Hide Module Grid" : "Browse All 13 Modules"}
+            <Sliders className="size-3.5" />
+            13 Standalone Modules
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              setStudioMode("fx-rack");
+            }}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-xs font-semibold transition-all cursor-pointer ${
+              studioMode === "fx-rack"
+                ? "bg-primary text-primary-foreground shadow-glow"
+                : "bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60"
+            }`}
+          >
+            <Layers className="size-3.5" />
+            ⚡ Modular FX Rack
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              setStudioMode("stem-mixer");
+            }}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-xs font-semibold transition-all cursor-pointer ${
+              studioMode === "stem-mixer"
+                ? "bg-primary text-primary-foreground shadow-glow"
+                : "bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60"
+            }`}
+          >
+            <Disc className="size-3.5" />
+            🎙️ 4-Track Stems
+          </button>
+
+          {studioMode === "single" && (
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                setShowGridDrawer((v) => !v);
+              }}
+              className="ml-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold bg-background/80 hover:bg-background border border-border/70 text-foreground transition-all duration-150 hover:border-primary/50 shadow-xs cursor-pointer"
+            >
+              <Grid className="size-3.5 text-primary" />
+              {showGridDrawer ? "Hide Module Grid" : "Browse All 13 Modules"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Collapsible 13-Module Grid Selector */}
-      <AnimatePresence>
-        {showGridDrawer && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="panel-hud p-4 rounded-tactile border border-primary/30 bg-background/80 shadow-elevation2">
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border/40">
-                <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider">
-                  Select Audio Manipulation Module
-                </span>
-                <span className="font-mono text-[11px] text-muted-foreground">
-                  Click any module or preset to load into workstation
-                </span>
+      {/* Collapsible 13-Module Grid Selector (Only in Single Mode) */}
+      {studioMode === "single" && (
+        <AnimatePresence>
+          {showGridDrawer && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="panel-hud p-4 rounded-tactile border border-primary/30 bg-background/80 shadow-elevation2">
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-border/40">
+                  <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Select Audio Manipulation Module
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    Click any module or preset to load into workstation
+                  </span>
+                </div>
+                <AudioToolsGrid
+                  selectedToolId={activeEffect}
+                  onSelectTool={handleSelectTool}
+                />
               </div>
-              <AudioToolsGrid
-                selectedToolId={activeEffect}
-                onSelectTool={handleSelectTool}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
-      {/* Main Dual-Engine Workstation Surface */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (7 cols): Input & Interactive Parameter Deck */}
-        <div className="lg:col-span-7 space-y-4">
+      {/* Dynamic Studio Mode Views */}
+      {studioMode === "fx-rack" ? (
+        <div className="space-y-4">
+          {!file ? (
+            <DropZone
+              accept="audio/*"
+              file={file}
+              onFile={(f) => {
+                reset();
+                setFile(f);
+              }}
+              onClear={() => {
+                reset();
+                setFile(null);
+              }}
+              preview="none"
+              label="Drop source audio track for Multi-FX Rack"
+              hint="Supports MP3, WAV, FLAC, OGG, AAC, M4A up to 20 GB"
+              onProbed={handleProbed}
+              disabled={busy}
+            />
+          ) : (
+            <div className="panel-hud p-3.5 rounded-tactile border border-border/60 bg-card/40 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                  <FileAudio className="size-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-xs text-foreground truncate max-w-[200px] sm:max-w-[400px]">
+                    {file.name}
+                  </p>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    {formatBytes(file.size)} · {duration > 0 ? `${duration.toFixed(1)}s` : "Loaded"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  reset();
+                  setFile(null);
+                }}
+                className="text-xs font-mono text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/60 hover:bg-secondary transition-all cursor-pointer"
+              >
+                Change Audio File
+              </button>
+            </div>
+          )}
+
+          <FXRackStudio
+            file={file}
+            audioRef={audioRef}
+            isPlaying={isPlaying}
+            onTogglePlay={togglePlay}
+            format={format}
+            kbps={kbps}
+          />
+        </div>
+      ) : studioMode === "stem-mixer" ? (
+        <div className="space-y-4">
+          {!file ? (
+            <DropZone
+              accept="audio/*"
+              file={file}
+              onFile={(f) => {
+                reset();
+                setFile(f);
+              }}
+              onClear={() => {
+                reset();
+                setFile(null);
+              }}
+              preview="none"
+              label="Drop source audio track for 4-Track Stem Separation"
+              hint="Supports MP3, WAV, FLAC, OGG, AAC, M4A up to 20 GB"
+              onProbed={handleProbed}
+              disabled={busy}
+            />
+          ) : (
+            <div className="panel-hud p-3.5 rounded-tactile border border-border/60 bg-card/40 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                  <FileAudio className="size-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-xs text-foreground truncate max-w-[200px] sm:max-w-[400px]">
+                    {file.name}
+                  </p>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    {formatBytes(file.size)} · {duration > 0 ? `${duration.toFixed(1)}s` : "Loaded"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  reset();
+                  setFile(null);
+                }}
+                className="text-xs font-mono text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/60 hover:bg-secondary transition-all cursor-pointer"
+              >
+                Change Audio File
+              </button>
+            </div>
+          )}
+
+          <StemMixerConsole
+            file={file}
+            audioRef={audioRef}
+            isPlaying={isPlaying}
+            onTogglePlay={togglePlay}
+            format={format}
+            kbps={kbps}
+          />
+        </div>
+      ) : (
+        /* Main Dual-Engine Workstation Surface (studioMode === "single") */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column (7 cols): Input & Interactive Parameter Deck */}
+          <div className="lg:col-span-7 space-y-4">
           {/* File Intake */}
           <DropZone
             accept="audio/*"
@@ -1437,6 +1631,7 @@ export function UnifiedAudioStudio({
           )}
         </div>
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

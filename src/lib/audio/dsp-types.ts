@@ -5,6 +5,8 @@
  * Real-Time 8D Spatial Audio, and Center Vocal Matrix types.
  */
 
+export type AudioFormat = "mp3" | "wav" | "flac" | "ogg" | "m4a";
+
 /**
  * Standard ISO 266 center frequencies for 10-band octave graphic equalizers.
  */
@@ -244,3 +246,86 @@ export function clampGain(gain: number): number {
   if (Number.isNaN(gain)) return 0;
   return Math.max(MIN_EQ_GAIN_DB, Math.min(MAX_EQ_GAIN_DB, gain));
 }
+
+/* -------------------------------------------------------------------------- */
+/* Modular Real-Time FX Rack Types                                            */
+/* -------------------------------------------------------------------------- */
+
+export type FXRackModuleId =
+  | "pre-amp"
+  | "bass-booster"
+  | "equalizer"
+  | "saturation"
+  | "stereo-imager"
+  | "reverb"
+  | "master-limiter";
+
+export interface FXRackModuleConfig {
+  id: FXRackModuleId;
+  name: string;
+  enabled: boolean;
+  wetDry: number; // 0.0 (100% Dry) to 1.0 (100% Wet)
+  params: Record<string, any>;
+}
+
+export interface FXRackConfig {
+  modules: FXRackModuleConfig[];
+  masterGainDb: number;
+  isBypassed: boolean;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Multi-Band Mastering Types                                                 */
+/* -------------------------------------------------------------------------- */
+
+export type LufsTargetProfile =
+  | "streaming"        // -14.0 LUFS, -1.0 dBTP (Spotify, Apple Music, YouTube)
+  | "club_edm"         // -9.0 LUFS, -0.2 dBTP (High-energy, maximum density)
+  | "audiophile"       // -18.0 LUFS, -1.5 dBTP (Wide dynamic range)
+  | "broadcast_voice"; // -16.0 LUFS, -1.0 dBTP (Podcasts & voice clarity)
+
+export interface MultiBandMasteringConfig {
+  lowCrossoverHz: number;   // default 160 Hz (Sub/Bass split)
+  highCrossoverHz: number;  // default 4500 Hz (Mid/Air split)
+  lowBand: {
+    gainDb: number;
+    compressorThresholdDb: number;
+    compressorRatio: number;
+    monoCollapse: boolean; // collapses <160Hz strictly to mono for punch & clarity
+  };
+  midBand: {
+    gainDb: number;
+    compressorThresholdDb: number;
+    compressorRatio: number;
+  };
+  highBand: {
+    gainDb: number;
+    stereoWidth: number; // 1.0 = normal, 1.2 = enhanced air widening
+  };
+  analogWarmth: number; // 0.0 (clean) to 1.0 (tape/tube saturation)
+  lufsProfile: LufsTargetProfile;
+  truePeakCeilingDb: number; // -1.0 dB to -0.1 dB
+}
+
+/* -------------------------------------------------------------------------- */
+/* 4-Track Stem Separation & Mixer Types                                      */
+/* -------------------------------------------------------------------------- */
+
+export type StemType = "vocals" | "bass" | "drums" | "instruments";
+
+export interface StemTrackConfig {
+  type: StemType;
+  name: string;
+  color: string;
+  volumeDb: number; // -60 to +6 dB (0dB unity)
+  pan: number;      // -1.0 (Left) to +1.0 (Right)
+  muted: boolean;
+  soloed: boolean;
+}
+
+export interface StemMixerState {
+  tracks: Record<StemType, StemTrackConfig>;
+  masterVolumeDb: number;
+  mode: "4-stem" | "2-stem"; // 4-stem or vocal/instrumental fast mode
+}
+

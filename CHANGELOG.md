@@ -5,6 +5,27 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.11.0] — 2026-10-10
+
+### Added
+- **⚡ Modular Real-Time Audio Multi-FX Rack (`FXRackStudio.tsx`, `fx-rack-engine.ts`)**:
+  - 7 studio slots: Dynamic Bass Booster (5 tiers + clarity shelf), 10-Band ISO Graphic EQ, Analog Tape Saturation, Stereo Spatial Widener, Acoustic Reverb (8 spaces), Auto-Panner, and True-Peak Master Limiter.
+  - Zero-latency Web Audio API audition cascade with 20ms de-zippering on slider moves.
+  - Global A/B bypass button for instant dry/wet comparison.
+  - Single-pass master offline WASM export in MP3, WAV, FLAC, OGG, and M4A.
+- **🎚️ Multi-Band Mastering Engine (`multiband-mastering.ts`)**:
+  - 3-band Linkwitz-Riley crossover dynamics (sub-bass split at 160 Hz, mid presence up to 3.5 kHz, high treble air).
+  - EBU R128 compliance with calibrated targets: Streaming (-14 LUFS), Club/EDM (-9 LUFS), Audiophile (-18 LUFS), and Broadcast/Voice (-16 LUFS).
+  - 22 Hz 2-pole subsonic DC filter and analog soft-clip tape saturation modeling.
+- **🎙️ 4-Track Stem Separation Mixing Desk (`StemMixerConsole.tsx`, `stem-separator.ts`)**:
+  - Discrete acoustic decomposition into Vocals, Bass (Linkwitz-Riley mono sub), Drums (transient attack extraction), and Instruments.
+  - Single-pass WASM compilation using `asplit=4` in `-filter_complex`, cutting decode overhead by ~65%.
+  - 4-channel mixer console with Solo, Mute, Volume Fader (-36 dB to +6 dB), and Stereo Panning (-1.0 to +1.0).
+  - Quick macros for instant Acapella and Karaoke soloing, plus direct single-stem export.
+- **🎛️ Unified Workstation Mode Switcher & Routing**:
+  - Top studio mode switcher tabs in `UnifiedAudioStudio.tsx` (`13 Standalone Modules`, `⚡ Modular FX Rack`, `🎙️ 4-Track Stems`) sharing source audio file and audition playback state.
+  - Dedicated route aliases `/fx-rack` and `/stem-separator` registered in `app-shell.tsx`, `registry.ts`, and `workstation-ribbon.tsx`.
+
 ## [3.10.3] — 2026-10-10
 
 ### Fixed & Refined

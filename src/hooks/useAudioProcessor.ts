@@ -60,6 +60,7 @@ export interface AudioProcessOptions {
   outputFormat?: AudioFormat;
   kbps?: number;
   sampleRate?: number;
+  customFilterArgs?: string[];
 }
 
 export function useAudioProcessor() {
@@ -147,6 +148,7 @@ export function useAudioProcessor() {
       outputFormat = "mp3",
       kbps = 320,
       sampleRate,
+      customFilterArgs,
     }: AudioProcessOptions): Promise<AudioProcessResult | null> => {
       // 1. Guard against re-entrant calls
       if (busyRef.current) {
@@ -240,7 +242,10 @@ export function useAudioProcessor() {
         const effectParams = { ...params };
         if (sampleRate) effectParams.sampleRate = sampleRate;
 
-        const filters = getAudioFilterGraph(effect, effectParams);
+        const filters =
+          customFilterArgs && customFilterArgs.length > 0
+            ? customFilterArgs
+            : getAudioFilterGraph(effect, effectParams);
         const outArgs = audioOutputArgs(outputFormat, kbps);
 
         const hasComplexFilter = filters.some((f) => f.includes("[") || f.includes(";"));

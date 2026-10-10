@@ -33,6 +33,8 @@ const VIEW_TITLES: Record<string, { label: string; tag: string }> = {
   "video-mute": { label: "VIDEO MUTE", tag: "P2 MEDIA" },
   "gif-maker": { label: "GIF MAKER", tag: "P2 MEDIA" },
   "audio-dsp": { label: "UNIFIED AUDIO DSP", tag: "P3 SOUND" },
+  "fx-rack": { label: "MODULAR FX RACK", tag: "P3 SOUND" },
+  "stem-separator": { label: "4-TRACK STEMS", tag: "P3 SOUND" },
   "spatial-8d": { label: "8D BINAURAL RADAR", tag: "P3 SOUND" },
   "bass-booster": { label: "5-TIER BASS BOOSTER", tag: "P3 SOUND" },
   "vocal-remover": { label: "VOCAL REMOVER", tag: "P3 SOUND" },

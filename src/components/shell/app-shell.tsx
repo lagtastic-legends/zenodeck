@@ -73,6 +73,8 @@ const ReverseAudioStudioTool = () => <UnifiedAudioStudio initialToolId="reverse-
 const StereoPannerStudioTool = () => <UnifiedAudioStudio initialToolId="stereo-panner" />;
 const VolumeChangerStudioTool = () => <UnifiedAudioStudio initialToolId="volume-changer" />;
 const TrimmerStudioTool = () => <UnifiedAudioStudio initialToolId="trimmer" />;
+const FXRackStudioTool = () => <UnifiedAudioStudio initialStudioMode="fx-rack" />;
+const StemSeparatorStudioTool = () => <UnifiedAudioStudio initialStudioMode="stem-mixer" />;
 
 function ToolSkeleton() {
   return (
@@ -132,6 +134,8 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "pitch-shifter": PitchShifterTool,
   "tempo-changer": TempoChangerTool,
   "audio-effects": AudioEffectsPanel,
+  "fx-rack": FXRackStudioTool,
+  "stem-separator": StemSeparatorStudioTool,
 };
 
 

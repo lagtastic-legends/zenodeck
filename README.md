@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.10.3-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.10.3" />
+    <img src="https://img.shields.io/badge/Release-v3.11.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.11.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.11.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.10.3-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.11.0/zenodeck-v3.11.0-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.11.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -61,33 +61,42 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.10.3-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.10.3-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.10.3-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.11.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.11.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.11.0/zenodeck-v3.11.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.11.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.11.0/zenodeck-v3.11.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.11.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.11.0/zenodeck-v3.11.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.10.3)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.10.3) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.11.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.11.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
 
 ---
 
-## 🌟 What's New in v3.10.3
+## 🌟 What's New in v3.11.0
 
-- **✨ Complete Mobile Dialog & Select Menu Refinement**:
-  - **Eliminated Native OS SingleChoice Dialog Interception**: Replaced all raw HTML `<select>` and `<option>` elements in `StudioRecorder` (`src/components/tools/studio-recorder.tsx`) with Radix UI's `<Select>` primitive, eliminating native Android OS dialog interception and providing a unified in-DOM glassmorphic experience.
-  - **Eradicated Dark-on-Dark Text Contrast Bug**: Added system-level `color-scheme: dark;` to `:root` and form controls in `globals.css` with explicit fallback styling on `select, option, optgroup`, permanently resolving the black-ink-on-dark-background text readability issue on mobile WebViews.
-  - **Glassmorphic Popup System Elevation**: Harmonized `Select`, `DropdownMenu`, `ContextMenu`, and `Menubar` primitives with `bg-card/95 text-card-foreground border-border/80 backdrop-blur-2xl rounded-2xl shadow-2xl`, top ambient laser edge glow accents, and tactile `rounded-xl` items with primary checkmark indicators.
-- **🎨 Comprehensive Modal Dialog & Overlay Design System Polish**:
-  - Standardized `Dialog`, `AlertDialog`, `Sheet`, and `Popover` components with high-opacity `bg-black/80 backdrop-blur-md` scrims, `rounded-2xl border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl` surfaces, and top ambient laser glow lines.
-  - Replaced all instances of unstyled `window.confirm` in the YouTube Vault with an accessible, dark-mode `<AlertDialog>` with clear confirmation copy.
-  - Integrated inline confirmation states in `VaultPreviewModal` (`isConfirmingDelete`) to prevent media loss, and wrapped cloud/local GIF deletions and mobile keyboard unlinking with structured `<AlertDialog>` prompts.
+- **⚡ Modular Real-Time Audio Multi-FX Rack (`FXRackStudio.tsx`, `fx-rack-engine.ts`)**:
+  - 7 studio slots: Dynamic Bass Booster (5 tiers + clarity shelf), 10-Band ISO Graphic EQ, Analog Tape Saturation, Stereo Spatial Widener, Acoustic Reverb (8 spaces), Auto-Panner, and True-Peak Master Limiter.
+  - Zero-latency Web Audio API audition cascade with 20ms de-zippering on slider moves to prevent zipper clicks.
+  - Global A/B bypass button for instant dry/wet comparison and single-pass offline WASM export in MP3, WAV, FLAC, OGG, and M4A.
+- **🎚️ Multi-Band Mastering Engine (`multiband-mastering.ts`)**:
+  - 3-band Linkwitz-Riley crossover dynamics (sub-bass split at 160 Hz, mid presence up to 3.5 kHz, high treble air).
+  - EBU R128 compliance with calibrated targets: Streaming (-14 LUFS), Club/EDM (-9 LUFS), Audiophile (-18 LUFS), and Broadcast/Voice (-16 LUFS).
+  - 22 Hz 2-pole subsonic DC filter and analog soft-clip tape saturation modeling.
+- **🎙️ 4-Track Stem Separation Mixing Desk (`StemMixerConsole.tsx`, `stem-separator.ts`)**:
+  - Discrete acoustic decomposition into Vocals, Bass (Linkwitz-Riley mono sub), Drums (transient attack extraction), and Instruments.
+  - Single-pass WASM compilation using `asplit=4` in `-filter_complex`, cutting decode overhead by ~65%.
+  - 4-channel mixer console with Solo, Mute, Volume Fader (-36 dB to +6 dB), Stereo Pan (-1.0 to +1.0), Acapella/Karaoke quick macros, and single-stem export.
+- **🎛️ Unified Workstation Mode Switcher & Routing**:
+  - Top studio mode switcher tabs in `UnifiedAudioStudio.tsx` (`13 Standalone Modules`, `⚡ Modular FX Rack`, `🎙️ 4-Track Stems`) sharing source audio file and audition playback state.
+  - Dedicated route aliases `/fx-rack` and `/stem-separator` registered in `app-shell.tsx`, `registry.ts`, and `workstation-ribbon.tsx`.
 - **🧪 100% Automated Test Suite Verified**:
+  - FX Rack & Mastering Tests: **59/59 passing (100%)**.
+  - Studio-Grade DSP Suite: **162/162 passing (100%)**.
   - E2E Test Suite: **138/138 passing (100%)**.
   - App Updater & Semver Test Suite: **12/12 passing (100%)**.
   - TypeScript strict compilation: **0 Errors**.
 
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.10.3.md](RELEASE_NOTES_v3.10.3.md)).*
+*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.11.0.md](RELEASE_NOTES_v3.11.0.md)).*
 
 ---
 
