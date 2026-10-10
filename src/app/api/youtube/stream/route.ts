@@ -15,36 +15,54 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
+const ALLOWED_STREAM_DOMAINS = [
+  "googlevideo.com",
+  "youtube.com",
+  "youtu.be",
+  "tiktokcdn.com",
+  "tiktokcdn-us.com",
+  "byteoversea.com",
+  "ibytedtos.com",
+  "tikwm.com",
+  "tiktok.com",
+  "cdninstagram.com",
+  "fbcdn.net",
+  "facebook.com",
+  "instagram.com",
+  "threads.net",
+  "threadscdn.com",
+  "twimg.com",
+  "twitter.com",
+  "x.com",
+  "v.redd.it",
+  "reddit.com",
+  "redd.it",
+  "redditmedia.com",
+  "preview.redd.it",
+  "packaged-media.redd.it",
+  "vimeocdn.com",
+  "vimeo.com",
+  "akamaized.net",
+  "akamaihd.net",
+  "ttvnw.net",
+  "twitch.tv",
+  "jtvnw.net",
+  "pinimg.com",
+  "pinterest.com",
+  "bsky.app",
+  "bsky.social",
+  "sndcdn.com",
+  "soundcloud.com",
+  "rapidcdn.app",
+  "cobalt.tools",
+];
+
 function isAllowedHost(urlStr: string): boolean {
   try {
     const parsed = new URL(urlStr);
     const host = parsed.hostname.toLowerCase();
-    return (
-      host.endsWith(".googlevideo.com") ||
-      host.endsWith(".youtube.com") ||
-      host === "googlevideo.com" ||
-      host === "youtube.com" ||
-      host.endsWith(".tiktokcdn.com") ||
-      host.endsWith(".byteoversea.com") ||
-      host.endsWith(".ibytedtos.com") ||
-      host.endsWith(".tikwm.com") ||
-      host.endsWith(".cdninstagram.com") ||
-      host.endsWith(".fbcdn.net") ||
-      host.endsWith(".facebook.com") ||
-      host.endsWith(".instagram.com") ||
-      host.endsWith(".twimg.com") ||
-      host.endsWith(".twitter.com") ||
-      host.endsWith(".x.com") ||
-      host.endsWith(".v.redd.it") ||
-      host.endsWith(".reddit.com") ||
-      host.endsWith(".redd.it") ||
-      host.endsWith(".vimeocdn.com") ||
-      host.endsWith(".vimeo.com") ||
-      host.endsWith(".akamaized.net") ||
-      host.endsWith(".ttvnw.net") ||
-      host.endsWith(".twitch.tv") ||
-      host.endsWith(".pinimg.com") ||
-      host.endsWith(".pinterest.com")
+    return ALLOWED_STREAM_DOMAINS.some(
+      (domain) => host === domain || host.endsWith("." + domain)
     );
   } catch {
     return false;
@@ -101,12 +119,29 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
 
     for (const urlToTry of candidateUrls) {
       try {
+        const controller = new AbortController();
+        const connectTimeoutMs = isHead ? 6000 : 15000;
+        const connectTimer = setTimeout(() => controller.abort(), connectTimeoutMs);
+
+        if (req.signal) {
+          req.signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(connectTimer);
+              controller.abort();
+            },
+            { once: true }
+          );
+        }
+
         const res = await fetch(urlToTry, {
           method: "GET",
           headers: fetchHeaders,
           redirect: "follow",
-          signal: AbortSignal.timeout(2000),
+          signal: controller.signal,
         });
+
+        clearTimeout(connectTimer);
 
         if (res.ok || res.status === 206 || res.status === 304) {
           upstreamRes = res;

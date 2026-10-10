@@ -72,10 +72,58 @@ export async function fetchStreamWithProgress(
     }
   } catch (fetchErr: any) {
     if (abortSignal?.aborted) throw fetchErr;
-    console.warn("fetch stream reader error, falling back:", fetchErr?.message);
+    console.warn("Direct stream fetch reader error, trying stream proxy:", fetchErr?.message);
   }
 
-  // 2. Fallback: CapacitorHttp on native mobile for non-CORS external CDN URLs
+  // 2. Fallback: Stream Proxy (/api/youtube/stream) for CORS-restricted external CDN URLs on web
+  if (
+    typeof window !== "undefined" &&
+    !directUrl.includes("/api/youtube/stream") &&
+    !directUrl.includes("/api/media/download")
+  ) {
+    try {
+      const proxyUrl = getYouTubeApiUrl(
+        `/api/youtube/stream?url=${encodeURIComponent(directUrl)}`
+      );
+      const res = await fetch(proxyUrl, { signal: abortSignal });
+      lastStatus = res.status;
+      if (res.ok && res.body) {
+        const contentLength = res.headers.get("content-length");
+        const total = contentLength ? parseInt(contentLength, 10) : undefined;
+        const reader = res.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let received = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            chunks.push(value);
+            received += value.length;
+            if (onProgress) onProgress(received, total);
+          }
+        }
+
+        const result = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) {
+          result.set(chunk, offset);
+          offset += chunk.length;
+        }
+        return result;
+      } else {
+        const errJson = await res.json().catch(() => null);
+        if (errJson?.error) {
+          serverErrMsg = errJson.error;
+        }
+      }
+    } catch (proxyErr: any) {
+      if (abortSignal?.aborted) throw proxyErr;
+      console.warn("Stream proxy fetch failed, trying next fallback:", proxyErr?.message);
+    }
+  }
+
+  // 3. Fallback: CapacitorHttp on native mobile for non-CORS external CDN URLs
   if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
     try {
       const nativeRes = await CapacitorHttp.request({
@@ -141,117 +189,121 @@ export async function downloadUniversalMedia(
 
   // 1. Check if stream requires FFmpeg muxing (e.g. Reddit DASH video + audio)
   if (option.requiresMuxing && option.audioUrl) {
-    onProgress({
-      phase: "downloading",
-      message: "Downloading video and audio streams concurrently…",
-      percent: 15,
-    });
+    try {
+      onProgress({
+        phase: "downloading",
+        message: "Downloading video and audio streams concurrently…",
+        percent: 15,
+      });
 
-    const [videoBytes, audioBytes] = await Promise.all([
-      fetchStreamWithProgress(option.downloadUrl, (rec, tot) => {
-        const pct = tot ? Math.min(45, 15 + Math.round((rec / tot) * 30)) : 30;
-        onProgress({
-          phase: "downloading",
-          message: "Downloading video stream…",
-          percent: pct,
-        });
-      }, options?.abortSignal),
-      fetchStreamWithProgress(option.audioUrl, undefined, options?.abortSignal).catch((err) => {
-        console.warn("Audio stream fetch failed, continuing video only:", err);
-        return null;
-      }),
-    ]);
+      const [videoBytes, audioBytes] = await Promise.all([
+        fetchStreamWithProgress(option.downloadUrl, (rec, tot) => {
+          const pct = tot ? Math.min(45, 15 + Math.round((rec / tot) * 30)) : 30;
+          onProgress({
+            phase: "downloading",
+            message: "Downloading video stream…",
+            percent: pct,
+          });
+        }, options?.abortSignal),
+        fetchStreamWithProgress(option.audioUrl, undefined, options?.abortSignal).catch((err) => {
+          console.warn("Audio stream fetch failed, continuing video only:", err);
+          return null;
+        }),
+      ]);
 
-    if (!audioBytes) {
-      // Audio stream unavailable, save video directly
-      const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: "video/mp4" });
-      const filename = `${safeTitle}.${option.ext}`;
-      const blobUrl = URL.createObjectURL(blob);
-      await nativeSave(blob, filename);
-      onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
+      if (!audioBytes) {
+        // Audio stream unavailable, save video directly
+        const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: "video/mp4" });
+        const filename = `${safeTitle}.${option.ext}`;
+        const blobUrl = URL.createObjectURL(blob);
+        await nativeSave(blob, filename);
+        onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
+        return {
+          blob,
+          url: blobUrl,
+          filename,
+          fileSizeBytes: videoBytes.length,
+          mimeType: "video/mp4",
+          is4K: false,
+          is60fps: false,
+        };
+      }
+
+      // Mux with FFmpeg WASM
+      onProgress({
+        phase: "muxing",
+        message: "Muxing video & audio with FFmpeg WebAssembly…",
+        percent: 60,
+      });
+
+      const engine = await getOrInitTurboEngine(options?.ffmpegEngine);
+      if (!engine) {
+        const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: "video/mp4" });
+        const filename = `${safeTitle}.${option.ext}`;
+        const blobUrl = URL.createObjectURL(blob);
+        await nativeSave(blob, filename);
+        onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
+        return {
+          blob,
+          url: blobUrl,
+          filename,
+          fileSizeBytes: videoBytes.length,
+          mimeType: "video/mp4",
+          is4K: false,
+          is60fps: false,
+        };
+      }
+      const inV = `in_v_${Date.now()}.mp4`;
+      const inA = `in_a_${Date.now()}.mp4`;
+      const outV = `out_${Date.now()}.mp4`;
+
+      await engine.writeFile(inV, videoBytes);
+      await engine.writeFile(inA, audioBytes);
+
+      try {
+        // Fast stream copy mux
+        await engine.exec(["-i", inV, "-i", inA, "-c", "copy", outV]);
+      } catch {
+        // Audio transcode fallback
+        await engine.exec(["-i", inV, "-i", inA, "-c:v", "copy", "-c:a", "aac", outV]);
+      }
+
+      const outputData = (await engine.readFile(outV)) as Uint8Array;
+      try {
+        await engine.deleteFile(inV);
+        await engine.deleteFile(inA);
+        await engine.deleteFile(outV);
+      } catch {}
+
+      const finalBlob = new Blob([outputData.buffer as ArrayBuffer], { type: "video/mp4" });
+      const finalFilename = `${safeTitle}.${option.ext}`;
+      const finalBlobUrl = URL.createObjectURL(finalBlob);
+
+      onProgress({ phase: "saving", message: "Saving to device…", percent: 90 });
+      await nativeSave(finalBlob, finalFilename);
+
+      void updateDownloadNotification({
+        id: 8888,
+        title: "Download Complete",
+        itemTitle: finalFilename,
+        progress: 100,
+        speedMbps: 0,
+        isComplete: true,
+      });
+      onProgress({ phase: "complete", message: "Download and muxing complete!", percent: 100 });
+
       return {
-        blob,
-        url: blobUrl,
-        filename,
-        fileSizeBytes: videoBytes.length,
+        blob: finalBlob,
+        url: finalBlobUrl,
+        filename: finalFilename,
+        fileSizeBytes: outputData.length,
         mimeType: "video/mp4",
         is4K: false,
         is60fps: false,
       };
+    } catch (muxErr) {
+      console.warn("Client dual-stream fetch/mux failed, falling back to server downloader:", muxErr);
     }
-
-    // Mux with FFmpeg WASM
-    onProgress({
-      phase: "muxing",
-      message: "Muxing video & audio with FFmpeg WebAssembly…",
-      percent: 60,
-    });
-
-    const engine = await getOrInitTurboEngine(options?.ffmpegEngine);
-    if (!engine) {
-      const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: "video/mp4" });
-      const filename = `${safeTitle}.${option.ext}`;
-      const blobUrl = URL.createObjectURL(blob);
-      await nativeSave(blob, filename);
-      onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
-      return {
-        blob,
-        url: blobUrl,
-        filename,
-        fileSizeBytes: videoBytes.length,
-        mimeType: "video/mp4",
-        is4K: false,
-        is60fps: false,
-      };
-    }
-    const inV = `in_v_${Date.now()}.mp4`;
-    const inA = `in_a_${Date.now()}.mp4`;
-    const outV = `out_${Date.now()}.mp4`;
-
-    await engine.writeFile(inV, videoBytes);
-    await engine.writeFile(inA, audioBytes);
-
-    try {
-      // Fast stream copy mux
-      await engine.exec(["-i", inV, "-i", inA, "-c", "copy", outV]);
-    } catch {
-      // Audio transcode fallback
-      await engine.exec(["-i", inV, "-i", inA, "-c:v", "copy", "-c:a", "aac", outV]);
-    }
-
-    const outputData = (await engine.readFile(outV)) as Uint8Array;
-    try {
-      await engine.deleteFile(inV);
-      await engine.deleteFile(inA);
-      await engine.deleteFile(outV);
-    } catch {}
-
-    const finalBlob = new Blob([outputData.buffer as ArrayBuffer], { type: "video/mp4" });
-    const finalFilename = `${safeTitle}.${option.ext}`;
-    const finalBlobUrl = URL.createObjectURL(finalBlob);
-
-    onProgress({ phase: "saving", message: "Saving to device…", percent: 90 });
-    await nativeSave(finalBlob, finalFilename);
-
-    void updateDownloadNotification({
-      id: 8888,
-      title: "Download Complete",
-      itemTitle: finalFilename,
-      progress: 100,
-      speedMbps: 0,
-      isComplete: true,
-    });
-    onProgress({ phase: "complete", message: "Download and muxing complete!", percent: 100 });
-
-    return {
-      blob: finalBlob,
-      url: finalBlobUrl,
-      filename: finalFilename,
-      fileSizeBytes: outputData.length,
-      mimeType: "video/mp4",
-      is4K: false,
-      is60fps: false,
-    };
   }
 
   // 2. Direct single-stream download (TikTok, Instagram, Twitter/X, audio tracks)

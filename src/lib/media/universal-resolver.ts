@@ -37,18 +37,29 @@ export async function resolveMediaUrl(url: string): Promise<{
     if (res.ok) {
       const data = await res.json().catch(() => null);
       if (data && (data.videoId || data.id) && Array.isArray(data.qualities) && data.qualities.length > 0) {
-        const qualities: UniversalQualityOption[] = data.qualities.map((q: any) => ({
-          label: q.label,
-          resolution: q.resolutionLabel || (q.isAudioOnly ? "AUDIO" : "HD"),
-          ext: q.container || (q.isAudioOnly ? "mp3" : "mp4"),
-          fileSize: q.approxSizeBytes || q.fileSize || 0,
-          isAudioOnly: !!q.isAudioOnly,
-          downloadUrl: q.videoFormat?.url || q.audioFormat?.url || q.downloadUrl || "",
-          audioUrl: q.audioFormat?.url,
-          bitrate: q.audioBitrate,
-          fps: q.fps,
-          badge: q.badge,
-        }));
+        const qualities: UniversalQualityOption[] = data.qualities.map((q: any) => {
+          const isAudio = Boolean(q.isAudioOnly);
+          const downloadUrl = q.videoFormat?.url || q.downloadUrl || q.audioFormat?.url || "";
+          const audioUrl = q.audioFormat?.url;
+          const requiresMuxing =
+            q.requiresMuxing !== undefined
+              ? Boolean(q.requiresMuxing)
+              : Boolean(audioUrl && (q.videoFormat?.url || (!isAudio && downloadUrl)) && !isAudio);
+
+          return {
+            label: q.label,
+            resolution: q.resolutionLabel || (isAudio ? "AUDIO" : "HD"),
+            ext: q.container || (isAudio ? "mp3" : "mp4"),
+            fileSize: q.approxSizeBytes || q.fileSize || 0,
+            isAudioOnly: isAudio,
+            downloadUrl,
+            audioUrl,
+            requiresMuxing,
+            bitrate: q.audioBitrate,
+            fps: q.fps,
+            badge: q.badge,
+          };
+        });
 
         const mediaInfo: UniversalMediaInfo = {
           id: data.videoId || data.id,
@@ -85,18 +96,26 @@ export async function resolveMediaUrl(url: string): Promise<{
         throw new Error("Could not extract YouTube video ID from the provided URL.");
       }
       const ytInfo = await resolveYouTubeVideo(videoId);
-      const qualities: UniversalQualityOption[] = (ytInfo.qualities || []).map((q) => ({
-        label: q.label,
-        resolution: q.resolutionLabel,
-        ext: q.container,
-        fileSize: q.approxSizeBytes,
-        isAudioOnly: q.isAudioOnly,
-        downloadUrl: q.videoFormat?.url || q.audioFormat?.url || "",
-        audioUrl: q.audioFormat?.url,
-        bitrate: q.audioBitrate,
-        fps: q.fps,
-        badge: q.badge,
-      }));
+      const qualities: UniversalQualityOption[] = (ytInfo.qualities || []).map((q) => {
+        const isAudio = Boolean(q.isAudioOnly);
+        const downloadUrl = q.videoFormat?.url || q.audioFormat?.url || "";
+        const audioUrl = q.audioFormat?.url;
+        const requiresMuxing = Boolean(!isAudio && audioUrl && q.videoFormat?.url);
+
+        return {
+          label: q.label,
+          resolution: q.resolutionLabel,
+          ext: q.container,
+          fileSize: q.approxSizeBytes,
+          isAudioOnly: isAudio,
+          downloadUrl,
+          audioUrl,
+          requiresMuxing,
+          bitrate: q.audioBitrate,
+          fps: q.fps,
+          badge: q.badge,
+        };
+      });
 
       const mediaInfo: UniversalMediaInfo = {
         id: ytInfo.videoId,

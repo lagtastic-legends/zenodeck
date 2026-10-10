@@ -228,6 +228,7 @@ def get_video_info(url):
                         "approxSizeBytes": total_bytes,
                         "videoFormat": v_format,
                         "audioFormat": associated_audio,
+                        "requiresMuxing": bool(associated_audio and associated_audio.get("url")),
                     })
 
             # If no categorized badges were matched (e.g. single direct mp4 from Twitter or Reddit)
@@ -261,6 +262,7 @@ def get_video_info(url):
                             "fps": int(best_fmt.get("fps") or 30),
                         },
                         "audioFormat": best_audio_format,
+                        "requiresMuxing": bool(best_audio_format and best_audio_format.get("url")),
                     })
 
             # Process Audio Formats

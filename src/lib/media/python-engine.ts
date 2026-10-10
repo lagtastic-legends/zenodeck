@@ -33,6 +33,8 @@ export interface PythonMediaResult {
     audioBitrate?: number;
     container: string;
     approxSizeBytes: number;
+    requiresMuxing?: boolean;
+    downloadUrl?: string;
     videoFormat?: {
       itag: number | string;
       url: string;

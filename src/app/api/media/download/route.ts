@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { downloadMediaWithPython, isValidMediaInput } from "@/lib/media/python-engine";
+import { downloadMediaWithPython, isValidMediaInput, resolveMediaWithPython } from "@/lib/media/python-engine";
 import { resolveYouTubeVideo, buildCandidateUrls } from "@/lib/youtube/innertube";
-import { resolveMediaUrl } from "@/lib/media/universal-resolver";
+import { extractTikTokMedia } from "@/lib/media/extractors/tiktok";
+import { extractTwitterMedia } from "@/lib/media/extractors/twitter";
+import { extractRedditMedia } from "@/lib/media/extractors/reddit";
+import { extractInstagramMedia } from "@/lib/media/extractors/instagram";
+import { detectPlatform } from "@/lib/media/detector";
+import type { UniversalQualityOption } from "@/lib/media/types";
 import fs from "fs";
 
 const corsHeaders = {
@@ -145,25 +150,74 @@ async function handleDownload(url: string, quality = "best", format?: string) {
         }
       }
     } else {
-      const res = await resolveMediaUrl(url);
+      const detected = detectPlatform(url);
+      let mediaTitle = "media";
+      let qualities: UniversalQualityOption[] = [];
+
+      // 1. Try in-memory Python resolution first
+      const pyResult = await resolveMediaWithPython(url);
+      if (pyResult && Array.isArray(pyResult.qualities) && pyResult.qualities.length > 0) {
+        mediaTitle = pyResult.title || "media";
+        qualities = pyResult.qualities.map((q) => ({
+          label: q.label,
+          resolution: q.resolutionLabel,
+          ext: q.container || (q.isAudioOnly ? "mp3" : "mp4"),
+          fileSize: q.approxSizeBytes,
+          isAudioOnly: !!q.isAudioOnly,
+          downloadUrl: q.videoFormat?.url || q.downloadUrl || q.audioFormat?.url || "",
+          audioUrl: q.audioFormat?.url,
+          requiresMuxing: Boolean(q.audioFormat?.url && q.videoFormat?.url && !q.isAudioOnly),
+          badge: q.badge,
+        }));
+      } else if (detected) {
+        switch (detected.platform) {
+          case "tiktok": {
+            const tt = await extractTikTokMedia(url);
+            mediaTitle = tt.title;
+            qualities = tt.qualities;
+            break;
+          }
+          case "twitter": {
+            const tw = await extractTwitterMedia(url);
+            mediaTitle = tw.title;
+            qualities = tw.qualities;
+            break;
+          }
+          case "reddit": {
+            const rd = await extractRedditMedia(url);
+            mediaTitle = rd.title;
+            qualities = rd.qualities;
+            break;
+          }
+          case "instagram": {
+            const ig = await extractInstagramMedia(url);
+            mediaTitle = ig.title;
+            qualities = ig.qualities;
+            break;
+          }
+        }
+      }
+
       const chosen =
-        res.mediaInfo.qualities.find(
+        qualities.find(
           (q) =>
             q.label.toLowerCase() === quality.toLowerCase() ||
             q.badge?.toLowerCase() === quality.toLowerCase() ||
             q.resolution?.toLowerCase() === quality.toLowerCase()
-        ) || res.mediaInfo.qualities[0];
+        ) || qualities[0];
 
       if (chosen?.downloadUrl) {
         const upstream = await fetch(chosen.downloadUrl, {
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
             Accept: "*/*",
           },
+          signal: AbortSignal.timeout(30000),
         });
 
         if (upstream.ok && upstream.body) {
-          const safeTitle = (res.mediaInfo.title || "media").replace(/[^\w\s.-]/g, "_").trim().slice(0, 60);
+          const safeTitle = mediaTitle.replace(/[^\w\s.-]/g, "_").trim().slice(0, 60);
           const filename = `${safeTitle}.${chosen.ext}`;
           const mimeType = chosen.isAudioOnly ? (chosen.ext === "mp3" ? "audio/mpeg" : "audio/mp4") : "video/mp4";
 

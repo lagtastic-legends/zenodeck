@@ -113,6 +113,7 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
           approxSizeBytes: q.fileSize || 0,
           videoFormat: { url: q.downloadUrl },
           audioFormat: q.audioUrl ? { url: q.audioUrl } : undefined,
+          requiresMuxing: !!q.requiresMuxing,
         })),
       };
     }
@@ -141,13 +142,18 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
           container: q.ext,
           approxSizeBytes: q.fileSize || 0,
           videoFormat: { url: q.downloadUrl },
+          requiresMuxing: false,
         })),
       };
     }
 
     default: {
-      // YouTube fallback via Innertube
-      return await resolveYouTubeVideo(urlOrId, clientIp);
+      if (platform === "youtube") {
+        return await resolveYouTubeVideo(urlOrId, clientIp);
+      }
+      throw new Error(
+        `Unable to extract media for platform: ${platform}. Please check the URL or try again.`
+      );
     }
   }
 }
