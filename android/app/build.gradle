@@ -23,8 +23,8 @@ android {
         applicationId "com.omnitool.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3100
-        versionName "3.10.0"
+        versionCode 3101
+        versionName "3.10.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             noCompress 'wasm'

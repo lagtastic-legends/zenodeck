@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.9.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.9.0" />
+    <img src="https://img.shields.io/badge/Release-v3.10.1-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.10.1" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.9.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.1/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.9.0/zenodeck-v3.9.0-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.9.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.1/zenodeck-v3.10.1-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.10.1-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -37,7 +37,7 @@
   <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml">
     <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml/badge.svg" alt="Release Build Status" />
   </a>
-  <img src="https://img.shields.io/badge/Tests-644%20Passing%20(100%25)-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-100%25%20Passing-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor" />
@@ -61,35 +61,35 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.9.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.9.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.9.0/zenodeck-v3.9.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.9.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.9.0/zenodeck-v3.9.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.9.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.9.0/zenodeck-v3.9.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.1/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.10.1-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.1/zenodeck-v3.10.1-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.10.1-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.1/zenodeck-v3.10.1-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.10.1-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.1/zenodeck-v3.10.1-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.9.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.9.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.10.1)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.10.1) | Full release notes, raw SHA256 checksums, and source tarballs. |
 
 ---
 
-## 🌟 What's New in v3.9.0
+## 🌟 What's New in v3.10.1
 
-- **🎥 Universal Media Downloader Powered by `yt-dlp`**:
-  - Full Python `yt-dlp` engine integration (`youtube_downloader.py` & `media_downloader.py`) powering YouTube (4K 60FPS, 2K, 1080p, 720p, 360p, and audio extraction) plus **1,700+ social media platforms** (TikTok watermark-free, Instagram Reels/Posts, X/Twitter, Reddit with audio muxing, Facebook, Vimeo, Twitch, Pinterest, Threads, Bluesky).
-  - Vertical video detection (1080x1920) for portrait content on TikTok, Instagram Reels, and YouTube Shorts accurately classified as 1080P Full HD.
-  - 6 audio extraction tiers: Studio Master (320 kbps MP3), High Fidelity (256 kbps AAC), High Quality (192 kbps MP3), Standard (128 kbps MP3), Native AAC, and Lossless Studio Audio (WAV PCM).
-  - Server-side streaming endpoints (`/api/media/download` & `/api/youtube/download`) with automatic temp-file cleanup and multi-worker acceleration.
-- **🔊 Zero-Latency Sensory Feedback Engine (`useSensoryFeedback`)**:
-  - Web Audio API `AudioContext` provider with first-user-gesture autoplay unlocking and in-memory `.wav` decoding with synthetic procedural PCM fallbacks.
-  - Exact millisecond haptic vibration matrix (`lightTap: [10]`, `toggleOn: [15, 30, 15]`, `toggleOff: [10, 40, 10]`, `success: [30, 60, 50]`, `error: [20, 20, 20, 20, 20, 20]`), silent degradation on unsupported hardware, and native Capacitor Haptics.
-  - Framer Motion `FfmpegConvertButton` component integration demonstrating mechanical hover taps, processing hum, and completion fanfare.
+- **⚡ ZenoTap Cloud Deck & Android Keyboard Sync Subsystem**:
+  - **SQLite Pair Code Anti-Collision & Anti-Hijack**: Atomic consumption of 6-digit codes to `consumed_<id>`, eliminating `UNIQUE constraint failed` crashes and preventing session hijacking.
+  - **Full Delta Cloud-to-Local Keyboard Sync**: Automatic background synchronization downloading cloud reaction GIFs to local device storage (`filesDir/zenodeck_gifs`) and broadcasting `ACTION_DECK_UPDATED` so the native Android IME keyboard updates instantly.
+  - **Universal Mobile URL Resolution & CORS Preflights**: Dynamic fallback to cloud backend for native Capacitor WebViews with full `OPTIONS` preflight headers and Android Cleartext HTTP protection.
+  - **Interactive Companion Pairing UI**: 6-digit pairing code entry and 1-tap "Sync Cloud" actions in both `KeyboardDeckManager` and `ZenoTapDeckManager`.
+- **🌐 Universal Social Media Video & Audio Downloader**:
+  - Dedicated scrapers and analyzers for **TikTok** (watermark-free 1080p/720p), **Instagram** (Reels, Posts, IGTV), **Twitter / X** (syndication API fallback), **Reddit** (v.redd.it with DASH audio extraction and muxing), **Facebook** (Reels, Watch), **Vimeo** (progressive MP4 configs), and **Pinterest**.
+  - **Universal Studio Audio Ladder**: 5 direct studio audio tiers (320 kbps MP3, 256 kbps AAC, 192 kbps MP3, 128 kbps MP3, WAV PCM) with true client-side FFmpeg WASM demuxing.
+  - **Referer Injection & Zero 403 Errors**: Upgraded stream proxies with origin-specific `Referer` headers for all social CDNs.
 - **🧪 100% Automated Test Suite Verified**:
   - E2E Test Suite: **138/138 passing (100%)**.
-  - Universal Downloader Suite: **15/15 passing (100%)**.
-  - Sensory Feedback Suite: **100% passing**.
-  - Full CI Test Suite: **644+ tests passing (100%)**.
+  - ZenoTap Security Test Suite: **8/8 passing (100%)**.
+  - ZenoTap Sync Test Suite: **4/4 passing (100%)**.
+  - TypeScript strict compilation: **0 Errors**.
 
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md)).*
+*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.10.1.md](RELEASE_NOTES_v3.10.1.md)).*
 
 ---
 
