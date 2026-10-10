@@ -5,6 +5,29 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.0] — 2026-10-10
+
+### Added & Enhanced
+- **🌐 Universal Social Media Video & Audio Downloader**:
+  - **Comprehensive Multi-Platform Coverage**: Native analyzers, dedicated scrapers, and metadata extractors for **TikTok** (watermark-free 1080p/720p), **Instagram** (Reels, Posts, IGTV), **Twitter / X** (with public syndication and multi-provider failover), **Reddit** (v.redd.it with DASH audio extraction and muxing), **Facebook** (Reels, Watch, videos), **Vimeo** (direct progressive MP4 configs bypassing login restrictions), and **Pinterest** (pins & pin.it video links).
+  - **Universal Studio Audio Ladder**: Automatic synthesis of 5 direct studio audio tiers for every social video:
+    - `320 kbps MP3` (Studio Master)
+    - `256 kbps AAC / M4A` (High Fidelity)
+    - `192 kbps MP3` (High Quality)
+    - `128 kbps MP3` (Standard Audio)
+    - `WAV PCM` (Lossless Studio Audio)
+  - **Client-Side FFmpeg WebAssembly Demuxing**: Downloader executes real client-side FFmpeg audio extraction (`-vn -b:a 320k`, etc.) when audio formats are selected, eliminating corrupt or mislabeled video-as-audio downloads.
+  - **Platform-Aware Referer Injection on CDN Stream Proxies**: Upgraded `/api/youtube/stream` and `/api/media/download` to inject origin-specific `Referer` headers for TikTok, Instagram, Twitter, Reddit, Facebook, Vimeo, and Pinterest CDNs, permanently eliminating upstream HTTP 403 Forbidden errors.
+  - **Intelligent Downloader UI Selection**: Synchronized quality selection with the active media tab (`video` vs `audio`), with descriptive empty state guidance.
+
+### Fixed & Hardened
+- **Removed Intrusive Notification Spam**: Eliminated repetitive, unwanted notification toasts and distracting alerts from the universal downloader and audio processing modules.
+- **Fixed Temporal Dead Zone (TDZ) Reference Bug**: Refactored `loadDeck` in `zenotap-deck-manager.tsx` into `useCallback` prior to mount effects, eliminating runtime reference errors.
+- **React 19 Render-Phase Ref Safety**: Fixed invalid render-phase ref access in `dsp-studio-panel.tsx` and ref mutation in `vault-preview-modal.tsx`.
+- **Async Effect State Dispatches**: Deferred synchronous state updates in `ascii-generator.tsx` using `queueMicrotask` to avoid cascading render warnings.
+- **Audio Container Matching in Download Route**: Streamlined `/api/media/download` to accept format parameters and pick audio quality options when audio containers are requested.
+- **Python Engine Error Guard**: Wrapped backend `resolveMediaWithPython` in error handling to guarantee seamless fallback to TypeScript extractors.
+
 ## [3.9.2] — 2026-10-08
 
 ### Fixed & Enhanced
