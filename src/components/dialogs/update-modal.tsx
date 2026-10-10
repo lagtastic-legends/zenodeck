@@ -15,6 +15,8 @@ import {
   ArrowRight,
   FileText,
   Radio,
+  Clock,
+  Check,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -89,6 +91,26 @@ export function UpdateModal({
     }
   }, [isOpen, updateInfo, isChecking, runCheck]);
 
+  // Escape key handler and body scroll locking
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isInstalling) {
+        void haptics.light();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, isInstalling, onClose, haptics]);
+
   const handleRemoveUpdate = () => {
     void haptics.medium();
     dismissUpdateNotification();
@@ -147,7 +169,12 @@ export function UpdateModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,24px)+1rem)] pb-[calc(env(safe-area-inset-bottom,16px)+1rem)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="update-modal-title"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,24px)+1rem)] pb-[calc(env(safe-area-inset-bottom,16px)+1rem)]"
+      >
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -185,8 +212,11 @@ export function UpdateModal({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-display text-base sm:text-lg font-bold uppercase tracking-wider text-foreground truncate">
-                    ZenoDeck OTA Center
+                  <h3
+                    id="update-modal-title"
+                    className="font-display text-base sm:text-lg font-bold uppercase tracking-wider text-foreground truncate"
+                  >
+                    ZenoDeck Software Updates
                   </h3>
                   <span className="hidden sm:inline rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-primary font-bold shrink-0">
                     Live Channel
@@ -195,6 +225,7 @@ export function UpdateModal({
                 <p className="font-mono text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                   <span>Current Build:</span>
                   <span className="font-semibold text-foreground">v{updateInfo?.currentVersion || APP_VERSION}</span>
+                  <span className="text-[10px] text-muted-foreground">· Official Release Channel</span>
                 </p>
               </div>
             </div>
@@ -219,10 +250,10 @@ export function UpdateModal({
                 <RefreshCw className="size-8 text-primary animate-spin" />
                 <div>
                   <p className="font-display text-xs font-bold uppercase tracking-wider text-foreground">
-                    Querying Release Repositories…
+                    Checking for New Releases…
                   </p>
                   <p className="font-mono text-[11px] text-muted-foreground mt-1">
-                    Checking official GitHub Releases for updates
+                    Connecting to GitHub Releases repository
                   </p>
                 </div>
               </div>
@@ -255,7 +286,7 @@ export function UpdateModal({
                   </div>
 
                   <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                    A newer release of ZenoDeck is verified and available with universal phone compatibility and performance upgrades.
+                    A verified newer version of ZenoDeck is available for installation with universal device compatibility and subsystem hardening.
                   </p>
                 </div>
 
@@ -335,13 +366,11 @@ export function UpdateModal({
                     type="button"
                     onClick={handleRemoveUpdate}
                     disabled={isInstalling}
-                    className="group flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/80 px-3.5 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shrink-0"
-                    title="Dismiss and remove this update notification"
+                    className="group flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border/80 bg-background/80 px-3.5 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-border active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                    title="Dismiss update notification for now"
                   >
-                    <div className="grid size-5 place-items-center rounded-full bg-red-500/15 border border-red-500/30 text-red-400 transition-transform group-hover:scale-110">
-                      <Trash2 className="size-3" />
-                    </div>
-                    <span>Remove</span>
+                    <Clock className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <span>Remind Later</span>
                   </button>
 
                   <a
@@ -349,10 +378,10 @@ export function UpdateModal({
                     target="_blank"
                     rel="noreferrer"
                     className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-background/60 px-3.5 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-primary/50 active:scale-[0.98] transition-all shrink-0"
-                    title="View GitHub release details"
+                    title="View GitHub release details and checksums"
                   >
                     <ExternalLink className="size-3.5" />
-                    <span>GitHub</span>
+                    <span>GitHub Release</span>
                   </a>
                 </div>
               </>
@@ -370,7 +399,7 @@ export function UpdateModal({
                     All Systems Up to Date
                   </h4>
                   <p className="mt-1 font-mono text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                    ZenoDeck is running the official release (<span className="text-foreground font-bold">v{updateInfo?.currentVersion || APP_VERSION}</span>). Universal responsive layouts, WASM engine, and audio DSP are fully operational.
+                    ZenoDeck is running the latest official release (<span className="text-foreground font-bold">v{updateInfo?.currentVersion || APP_VERSION}</span>). Universal responsive layouts, WASM multimedia engines, and audio DSP are fully operational.
                   </p>
                 </div>
 
@@ -381,21 +410,20 @@ export function UpdateModal({
                     className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/50 active:scale-98 transition-all cursor-pointer shadow-xs"
                   >
                     <RefreshCw className={`size-3.5 text-primary ${isChecking ? "animate-spin" : ""}`} />
-                    <span>Check for Updates</span>
+                    <span>Check Again</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={handleRemoveUpdate}
+                    onClick={() => {
+                      void haptics.light();
+                      onClose();
+                    }}
                     disabled={isChecking}
-                    className="group inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-3.5 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 active:scale-98 transition-all cursor-pointer shadow-xs"
-                    title="Remove update notification and close"
-                    aria-label="Remove and dismiss update window"
+                    className="inline-flex min-h-[38px] items-center gap-2 rounded-xl border border-border/80 bg-background/80 px-4 py-2 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-border active:scale-98 transition-all cursor-pointer shadow-xs"
                   >
-                    <div className="grid size-5 place-items-center rounded-full bg-red-500/15 border border-red-500/30 text-red-400 transition-transform group-hover:scale-110">
-                      <Trash2 className="size-3" />
-                    </div>
-                    <span>Remove</span>
+                    <Check className="size-3.5 text-emerald-400" />
+                    <span>Done</span>
                   </button>
                 </div>
               </div>

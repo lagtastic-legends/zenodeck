@@ -36,6 +36,17 @@ import {
 import { formatBytes } from "@/lib/format";
 import { useHaptics } from "@/hooks/use-haptics";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function KeyboardDeckManager() {
   const haptics = useHaptics();
@@ -238,13 +249,34 @@ export function KeyboardDeckManager() {
                 <CheckCircle2 className="size-3" />
                 Linked: {pairedDeviceName || "Android Keyboard"}
               </span>
-              <button
-                onClick={handleUnlink}
-                className="text-xs text-muted-foreground hover:text-red-400 p-1"
-                title="Unlink device"
-              >
-                <Unlink className="size-3.5" />
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    className="size-7 grid place-items-center rounded-lg border border-border/70 bg-card text-muted-foreground hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all"
+                    title="Unlink device"
+                    aria-label="Unlink device"
+                  >
+                    <Unlink className="size-3.5" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Unlink Mobile Keyboard?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will disconnect this device from your ZenoTap Cloud Deck sync token. You can re-link at any time by generating a new 6-digit code on desktop.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Linked</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleUnlink}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Unlink Keyboard
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : (
             <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
@@ -415,14 +447,34 @@ export function KeyboardDeckManager() {
                 </span>
               </div>
 
-              <button
-                onClick={() => void handleDelete(item.filename)}
-                aria-label="Delete from keyboard deck"
-                title="Delete from deck"
-                className="absolute right-3 top-3 grid size-7 place-items-center rounded-lg bg-black/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-all hover:bg-red-500/80 hover:text-white group-hover:opacity-100"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    aria-label={`Delete ${item.filename} from keyboard deck`}
+                    title="Delete from deck"
+                    className="absolute right-3 top-3 grid size-7 place-items-center rounded-lg bg-black/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-all hover:bg-destructive hover:text-white group-hover:opacity-100 cursor-pointer"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove GIF from Keyboard Deck?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to remove &ldquo;{item.filename}&rdquo; from your keyboard storage?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => void handleDelete(item.filename)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Remove GIF
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </motion.div>
           ))}
         </div>

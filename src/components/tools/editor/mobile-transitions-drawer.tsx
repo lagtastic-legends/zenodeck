@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, Layers, Play } from "lucide-react";
 import {
@@ -36,6 +36,24 @@ export function MobileTransitionsDrawer({
 }: MobileTransitionsDrawerProps) {
   const haptics = useHaptics();
 
+  // Escape key handler & scroll lock
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -46,11 +64,14 @@ export function MobileTransitionsDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
           />
 
           {/* Drawer Sheet Container */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="transitions-drawer-title"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -65,6 +86,9 @@ export function MobileTransitionsDrawer({
             }}
             className="relative z-10 w-full bg-[#181818] border-t border-white/10 rounded-t-3xl max-h-[82vh] flex flex-col shadow-2xl overflow-hidden pb-safe"
           >
+            {/* Top ambient glow line */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent pointer-events-none" />
+
             {/* Grab Handle */}
             <div className="w-full flex items-center justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
               <div className="w-12 h-1.5 rounded-full bg-white/20" />
@@ -74,7 +98,7 @@ export function MobileTransitionsDrawer({
             <div className="px-5 py-3 flex items-center justify-between border-b border-white/5">
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-cyan-400" />
-                <h3 className="font-bold text-sm text-white font-mono uppercase tracking-wider">
+                <h3 id="transitions-drawer-title" className="font-bold text-sm text-white font-mono uppercase tracking-wider">
                   Transitions Studio
                 </h3>
               </div>
@@ -94,7 +118,8 @@ export function MobileTransitionsDrawer({
                 )}
                 <button
                   onClick={onClose}
-                  className="p-1 rounded-full bg-white/5 text-[#94A3B8] hover:text-white cursor-pointer"
+                  aria-label="Close transitions studio"
+                  className="p-1 rounded-full bg-white/5 text-[#94A3B8] hover:text-white cursor-pointer transition-colors"
                 >
                   <X className="size-4" />
                 </button>

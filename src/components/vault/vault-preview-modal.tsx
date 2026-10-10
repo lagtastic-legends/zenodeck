@@ -218,6 +218,7 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageZoom, setImageZoom] = useState(1);
   const [imageRotation, setImageRotation] = useState(0);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const haptics = useHaptics();
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -226,7 +227,10 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
 
   useEffect(() => {
     if (!item) {
-      queueMicrotask(() => setPreviewUrl(null));
+      queueMicrotask(() => {
+        setPreviewUrl(null);
+        setIsConfirmingDelete(false);
+      });
       return;
     }
     const url = URL.createObjectURL(item.blob);
@@ -237,6 +241,7 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
         setPreviewUrl(url);
         setImageZoom(1);
         setImageRotation(0);
+        setIsConfirmingDelete(false);
       }
     });
 
@@ -334,12 +339,18 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
 
           {/* Modal Container — Carefully tailored to fit ALL mobile phone viewports */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vault-preview-title"
             initial={{ opacity: 0, scale: 0.94, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
             className="relative z-10 flex flex-col w-full max-w-lg md:max-w-2xl max-h-[86vh] sm:max-h-[85vh] rounded-2xl border border-border/80 bg-card/95 shadow-2xl overflow-hidden backdrop-blur-xl"
           >
+            {/* Top ambient glow line */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent pointer-events-none" />
+
             {/* Header Bar */}
             <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-3 sm:px-5 sm:py-3.5 bg-card/80 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
@@ -352,14 +363,14 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
                       {item.kind}
                     </span>
                     <span className="font-mono text-[9px] text-muted-foreground truncate hidden xs:inline">
-                  {formatBytes(item.size)}
-                </span>
+                      {formatBytes(item.size)}
+                    </span>
+                  </div>
+                  <h4 id="vault-preview-title" className="truncate font-mono text-xs sm:text-sm font-semibold text-foreground mt-0.5" title={item.name}>
+                    {item.name}
+                  </h4>
+                </div>
               </div>
-              <h4 className="truncate font-mono text-xs sm:text-sm font-semibold text-foreground mt-0.5" title={item.name}>
-                {item.name}
-              </h4>
-            </div>
-          </div>
 
           <button
             type="button"
@@ -507,47 +518,79 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
 
         {/* Footer Action Bar — Touch-optimized for phones */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-3.5 py-3 sm:px-5 sm:py-3.5 bg-card/80 shrink-0">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-primary/50 bg-primary px-3.5 py-2 sm:py-2.5 font-mono text-xs font-bold text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
-            >
-              <HardDrive className="size-3.5" />
-              <span>Save to Device</span>
-            </button>
+          {isConfirmingDelete ? (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 w-full p-2.5 rounded-xl border border-destructive/40 bg-destructive/10 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-2 text-destructive">
+                <Trash2 className="size-4 shrink-0" />
+                <span className="font-mono text-xs font-semibold">
+                  Delete permanently from Vault?
+                </span>
+              </div>
+              <div className="flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(false)}
+                  className="px-3 py-1.5 rounded-lg border border-border/70 bg-card font-mono text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-3 py-1.5 rounded-lg border border-destructive/50 bg-destructive font-mono text-xs font-bold text-destructive-foreground hover:bg-destructive/90 active:scale-95 transition-all"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-primary/50 bg-primary px-3.5 py-2 sm:py-2.5 font-mono text-xs font-bold text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
+                >
+                  <HardDrive className="size-3.5" />
+                  <span>Save to Device</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => void handleShare()}
-              className="flex items-center justify-center gap-1.5 rounded-xl border border-border/70 bg-card/70 px-3 py-2 sm:py-2.5 font-mono text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-all"
-              title="Share file"
-            >
-              <Share2 className="size-3.5" />
-              <span className="hidden xs:inline">Share</span>
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => void handleShare()}
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-border/70 bg-card/70 px-3 py-2 sm:py-2.5 font-mono text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                  title="Share file"
+                >
+                  <Share2 className="size-3.5" />
+                  <span className="hidden xs:inline">Share</span>
+                </button>
+              </div>
 
-          <div className="flex items-center gap-2">
-            {onDelete && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="size-9 grid place-items-center rounded-xl border border-border/70 bg-card/70 text-muted-foreground hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all"
-                title="Delete file"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            )}
+              <div className="flex items-center gap-2">
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptics.selectionChanged();
+                      setIsConfirmingDelete(true);
+                    }}
+                    className="size-9 grid place-items-center rounded-xl border border-border/70 bg-card/70 text-muted-foreground hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all"
+                    title="Delete file"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )}
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-2 rounded-xl border border-border/70 bg-card/70 font-mono text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-all"
-            >
-              Close
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-3 py-2 rounded-xl border border-border/70 bg-card/70 font-mono text-xs text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </motion.div>
     </div>

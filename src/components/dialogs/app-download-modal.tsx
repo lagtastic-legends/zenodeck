@@ -33,6 +33,26 @@ export function AppDownloadModal() {
     setMounted(true);
   }, []);
 
+  // Handle Escape key navigation and body scroll locking
+  useEffect(() => {
+    if (!isDownloadModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        haptics.light();
+        setDownloadModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDownloadModalOpen, setDownloadModalOpen, haptics]);
+
   if (!mounted || !isDownloadModalOpen) return null;
 
   const handleInstallPwa = async () => {
@@ -47,7 +67,12 @@ export function AppDownloadModal() {
 
   const modalContent = (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="download-modal-title"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]"
+      >
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -66,20 +91,26 @@ export function AppDownloadModal() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ type: "spring", stiffness: 420, damping: 28 }}
-          className="relative w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg rounded-2xl border border-primary/40 bg-card/95 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl max-h-[calc(100dvh-2.5rem)] overflow-y-auto"
+          className="relative w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg rounded-2xl border border-primary/40 bg-card/95 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl max-h-[calc(100dvh-2.5rem)] overflow-y-auto overscroll-contain"
         >
+          {/* Subtle Ambient Laser Edge Glow */}
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent pointer-events-none" />
+
           {/* Header */}
           <div className="flex items-start justify-between gap-3 border-b border-border/70 pb-4">
             <div className="flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-xl border border-primary/40 bg-primary/10 text-primary">
+              <div className="grid size-11 place-items-center rounded-xl border border-primary/40 bg-primary/10 text-primary shadow-sm glow-box-violet shrink-0">
                 <Smartphone className="size-6" />
               </div>
-              <div>
-                <h3 className="font-display text-base sm:text-lg font-bold uppercase tracking-wider text-foreground">
+              <div className="min-w-0">
+                <h3
+                  id="download-modal-title"
+                  className="font-display text-base sm:text-lg font-bold uppercase tracking-wider text-foreground truncate"
+                >
                   Get ZenoDeck
                 </h3>
                 <p className="font-mono text-xs text-muted-foreground">
-                  v{APP_VERSION} · Web, Android APK & PWA
+                  v{APP_VERSION} · Universal Cross-Platform Edition
                 </p>
               </div>
             </div>
@@ -89,7 +120,7 @@ export function AppDownloadModal() {
                 haptics.light();
                 setDownloadModalOpen(false);
               }}
-              className="grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-all"
+              className="grid size-8 place-items-center rounded-xl border border-border/70 bg-card/60 text-muted-foreground hover:border-primary/50 hover:text-foreground active:scale-95 transition-all cursor-pointer shrink-0"
               aria-label="Close download modal"
             >
               <X className="size-4" />
@@ -104,14 +135,14 @@ export function AppDownloadModal() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-display text-xs font-bold uppercase tracking-wide text-foreground">
-                      Android Native APK
+                      Android Native APK (Universal)
                     </span>
                     <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[9px] font-bold text-emerald-400">
-                      Signed Release
+                      Signed v{APP_VERSION}
                     </span>
                   </div>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    Direct installation bundle (24.5 MB). 100% on-device WebAssembly, no account needed.
+                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                    Complete offline bundle (24.5 MB). 100% on-device WebAssembly, zero accounts or permissions required.
                   </p>
                 </div>
 
@@ -130,7 +161,9 @@ export function AppDownloadModal() {
                   <ShieldCheck className="size-3 text-emerald-400" /> Target SDK 36 (Android 15+)
                 </span>
                 <span>·</span>
-                <span>SHA1 Keystore Signed</span>
+                <span>Universal & ARM64 Supported</span>
+                <span>·</span>
+                <span>Keystore Signed</span>
               </div>
             </div>
 
@@ -140,14 +173,14 @@ export function AppDownloadModal() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-display text-xs font-bold uppercase tracking-wide text-foreground">
-                      Web App / PWA
+                      Web App & Desktop PWA
                     </span>
                     <span className="rounded-full border border-neon/40 bg-neon/10 px-2 py-0.5 font-mono text-[9px] font-bold text-neon">
                       Instant Install
                     </span>
                   </div>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    Install as desktop or phone home-screen app. Fast offline caching via Service Worker.
+                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                    Install directly to home screen or desktop. Instant offline launch powered by Service Workers.
                   </p>
                 </div>
 
@@ -185,8 +218,8 @@ export function AppDownloadModal() {
                       iPhone & iPad
                     </span>
                   </div>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    Standard Apple mobileconfig file to launch ZenoDeck in full-screen standalone mode.
+                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                    Full-screen Apple Web Clip profile (.mobileconfig) for iPhone & iPad with native icon.
                   </p>
                 </div>
 
@@ -208,7 +241,7 @@ export function AppDownloadModal() {
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-primary" />
               <span className="font-mono text-xs text-foreground">
-                ZenoDeck Release Channel
+                ZenoDeck Software Release Channel
               </span>
             </div>
             <button
@@ -219,7 +252,7 @@ export function AppDownloadModal() {
               }}
               className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 font-mono text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
             >
-              <span>Check for Updates</span>
+              <span>Check for Updates (OTA)</span>
             </button>
           </div>
 
@@ -227,7 +260,7 @@ export function AppDownloadModal() {
           <div className="mt-4 rounded-xl border border-border/60 bg-background/30 p-3 text-center">
             <p className="flex items-center justify-center gap-1.5 font-mono text-[11px] text-muted-foreground">
               <Cpu className="size-3.5 text-neon" />
-              <span>All versions run 100% on-device WebAssembly. Zero telemetry, zero uploads.</span>
+              <span>100% on-device WebAssembly execution. Zero telemetry, zero cloud tracking.</span>
             </p>
           </div>
         </motion.div>

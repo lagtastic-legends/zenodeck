@@ -285,14 +285,14 @@ export function SaveResultModal() {
                       }`}
                     >
                       <span className="size-1.5 rounded-full bg-current animate-pulse" />
-                      {isSuccess ? "STORAGE VERIFIED" : "ACCESS BLOCKED"}
+                      {isSuccess ? "SAVED TO DEVICE" : "PERMISSION REQUIRED"}
                     </span>
                   </div>
                   <h3
                     id="save-dialog-title"
                     className="font-display text-sm sm:text-base font-bold tracking-wider text-foreground uppercase"
                   >
-                    {isSuccess ? "File Saved Directly" : "Permission Required"}
+                    {isSuccess ? "File Saved to Storage" : "Storage Access Required"}
                   </h3>
                 </div>
               </div>
@@ -331,17 +331,17 @@ export function SaveResultModal() {
                   </div>
 
                   <div className="flex items-center justify-between border-t border-border/40 pt-2 text-[10px] font-mono text-muted-foreground">
-                    <span>Location:</span>
+                    <span>Target Folder:</span>
                     <span className="truncate max-w-[210px] text-foreground font-medium">
-                      📁 /Documents/{filename}
+                      📁 /{directory || "Documents"}/{filename}
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 space-y-2 text-xs font-mono text-rose-600 dark:text-rose-200/90 leading-relaxed">
-                  <p>{errorMessage}</p>
+                  <p>{errorMessage || "Device storage permission was denied."}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    Please ensure storage/files permissions are enabled in your device settings.
+                    Storage permission is required to save processed media. Please enable file permissions in device settings.
                   </p>
                 </div>
               )}
@@ -352,23 +352,23 @@ export function SaveResultModal() {
                   <button
                     onClick={handleShare}
                     disabled={isSharing}
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/70 dark:bg-card/60 px-3 font-display text-xs font-bold tracking-wider text-foreground transition-all hover:bg-secondary hover:border-pulse/40 active:scale-95 disabled:opacity-50"
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/70 dark:bg-card/60 px-3 font-display text-xs font-bold tracking-wider text-foreground transition-all hover:bg-secondary hover:border-pulse/40 active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     <Share2 className="size-4 text-pulse" />
-                    <span>{shareSuccess ? "SHARED" : "SHARE"}</span>
+                    <span>{shareSuccess ? "SHARED" : "SHARE FILE"}</span>
                   </button>
                 )}
 
                 <button
                   onClick={handleDismiss}
-                  className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 font-display text-xs font-bold tracking-widest uppercase transition-all active:scale-95 ${
+                  className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 font-display text-xs font-bold tracking-widest uppercase transition-all active:scale-95 cursor-pointer ${
                     isSuccess
                       ? "bg-pulse text-zinc-950 font-extrabold hover:bg-pulse/90 shadow-[0_0_20px_rgba(16,185,129,0.3)] col-span-1"
                       : "bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] col-span-2"
                   }`}
                 >
                   <Check className="size-4" strokeWidth={3} />
-                  <span>{isSuccess ? "OK" : "UNDERSTOOD"}</span>
+                  <span>{isSuccess ? "DONE" : "ACKNOWLEDGE"}</span>
                 </button>
               </div>
             </div>

@@ -9,6 +9,17 @@ import {
   type PairCodeResponse,
 } from "@/lib/zenotap/client-sdk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -183,31 +194,31 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-neutral-950 text-neutral-100 border-neutral-800">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">⚡</span>
-              <DialogTitle className="text-xl font-bold tracking-tight text-white">
+              <DialogTitle className="text-xl font-bold tracking-tight text-foreground font-display">
                 ZenoTap Cloud Deck & Keyboard Sync
               </DialogTitle>
             </div>
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
+            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10 font-mono text-[10px]">
               <ShieldCheck className="w-3 h-3 mr-1" />
               HMAC Guard Active
             </Badge>
           </div>
-          <DialogDescription className="text-neutral-400 text-sm">
+          <DialogDescription className="text-muted-foreground text-xs sm:text-sm">
             Manage your personal GIF reaction deck and link your mobile ZenoTap keyboard using encrypted sync tokens.
           </DialogDescription>
         </DialogHeader>
 
         {/* Device Pairing Card */}
-        <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm space-y-3">
+        <div className="p-4 rounded-xl border border-border/70 bg-card/60 backdrop-blur-sm space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-indigo-400" />
-              <h3 className="font-semibold text-sm text-neutral-200">Link Mobile Keyboard</h3>
+              <h3 className="font-semibold text-sm text-foreground">Link Mobile Keyboard</h3>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -217,7 +228,7 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
                   setShowEnterCode(!showEnterCode);
                   setPairData(null);
                 }}
-                className="text-xs text-neutral-400 hover:text-neutral-200"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 <LinkIcon className="w-3.5 h-3.5 mr-1" />
                 {showEnterCode ? "Show Generator" : "Enter Code"}
@@ -228,7 +239,7 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
                 variant="outline"
                 disabled={pairingLoading}
                 onClick={handleGeneratePairCode}
-                className="text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"
+                className="text-xs border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10"
               >
                 <KeyRound className="w-3.5 h-3.5 mr-1.5" />
                 {pairData ? "Regenerate Code" : "Generate Pairing Code"}
@@ -237,44 +248,44 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
           </div>
 
           {showEnterCode ? (
-            <form onSubmit={(e) => void handleConfirmPairCode(e)} className="p-3 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center gap-2">
+            <form onSubmit={(e) => void handleConfirmPairCode(e)} className="p-3 rounded-xl bg-background/60 border border-border/70 flex items-center gap-2">
               <input
                 type="text"
                 maxLength={6}
                 placeholder="Enter 6-digit code"
                 value={enterCodeInput}
                 onChange={(e) => setEnterCodeInput(e.target.value.replace(/[^0-9]/g, ""))}
-                className="w-40 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-sm tracking-wider text-white focus:outline-none focus:border-indigo-500"
+                className="w-44 rounded-lg border border-border/80 bg-background px-3 py-1.5 font-mono text-sm tracking-wider text-foreground focus:outline-none focus:border-indigo-500"
               />
               <Button
                 type="submit"
                 size="sm"
                 disabled={pairingLoading || enterCodeInput.length !== 6}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
               >
                 Connect Device
               </Button>
             </form>
           ) : pairData ? (
-            <div className="p-4 rounded-lg bg-indigo-950/30 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <p className="text-xs text-neutral-400">Enter this code in your ZenoTap Android app:</p>
+                <p className="text-xs text-muted-foreground">Enter this code in your ZenoTap Android app:</p>
                 <div className="text-3xl font-mono font-bold tracking-widest text-indigo-400 mt-1">
                   {pairData.pairCode.slice(0, 3)} {pairData.pairCode.slice(3)}
                 </div>
-                <p className="text-[11px] text-neutral-500 mt-1">
-                  Expires in <span className="font-semibold text-neutral-300">{pairSecondsLeft}s</span> (single-use)
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Expires in <span className="font-semibold text-foreground">{pairSecondsLeft}s</span> (single-use)
                 </p>
               </div>
-              <div className="text-xs text-neutral-400 max-w-xs space-y-1">
-                <p className="font-medium text-neutral-300">How to connect:</p>
+              <div className="text-xs text-muted-foreground max-w-xs space-y-1">
+                <p className="font-medium text-foreground">How to connect:</p>
                 <p>1. Open ZenoDeck on Android</p>
-                <p>2. Go to Keyboard Deck Manager</p>
+                <p>2. Open Keyboard Deck Manager</p>
                 <p>3. Tap &ldquo;Enter 6-Digit Pairing Code&rdquo;</p>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-muted-foreground">
               Pair your device to automatically sync GIFs created in ZenoDeck straight into your WhatsApp & Messages keyboard keys.
             </p>
           )}
@@ -373,13 +384,34 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
                     {item.originalName}
                   </span>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleDelete(item)}
-                      title="Delete from deck"
-                      className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          title="Delete from deck"
+                          aria-label={`Delete ${item.originalName} from cloud deck`}
+                          className="p-1 text-destructive/80 hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove GIF from Cloud Deck?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete &ldquo;{item.originalName}&rdquo; from your personal cloud storage?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => void handleDelete(item)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete GIF
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>

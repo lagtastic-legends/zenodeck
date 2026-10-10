@@ -171,7 +171,7 @@ export function BackConfirmDialog() {
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[9px] font-bold tracking-widest text-amber-600 dark:text-amber-400 uppercase">
                         <span className="size-1.5 rounded-full bg-current animate-pulse" />
-                        UNSAVED WORKSPACE
+                        UNSAVED CHANGES
                       </span>
                     </div>
                     <h2
@@ -216,7 +216,7 @@ export function BackConfirmDialog() {
                   className="font-mono text-xs leading-relaxed text-muted-foreground"
                 >
                   {rawFileName
-                    ? "Going back will unload this file and discard any in-memory adjustments, configurations, or operations. Are you sure you want to proceed?"
+                    ? "Navigating away will unload this workspace and discard all unsaved edits, parameter adjustments, and rendered buffers. Are you sure you want to proceed?"
                     : confirmDialogState.message}
                 </p>
               </div>
@@ -245,7 +245,7 @@ export function BackConfirmDialog() {
                   className="min-h-11 rounded-tactile bg-destructive hover:bg-destructive/90 text-destructive-foreground font-mono text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.35)] transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                 >
                   <Trash2 className="size-3.5" />
-                  Discard & Leave
+                  Discard & Exit
                 </button>
               </div>
             </div>

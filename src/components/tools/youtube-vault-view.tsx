@@ -24,6 +24,17 @@ import { useHistoryStore, type DownloadHistoryItem } from "@/lib/youtube/history
 import { usePlayerStore } from "@/lib/youtube/player-store";
 import { formatBytes } from "@/lib/youtube/innertube";
 import { useHaptics } from "@/hooks/use-haptics";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function formatTimeAgo(timestamp: number): string {
   const now = Date.now();
@@ -89,10 +100,8 @@ export function YouTubeVaultView() {
 
   const handleClear = () => {
     if (items.length === 0) return;
-    if (window.confirm("Are you sure you want to clear your download vault history?")) {
-      clearHistory();
-      void haptics.medium();
-    }
+    clearHistory();
+    void haptics.medium();
   };
 
   return (
@@ -132,17 +141,37 @@ export function YouTubeVaultView() {
           ))}
         </div>
 
-        {/* Clear All */}
+        {/* Clear All Dialog */}
         {items.length > 0 && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 px-3 py-2 font-mono text-xs text-red-300 transition-all cursor-pointer shrink-0"
-            title="Clear all vault entries"
-          >
-            <Trash2 className="size-3.5" />
-            <span>Clear Vault</span>
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/10 hover:bg-destructive/20 px-3 py-2 font-mono text-xs text-destructive-foreground transition-all cursor-pointer shrink-0"
+                title="Clear all vault entries"
+              >
+                <Trash2 className="size-3.5 text-destructive" />
+                <span className="text-destructive font-medium">Clear Vault</span>
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear Download History Vault?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove all {items.length} downloaded media record{items.length === 1 ? "" : "s"} from your offline session vault. Files already saved directly to your device storage will not be affected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep History</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleClear}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Clear History
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
 

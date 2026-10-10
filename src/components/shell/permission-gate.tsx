@@ -124,14 +124,29 @@ export function PermissionGate() {
     };
   }, [refreshPermissions]);
 
-  // Back button closes dialog if open
+  // Back button and Escape key close dialog if open
   useEffect(() => {
-    if (visible) {
-      return useNavStore.getState().registerOverlay("permission-gate", () => {
+    if (!visible) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const unregister = useNavStore.getState().registerOverlay("permission-gate", () => {
+      dismiss();
+      return true;
+    });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
         dismiss();
-        return true;
-      });
-    }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      unregister();
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [visible]);
 
   const requestSingle = async (id: PermissionCategory["id"]) => {
@@ -221,10 +236,10 @@ export function PermissionGate() {
               </div>
               <div>
                 <h2 id="app-permissions-title" className="font-display text-sm font-bold tracking-wide">
-                  Device Permissions
+                  Device Access & Permissions
                 </h2>
                 <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.14em]">
-                  100% On-Device · Zero Cloud Tracking
+                  100% On-Device Sandbox · Zero Cloud Telemetry
                 </p>
               </div>
             </div>
@@ -288,7 +303,7 @@ export function PermissionGate() {
             {hasDenied && Capacitor.isNativePlatform() && (
               <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-500/10 p-2.5 flex items-center justify-between gap-2">
                 <p className="font-mono text-[10px] leading-relaxed text-amber-200">
-                  Some permissions are blocked. Open Settings to enable them.
+                  Certain permissions were denied by system settings. Open Settings to enable them.
                 </p>
                 <button
                   type="button"
