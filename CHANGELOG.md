@@ -5,6 +5,17 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.2] — 2026-10-10
+
+### Refined & Hardened
+- **🎨 Comprehensive Modal Dialog, Popups & Copywriting Polish**:
+  - **Design System Glassmorphic Overlays**: Upgraded `Dialog`, `AlertDialog`, `Sheet`, and `Popover` components with high-opacity `bg-black/80 backdrop-blur-md` overlays, `rounded-2xl border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl` surfaces, and top ambient laser glow lines.
+  - **Eradicated Raw Browser Alerts**: Replaced all instances of raw unstyled `window.confirm` in the YouTube Vault with a styled, accessible `<AlertDialog>`.
+  - **Accidental Deletion Guards**: Added inline deletion confirmation state (`isConfirmingDelete`) to `VaultPreviewModal` to prevent accidental media loss, and wrapped cloud/local GIF deletions and mobile keyboard unlinking with structured `<AlertDialog>` prompts.
+  - **Full Accessibility (a11y) & Focus Conformance**: Equipped all modals, drawers, and overlay gates (`AppDownloadModal`, `UpdateModal`, `VaultPreviewModal`, `MobileTransitionsDrawer`, `YouTubeDownloader` Subtitle Modal, `PermissionGate`) with `role="dialog"`, `aria-modal="true"`, `Escape` key listeners, and document body scroll locking.
+  - **Updater UI Streamlining**: Removed confusing red "Remove" buttons from the software update available and up-to-date dialog screens, replacing them with `<Clock /> Remind Later` and `<Check /> Done`.
+  - **Dynamic Storage Paths & Polished Copy**: Fixed hardcoded directory labels in `save-result-modal.tsx` to dynamic filesystem paths and harmonized UI copywriting across permission gates, downloads, and navigation guards.
+
 ## [3.10.1] — 2026-10-10
 
 ### Fixed & Hardened
