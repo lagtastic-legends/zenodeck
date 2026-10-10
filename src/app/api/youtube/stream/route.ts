@@ -27,6 +27,7 @@ const ALLOWED_STREAM_DOMAINS = [
   "tiktok.com",
   "cdninstagram.com",
   "fbcdn.net",
+  "fbsbx.com",
   "facebook.com",
   "instagram.com",
   "threads.net",
@@ -34,6 +35,8 @@ const ALLOWED_STREAM_DOMAINS = [
   "twimg.com",
   "twitter.com",
   "x.com",
+  "vxtwitter.com",
+  "fxtwitter.com",
   "v.redd.it",
   "reddit.com",
   "redd.it",
@@ -44,6 +47,8 @@ const ALLOWED_STREAM_DOMAINS = [
   "vimeo.com",
   "akamaized.net",
   "akamaihd.net",
+  "edgekey.net",
+  "cloudfront.net",
   "ttvnw.net",
   "twitch.tv",
   "jtvnw.net",
@@ -55,6 +60,7 @@ const ALLOWED_STREAM_DOMAINS = [
   "soundcloud.com",
   "rapidcdn.app",
   "cobalt.tools",
+  "snapinst.app",
 ];
 
 function isAllowedHost(urlStr: string): boolean {
@@ -106,6 +112,23 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
       Accept: "*/*",
       "Accept-Encoding": "identity",
     };
+
+    // Platform-specific Referer injection to prevent 403 Forbidden on CDNs
+    if (targetUrl.includes("tiktok") || targetUrl.includes("byteoversea") || targetUrl.includes("ibytedtos")) {
+      fetchHeaders["Referer"] = "https://www.tiktok.com/";
+    } else if (targetUrl.includes("twimg.com") || targetUrl.includes("twitter.com") || targetUrl.includes("x.com")) {
+      fetchHeaders["Referer"] = "https://twitter.com/";
+    } else if (targetUrl.includes("instagram.com") || targetUrl.includes("cdninstagram.com")) {
+      fetchHeaders["Referer"] = "https://www.instagram.com/";
+    } else if (targetUrl.includes("redd.it") || targetUrl.includes("reddit.com")) {
+      fetchHeaders["Referer"] = "https://www.reddit.com/";
+    } else if (targetUrl.includes("facebook.com") || targetUrl.includes("fbcdn.net") || targetUrl.includes("fbsbx.com")) {
+      fetchHeaders["Referer"] = "https://www.facebook.com/";
+    } else if (targetUrl.includes("vimeo.com") || targetUrl.includes("vimeocdn.com")) {
+      fetchHeaders["Referer"] = "https://vimeo.com/";
+    } else if (targetUrl.includes("pinterest.com") || targetUrl.includes("pinimg.com")) {
+      fetchHeaders["Referer"] = "https://www.pinterest.com/";
+    }
 
     if (rangeHeader) {
       fetchHeaders["Range"] = rangeHeader;

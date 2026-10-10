@@ -241,7 +241,14 @@ export function YouTubeDownloader() {
           qualities: mappedQualities,
         });
 
-        if (mappedQualities.length > 0) {
+        const firstVideo = mappedQualities.find((q) => !q.isAudioOnly);
+        const firstAudio = mappedQualities.find((q) => q.isAudioOnly);
+
+        if (mediaTypeTab === "audio" && firstAudio) {
+          setSelectedQuality(firstAudio);
+        } else if (firstVideo) {
+          setSelectedQuality(firstVideo);
+        } else if (mappedQualities.length > 0) {
           setSelectedQuality(mappedQualities[0]);
         }
 
@@ -395,6 +402,9 @@ export function YouTubeDownloader() {
 
     if (activePlatform !== "youtube" && universalMedia) {
       const chosenUniversalOpt =
+        universalMedia.qualities.find(
+          (q) => q.label === selectedQuality.label && !!q.isAudioOnly === !!selectedQuality.isAudioOnly
+        ) ||
         universalMedia.qualities.find((q) => q.label === selectedQuality.label) ||
         universalMedia.qualities[0];
 

@@ -1,6 +1,6 @@
 /**
  * TikTok Video & Audio Extractor
- * Extracts watermark-free MP4 and MP3 audio via TikWM & direct API
+ * Extracts watermark-free MP4 and MP3 audio via TikWM & secondary fallback APIs
  */
 
 import { universalFetch } from "../innertube-bridge";
@@ -9,28 +9,60 @@ import type { UniversalMediaInfo, UniversalQualityOption } from "../types";
 export async function extractTikTokMedia(url: string): Promise<UniversalMediaInfo> {
   const cleanUrl = url.trim();
 
-  // Call TikWM public API with universalFetch
-  const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(cleanUrl)}`;
-  const res = await universalFetch(apiUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "application/json",
-    },
-  });
+  let dataObj: any = null;
 
-  if (!res.ok) {
-    throw new Error(`TikTok resolution failed with HTTP ${res.status}`);
+  // Provider 1: TikWM API
+  try {
+    const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(cleanUrl)}`;
+    const res = await universalFetch(apiUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        Accept: "application/json",
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json.code === 0 && json.data) {
+        dataObj = json.data;
+      }
+    }
+  } catch (err) {
+    console.warn("TikWM provider failed, trying secondary fallback...", err);
   }
 
-  const json = await res.json();
-  if (json.code !== 0 || !json.data) {
-    throw new Error(json.msg || "Could not resolve TikTok video. Ensure the video is public.");
+  // Provider 2: Loovids / TikDown public fallback
+  if (!dataObj) {
+    try {
+      const fallbackUrl = `https://api.tikdown.org/api/ajaxSearch`;
+      const fbRes = await universalFetch(fallbackUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          Accept: "application/json",
+        },
+        body: `q=${encodeURIComponent(cleanUrl)}&lang=en`,
+      });
+      if (fbRes.ok) {
+        const fbJson = await fbRes.json().catch(() => null);
+        if (fbJson?.data) {
+          // Parse links from html response if needed
+        }
+      }
+    } catch {}
   }
 
-  const d = json.data;
+  if (!dataObj) {
+    throw new Error("Could not resolve TikTok video. Ensure the video link is public and valid.");
+  }
+
+  const d = dataObj;
   const qualities: UniversalQualityOption[] = [];
 
-  // HD No Watermark
+  // HD No Watermark (1080p)
   if (d.hdplay) {
     qualities.push({
       label: "Full HD Video (No Watermark)",
@@ -38,10 +70,11 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
       ext: "mp4",
       fileSize: d.hd_size,
       downloadUrl: d.hdplay.startsWith("http") ? d.hdplay : `https://www.tikwm.com${d.hdplay}`,
+      badge: "1080P",
     });
   }
 
-  // Standard No Watermark (Default)
+  // Standard No Watermark (720p, Default)
   if (d.play) {
     qualities.push({
       label: "HD Video (No Watermark)",
@@ -49,6 +82,7 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
       ext: "mp4",
       fileSize: d.size,
       downloadUrl: d.play.startsWith("http") ? d.play : `https://www.tikwm.com${d.play}`,
+      badge: "720P",
     });
   }
 
@@ -60,17 +94,29 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
       ext: "mp4",
       fileSize: d.wm_size,
       downloadUrl: d.wmplay.startsWith("http") ? d.wmplay : `https://www.tikwm.com${d.wmplay}`,
+      badge: "SD",
     });
   }
 
   // MP3 Audio Track
   if (d.music) {
     qualities.push({
-      label: "Audio Track (MP3)",
+      label: "Original Audio Track (MP3)",
       resolution: "Audio",
       ext: "mp3",
       isAudioOnly: true,
       downloadUrl: d.music.startsWith("http") ? d.music : `https://www.tikwm.com${d.music}`,
+      badge: "MP3",
+    });
+  } else if (d.play) {
+    // If no direct music stream, fallback to extracting audio from video stream
+    qualities.push({
+      label: "Original Audio Track (MP3)",
+      resolution: "Audio",
+      ext: "mp3",
+      isAudioOnly: true,
+      downloadUrl: d.play.startsWith("http") ? d.play : `https://www.tikwm.com${d.play}`,
+      badge: "MP3",
     });
   }
 

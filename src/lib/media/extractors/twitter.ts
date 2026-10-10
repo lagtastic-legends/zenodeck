@@ -20,7 +20,8 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
   try {
     const vxRes = await universalFetch(`https://api.vxtwitter.com/Twitter/status/${tweetId}`, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
         Accept: "application/json",
       },
     });
@@ -36,7 +37,8 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
     try {
       const fxRes = await universalFetch(`https://api.fxtwitter.com/status/${tweetId}`, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
           Accept: "application/json",
         },
       });
@@ -46,6 +48,41 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
       }
     } catch (fxErr) {
       console.warn("Twitter provider 2 failed", fxErr);
+    }
+  }
+
+  // Try Provider 3: Twitter Syndication endpoint
+  if (!tweetData || (!tweetData.media_extended && !tweetData.video_url)) {
+    try {
+      const synRes = await universalFetch(`https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en`, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          Accept: "application/json",
+        },
+      });
+      if (synRes.ok) {
+        const synJson = await synRes.json();
+        if (synJson && synJson.video) {
+          const variants: any[] = synJson.video.variants || [];
+          const mp4s = variants
+            .filter((v: any) => v.type === "video/mp4" || v.src?.includes(".mp4"))
+            .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+
+          if (mp4s.length > 0) {
+            tweetData = {
+              text: synJson.text,
+              user_name: synJson.user?.name,
+              user_screen_name: synJson.user?.screen_name,
+              video_url: mp4s[0].src,
+              mediaURLs: [synJson.video.poster],
+              duration_millis: synJson.video.durationMillis,
+            };
+          }
+        }
+      }
+    } catch (synErr) {
+      console.warn("Twitter syndication fallback failed:", synErr);
     }
   }
 
@@ -68,19 +105,21 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
   const directVideoUrl = videoMedia.url;
 
   qualities.push({
-    label: "Video (MP4)",
+    label: "X / Twitter HD Video (MP4)",
     resolution: "HD",
     ext: "mp4",
     downloadUrl: directVideoUrl,
+    badge: "HD",
   });
 
   // Audio track option
   qualities.push({
-    label: "Extracted Audio (MP3)",
+    label: "Extracted Audio Track (MP3)",
     resolution: "Audio",
     ext: "mp3",
     isAudioOnly: true,
     downloadUrl: directVideoUrl,
+    badge: "MP3",
   });
 
   const author = tweetData.user_name || "X User";

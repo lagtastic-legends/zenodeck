@@ -5,6 +5,9 @@ import { extractTikTokMedia } from "@/lib/media/extractors/tiktok";
 import { extractTwitterMedia } from "@/lib/media/extractors/twitter";
 import { extractRedditMedia } from "@/lib/media/extractors/reddit";
 import { extractInstagramMedia } from "@/lib/media/extractors/instagram";
+import { extractFacebookMedia } from "@/lib/media/extractors/facebook";
+import { extractVimeoMedia } from "@/lib/media/extractors/vimeo";
+import { extractPinterestMedia } from "@/lib/media/extractors/pinterest";
 import { detectPlatform } from "@/lib/media/detector";
 import type { UniversalQualityOption } from "@/lib/media/types";
 import fs from "fs";
@@ -195,6 +198,24 @@ async function handleDownload(url: string, quality = "best", format?: string) {
             qualities = ig.qualities;
             break;
           }
+          case "facebook": {
+            const fb = await extractFacebookMedia(url);
+            mediaTitle = fb.title;
+            qualities = fb.qualities;
+            break;
+          }
+          case "vimeo": {
+            const vm = await extractVimeoMedia(url);
+            mediaTitle = vm.title;
+            qualities = vm.qualities;
+            break;
+          }
+          case "pinterest": {
+            const pin = await extractPinterestMedia(url);
+            mediaTitle = pin.title;
+            qualities = pin.qualities;
+            break;
+          }
         }
       }
 
@@ -207,12 +228,30 @@ async function handleDownload(url: string, quality = "best", format?: string) {
         ) || qualities[0];
 
       if (chosen?.downloadUrl) {
+        const upstreamHeaders: Record<string, string> = {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          Accept: "*/*",
+        };
+        const dlUrl = chosen.downloadUrl;
+        if (dlUrl.includes("tiktok") || dlUrl.includes("byteoversea") || dlUrl.includes("ibytedtos")) {
+          upstreamHeaders["Referer"] = "https://www.tiktok.com/";
+        } else if (dlUrl.includes("twimg.com") || dlUrl.includes("twitter.com") || dlUrl.includes("x.com")) {
+          upstreamHeaders["Referer"] = "https://twitter.com/";
+        } else if (dlUrl.includes("instagram.com") || dlUrl.includes("cdninstagram.com")) {
+          upstreamHeaders["Referer"] = "https://www.instagram.com/";
+        } else if (dlUrl.includes("redd.it") || dlUrl.includes("reddit.com")) {
+          upstreamHeaders["Referer"] = "https://www.reddit.com/";
+        } else if (dlUrl.includes("facebook.com") || dlUrl.includes("fbcdn.net") || dlUrl.includes("fbsbx.com")) {
+          upstreamHeaders["Referer"] = "https://www.facebook.com/";
+        } else if (dlUrl.includes("vimeo.com") || dlUrl.includes("vimeocdn.com")) {
+          upstreamHeaders["Referer"] = "https://vimeo.com/";
+        } else if (dlUrl.includes("pinterest.com") || dlUrl.includes("pinimg.com")) {
+          upstreamHeaders["Referer"] = "https://www.pinterest.com/";
+        }
+
         const upstream = await fetch(chosen.downloadUrl, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            Accept: "*/*",
-          },
+          headers: upstreamHeaders,
           signal: AbortSignal.timeout(30000),
         });
 

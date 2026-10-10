@@ -339,8 +339,60 @@ export async function downloadUniversalMedia(
   }
 
 
-  const mimeType = option.isAudioOnly ? (option.ext === "mp3" ? "audio/mpeg" : "audio/mp4") : "video/mp4";
-  const blob = new Blob([bytes.buffer as ArrayBuffer], { type: mimeType });
+  let finalBytes = bytes;
+  const mimeType = option.isAudioOnly
+    ? option.ext === "mp3"
+      ? "audio/mpeg"
+      : option.ext === "wav"
+      ? "audio/wav"
+      : "audio/mp4"
+    : "video/mp4";
+
+  if (option.isAudioOnly) {
+    onProgress({
+      phase: "muxing",
+      message: `Extracting ${option.ext.toUpperCase()} audio with FFmpeg WebAssembly…`,
+      percent: 85,
+    });
+
+    try {
+      const engine = await getOrInitTurboEngine(options?.ffmpegEngine);
+      if (engine) {
+        const inName = `audio_in_${Date.now()}.mp4`;
+        const outName = `audio_out_${Date.now()}.${option.ext}`;
+
+        await engine.writeFile(inName, bytes);
+
+        let ffmpegArgs: string[];
+        if (option.ext === "mp3") {
+          const br = option.bitrate ? `${option.bitrate}k` : "320k";
+          ffmpegArgs = ["-i", inName, "-vn", "-b:a", br, outName];
+        } else if (option.ext === "wav") {
+          ffmpegArgs = ["-i", inName, "-vn", "-c:a", "pcm_s16le", outName];
+        } else if (option.ext === "m4a") {
+          ffmpegArgs = ["-i", inName, "-vn", "-c:a", "aac", "-b:a", "256k", outName];
+        } else {
+          ffmpegArgs = ["-i", inName, "-vn", outName];
+        }
+
+        await engine.exec(ffmpegArgs);
+        const transData = (await engine.readFile(outName)) as Uint8Array;
+
+        try {
+          await engine.deleteFile(inName);
+          await engine.deleteFile(outName);
+        } catch {}
+
+        if (transData && transData.length > 0) {
+          finalBytes = transData;
+        }
+      }
+    } catch (ffmpegErr) {
+      console.warn("FFmpeg audio extraction deferred, keeping direct stream:", ffmpegErr);
+    }
+  }
+
+  const blob = new Blob([finalBytes.buffer as ArrayBuffer], { type: mimeType });
   const filename = `${safeTitle}.${option.ext}`;
   const blobUrl = URL.createObjectURL(blob);
 
@@ -352,7 +404,7 @@ export async function downloadUniversalMedia(
     blob,
     url: blobUrl,
     filename,
-    fileSizeBytes: bytes.length,
+    fileSizeBytes: finalBytes.length,
     mimeType,
     is4K: false,
     is60fps: false,

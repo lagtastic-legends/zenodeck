@@ -5,6 +5,9 @@ import { extractTikTokMedia } from "@/lib/media/extractors/tiktok";
 import { extractTwitterMedia } from "@/lib/media/extractors/twitter";
 import { extractRedditMedia } from "@/lib/media/extractors/reddit";
 import { extractInstagramMedia } from "@/lib/media/extractors/instagram";
+import { extractFacebookMedia } from "@/lib/media/extractors/facebook";
+import { extractVimeoMedia } from "@/lib/media/extractors/vimeo";
+import { extractPinterestMedia } from "@/lib/media/extractors/pinterest";
 import { detectPlatform } from "@/lib/media/detector";
 
 const corsHeaders = {
@@ -80,10 +83,11 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
           badge: q.resolution || "HD",
           is4K: false,
           is60fps: false,
-          isAudioOnly: false,
+          isAudioOnly: !!q.isAudioOnly,
           container: q.ext,
           approxSizeBytes: q.fileSize || 0,
-          videoFormat: { url: q.downloadUrl },
+          videoFormat: q.isAudioOnly ? undefined : { url: q.downloadUrl },
+          audioFormat: q.isAudioOnly ? { url: q.downloadUrl } : undefined,
         })),
       };
     }
@@ -108,11 +112,11 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
           badge: q.resolution || "HD",
           is4K: false,
           is60fps: false,
-          isAudioOnly: false,
+          isAudioOnly: !!q.isAudioOnly,
           container: q.ext,
           approxSizeBytes: q.fileSize || 0,
-          videoFormat: { url: q.downloadUrl },
-          audioFormat: q.audioUrl ? { url: q.audioUrl } : undefined,
+          videoFormat: q.isAudioOnly ? undefined : { url: q.downloadUrl },
+          audioFormat: q.isAudioOnly ? { url: q.downloadUrl } : (q.audioUrl ? { url: q.audioUrl } : undefined),
           requiresMuxing: !!q.requiresMuxing,
         })),
       };
@@ -138,10 +142,101 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
           badge: q.resolution || "HD",
           is4K: false,
           is60fps: false,
-          isAudioOnly: false,
+          isAudioOnly: !!q.isAudioOnly,
           container: q.ext,
           approxSizeBytes: q.fileSize || 0,
-          videoFormat: { url: q.downloadUrl },
+          videoFormat: q.isAudioOnly ? undefined : { url: q.downloadUrl },
+          audioFormat: q.isAudioOnly ? { url: q.downloadUrl } : undefined,
+          requiresMuxing: false,
+        })),
+      };
+    }
+
+    case "facebook": {
+      const fb = await extractFacebookMedia(urlOrId);
+      return {
+        videoId: fb.id,
+        platform: "facebook",
+        title: fb.title,
+        author: fb.author,
+        thumbnailUrl: fb.thumbnailUrl,
+        durationSeconds: fb.duration || 0,
+        durationFormatted: "0:30",
+        viewCount: fb.viewCount,
+        qualities: fb.qualities.map((q, idx) => ({
+          id: `facebook-${idx}`,
+          itag: idx,
+          label: q.label,
+          resolutionLabel: q.resolution || "HD",
+          fps: 30,
+          badge: q.badge || q.resolution || "HD",
+          is4K: false,
+          is60fps: false,
+          isAudioOnly: !!q.isAudioOnly,
+          container: q.ext,
+          approxSizeBytes: q.fileSize || 0,
+          videoFormat: q.isAudioOnly ? undefined : { url: q.downloadUrl },
+          audioFormat: q.isAudioOnly ? { url: q.downloadUrl } : undefined,
+          requiresMuxing: false,
+        })),
+      };
+    }
+
+    case "vimeo": {
+      const vm = await extractVimeoMedia(urlOrId);
+      return {
+        videoId: vm.id,
+        platform: "vimeo",
+        title: vm.title,
+        author: vm.author,
+        thumbnailUrl: vm.thumbnailUrl,
+        durationSeconds: vm.duration || 0,
+        durationFormatted: `${Math.floor((vm.duration || 0) / 60)}:${String((vm.duration || 0) % 60).padStart(2, "0")}`,
+        viewCount: vm.viewCount,
+        qualities: vm.qualities.map((q, idx) => ({
+          id: `vimeo-${idx}`,
+          itag: idx,
+          label: q.label,
+          resolutionLabel: q.resolution || "HD",
+          fps: q.fps || 30,
+          badge: q.badge || q.resolution || "HD",
+          is4K: false,
+          is60fps: (q.fps || 30) >= 50,
+          isAudioOnly: !!q.isAudioOnly,
+          container: q.ext,
+          approxSizeBytes: q.fileSize || 0,
+          videoFormat: q.isAudioOnly ? undefined : { url: q.downloadUrl },
+          audioFormat: q.isAudioOnly ? { url: q.downloadUrl } : undefined,
+          requiresMuxing: false,
+        })),
+      };
+    }
+
+    case "pinterest": {
+      const pin = await extractPinterestMedia(urlOrId);
+      return {
+        videoId: pin.id,
+        platform: "pinterest",
+        title: pin.title,
+        author: pin.author,
+        thumbnailUrl: pin.thumbnailUrl,
+        durationSeconds: pin.duration || 0,
+        durationFormatted: "0:30",
+        viewCount: pin.viewCount,
+        qualities: pin.qualities.map((q, idx) => ({
+          id: `pinterest-${idx}`,
+          itag: idx,
+          label: q.label,
+          resolutionLabel: q.resolution || "HD",
+          fps: 30,
+          badge: q.badge || q.resolution || "HD",
+          is4K: false,
+          is60fps: false,
+          isAudioOnly: !!q.isAudioOnly,
+          container: q.ext,
+          approxSizeBytes: q.fileSize || 0,
+          videoFormat: q.isAudioOnly ? undefined : { url: q.downloadUrl },
+          audioFormat: q.isAudioOnly ? { url: q.downloadUrl } : undefined,
           requiresMuxing: false,
         })),
       };

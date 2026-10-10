@@ -10,7 +10,9 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
   const cleanUrl = url.trim();
 
   // Extract Reddit Post ID
-  const match = cleanUrl.match(/(?:reddit\.com\/r\/[\w-]+\/comments\/([a-zA-Z0-9]+)|redd\.it\/([a-zA-Z0-9]+)|v\.redd\.it\/([a-zA-Z0-9]+))/i);
+  const match = cleanUrl.match(
+    /(?:reddit\.com\/r\/[\w-]+\/comments\/([a-zA-Z0-9]+)|redd\.it\/([a-zA-Z0-9]+)|v\.redd\.it\/([a-zA-Z0-9]+))/i
+  );
   const postId = match ? match[1] || match[2] || match[3] : null;
 
   if (!postId) {
@@ -21,7 +23,8 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
   const jsonApiUrl = `https://www.reddit.com/comments/${postId}.json`;
   const res = await universalFetch(jsonApiUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
       Accept: "application/json",
     },
   });
@@ -50,15 +53,18 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
   const fallbackUrl = String(redditVideo.fallback_url);
   // Derive base Reddit video URL (e.g. https://v.redd.it/abc123xyz/)
   const baseUrlMatch = fallbackUrl.match(/(https?:\/\/v\.redd\.it\/[a-zA-Z0-9]+)/i);
-  const videoBaseUrl = baseUrlMatch ? baseUrlMatch[1] : fallbackUrl.split("?")[0].replace(/\/DASH_[^/]+$/, "");
+  const videoBaseUrl = baseUrlMatch
+    ? baseUrlMatch[1]
+    : fallbackUrl.split("?")[0].replace(/\/DASH_[^/]+$/, "");
 
   // Probable DASH audio URLs for Reddit
   const dashAudioUrl = `${videoBaseUrl}/DASH_AUDIO_128.mp4`;
 
   const qualities: UniversalQualityOption[] = [];
   const height = redditVideo.height || 720;
+  const badge = height >= 1080 ? "1080P" : height >= 720 ? "720P" : `${height}P`;
 
-  // Synced High Quality Video with Muxed Audio
+  // 1. Synced High Quality Video with Muxed Audio (Primary)
   qualities.push({
     label: `Reddit HD Video (${height}p) + Synced Audio`,
     resolution: `${height}p`,
@@ -66,30 +72,34 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
     downloadUrl: fallbackUrl,
     audioUrl: dashAudioUrl,
     requiresMuxing: true,
+    badge,
   });
 
-  // Video stream only (fallback)
+  // 2. Video stream only (fallback)
   qualities.push({
     label: `Video Stream Only (${height}p)`,
     resolution: `${height}p`,
     ext: "mp4",
     downloadUrl: fallbackUrl,
     requiresMuxing: false,
+    badge: "VIDEO",
   });
 
-  // Audio track only
+  // 3. Audio track only
   qualities.push({
     label: "Audio Track Only (MP3)",
     resolution: "Audio",
     ext: "mp3",
     isAudioOnly: true,
     downloadUrl: dashAudioUrl,
+    badge: "MP3",
   });
 
   const title = (post.title || "Reddit Video").trim();
   const author = post.author ? `u/${post.author}` : "Reddit User";
   const authorHandle = post.subreddit_name_prefixed || (post.subreddit ? `r/${post.subreddit}` : undefined);
-  const thumbnailUrl = (post.thumbnail && post.thumbnail.startsWith("http")) ? post.thumbnail : "";
+  const thumbnailUrl =
+    post.thumbnail && post.thumbnail.startsWith("http") ? post.thumbnail : "";
   const duration = redditVideo.duration ? Math.round(redditVideo.duration) : undefined;
 
   return {

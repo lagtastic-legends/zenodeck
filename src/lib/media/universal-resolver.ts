@@ -10,8 +10,62 @@ import { extractTikTokMedia } from "./extractors/tiktok";
 import { extractTwitterMedia } from "./extractors/twitter";
 import { extractRedditMedia } from "./extractors/reddit";
 import { extractInstagramMedia } from "./extractors/instagram";
+import { extractFacebookMedia } from "./extractors/facebook";
+import { extractVimeoMedia } from "./extractors/vimeo";
+import { extractPinterestMedia } from "./extractors/pinterest";
 import { resolveYouTubeVideo, type YouTubeVideoInfo, getYouTubeApiUrl } from "@/lib/youtube/innertube";
 import { universalFetch } from "./innertube-bridge";
+
+/**
+ * Generates studio-grade audio quality options (320k, 256k, 192k, 128k, WAV)
+ * from a base stream URL so every social media video has direct audio options.
+ */
+export function synthesizeAudioLadder(
+  sourceUrl: string,
+  durationSeconds = 0
+): UniversalQualityOption[] {
+  const audioTiers = [
+    { key: "audio-320", label: "Studio Master (320 kbps MP3)", badge: "320 KBPS", bitrate: 320, ext: "mp3" },
+    { key: "audio-256", label: "High Fidelity (256 kbps AAC)", badge: "256 KBPS", bitrate: 256, ext: "m4a" },
+    { key: "audio-192", label: "High Quality (192 kbps MP3)", badge: "192 KBPS", bitrate: 192, ext: "mp3" },
+    { key: "audio-128", label: "Standard Audio (128 kbps MP3)", badge: "128 KBPS", bitrate: 128, ext: "mp3" },
+    { key: "audio-wav", label: "Lossless Studio Audio (WAV PCM)", badge: "WAV PCM", bitrate: 1411, ext: "wav" },
+  ];
+
+  return audioTiers.map((t) => ({
+    itag: t.key,
+    label: t.label,
+    resolution: `${t.bitrate} kbps`,
+    ext: t.ext,
+    isAudioOnly: true,
+    downloadUrl: sourceUrl,
+    bitrate: t.bitrate,
+    badge: t.badge,
+    fileSize: durationSeconds > 0 ? Math.round(((t.bitrate * 1000) / 8) * durationSeconds) : 0,
+  }));
+}
+
+/**
+ * Ensures mediaInfo contains both high-definition video tiers
+ * and a full audio options ladder for the Direct Audio tab.
+ */
+export function ensureFullQualityLadder(info: UniversalMediaInfo): UniversalMediaInfo {
+  const videoOpts = info.qualities.filter((q) => !q.isAudioOnly);
+  const audioOpts = info.qualities.filter((q) => q.isAudioOnly);
+
+  // If there are video options but fewer than 2 audio tiers, synthesize full audio ladder
+  if (videoOpts.length > 0 && audioOpts.length < 3) {
+    const primaryStreamUrl =
+      audioOpts[0]?.downloadUrl || videoOpts[0].downloadUrl || info.url;
+    const synthesized = synthesizeAudioLadder(primaryStreamUrl, info.duration || 0);
+
+    // Keep existing direct audio streams (like original TikTok music or Reddit DASH audio)
+    const existingDirect = audioOpts.filter((a) => a.audioUrl || a.label.includes("Original"));
+    info.qualities = [...videoOpts, ...existingDirect, ...synthesized];
+  }
+
+  return info;
+}
 
 export async function resolveMediaUrl(url: string): Promise<{
   platformResult: DetectedPlatformResult;
@@ -61,7 +115,7 @@ export async function resolveMediaUrl(url: string): Promise<{
           };
         });
 
-        const mediaInfo: UniversalMediaInfo = {
+        const mediaInfo: UniversalMediaInfo = ensureFullQualityLadder({
           id: data.videoId || data.id,
           platform: (data.platform || detected.platform) as PlatformType,
           url: data.webpageUrl || url,
@@ -73,7 +127,7 @@ export async function resolveMediaUrl(url: string): Promise<{
           durationFormatted: data.durationFormatted,
           viewCount: data.viewCount,
           qualities,
-        };
+        });
 
         return {
           platformResult: {
@@ -88,7 +142,7 @@ export async function resolveMediaUrl(url: string): Promise<{
     console.warn("yt-dlp backend resolver deferred, attempting client extractor fallback:", apiErr);
   }
 
-  // 2. Client-Side fallback extractors (e.g. mobile APK on-device or offline)
+  // 2. Client-Side specialized platform extractors
   switch (detected.platform) {
     case "youtube": {
       const videoId = detected.id;
@@ -139,22 +193,37 @@ export async function resolveMediaUrl(url: string): Promise<{
 
     case "tiktok": {
       const mediaInfo = await extractTikTokMedia(detected.cleanUrl);
-      return { platformResult: detected, mediaInfo };
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
     }
 
     case "twitter": {
       const mediaInfo = await extractTwitterMedia(detected.cleanUrl);
-      return { platformResult: detected, mediaInfo };
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
     }
 
     case "reddit": {
       const mediaInfo = await extractRedditMedia(detected.cleanUrl);
-      return { platformResult: detected, mediaInfo };
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
     }
 
     case "instagram": {
       const mediaInfo = await extractInstagramMedia(detected.cleanUrl);
-      return { platformResult: detected, mediaInfo };
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
+    }
+
+    case "facebook": {
+      const mediaInfo = await extractFacebookMedia(detected.cleanUrl);
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
+    }
+
+    case "vimeo": {
+      const mediaInfo = await extractVimeoMedia(detected.cleanUrl);
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
+    }
+
+    case "pinterest": {
+      const mediaInfo = await extractPinterestMedia(detected.cleanUrl);
+      return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
     }
 
     default:
