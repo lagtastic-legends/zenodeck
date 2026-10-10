@@ -37,6 +37,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { JobOutput } from "@/hooks/use-media-job";
 import { formatDurationMs } from "@/lib/format";
 
@@ -656,24 +663,32 @@ export function StudioRecorder() {
                       </p>
                     </div>
                     {!recording && (
-                      <div className="flex items-center gap-4">
-                        <select 
+                      <div className="flex items-center gap-2">
+                        <Select
                           value={screenQuality}
-                          onChange={(e) => setScreenQuality(e.target.value as "720p" | "1080p" | "4k")}
-                          className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
+                          onValueChange={(val) => setScreenQuality(val as "720p" | "1080p" | "4k")}
                         >
-                          <option value="720p" className="bg-zinc-900 text-zinc-100">720p (HD)</option>
-                          <option value="1080p" className="bg-zinc-900 text-zinc-100">1080p (FHD)</option>
-                          <option value="4k" className="bg-zinc-900 text-zinc-100">4K (UHD)</option>
-                        </select>
-                        <select 
-                          value={screenFps}
-                          onChange={(e) => setScreenFps(Number(e.target.value) as 30 | 60)}
-                          className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
+                          <SelectTrigger size="sm" className="h-8 text-xs font-mono px-2.5 bg-secondary/80 border-border/80">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="720p">720p (HD)</SelectItem>
+                            <SelectItem value="1080p">1080p (FHD)</SelectItem>
+                            <SelectItem value="4k">4K (UHD)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={String(screenFps)}
+                          onValueChange={(val) => setScreenFps(Number(val) as 30 | 60)}
                         >
-                          <option value={30} className="bg-zinc-900 text-zinc-100">30 FPS</option>
-                          <option value={60} className="bg-zinc-900 text-zinc-100">60 FPS</option>
-                        </select>
+                          <SelectTrigger size="sm" className="h-8 text-xs font-mono px-2.5 bg-secondary/80 border-border/80">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30 FPS</SelectItem>
+                            <SelectItem value="60">60 FPS</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
@@ -697,25 +712,33 @@ export function StudioRecorder() {
                     <p className="max-w-60 font-mono text-[10px] leading-relaxed text-muted-foreground">
                       {mode === "mic" ? "audio-only capture — arm the mic to see levels" : `${meta.hint} · arm to preview`}
                     </p>
-                    {mode === "screen" && !Capacitor.isNativePlatform() && (
-                      <div className="flex items-center justify-center gap-3">
-                        <select 
+                    {mode === "screen" && (
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        <Select 
                           value={screenQuality}
-                          onChange={(e) => setScreenQuality(e.target.value as "720p" | "1080p" | "4k")}
-                          className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
+                          onValueChange={(val) => setScreenQuality(val as "720p" | "1080p" | "4k")}
                         >
-                          <option value="720p" className="bg-zinc-900 text-zinc-100">720p (HD)</option>
-                          <option value="1080p" className="bg-zinc-900 text-zinc-100">1080p (FHD)</option>
-                          <option value="4k" className="bg-zinc-900 text-zinc-100">4K (UHD)</option>
-                        </select>
-                        <select 
-                          value={screenFps}
-                          onChange={(e) => setScreenFps(Number(e.target.value) as 30 | 60)}
-                          className="bg-secondary/70 border border-border rounded-md text-[11px] font-mono p-1 text-foreground focus:outline-none"
+                          <SelectTrigger size="sm" className="h-8 text-xs font-mono px-2.5 bg-secondary/80 border-border/80">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="720p">720p (HD)</SelectItem>
+                            <SelectItem value="1080p">1080p (FHD)</SelectItem>
+                            <SelectItem value="4k">4K (UHD)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select 
+                          value={String(screenFps)}
+                          onValueChange={(val) => setScreenFps(Number(val) as 30 | 60)}
                         >
-                          <option value={30} className="bg-zinc-900 text-zinc-100">30 FPS</option>
-                          <option value={60} className="bg-zinc-900 text-zinc-100">60 FPS</option>
-                        </select>
+                          <SelectTrigger size="sm" className="h-8 text-xs font-mono px-2.5 bg-secondary/80 border-border/80">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30">30 FPS</SelectItem>
+                            <SelectItem value="60">60 FPS</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                     {mode === "webcam" && Capacitor.isNativePlatform() && (

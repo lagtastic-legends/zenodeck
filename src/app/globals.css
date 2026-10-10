@@ -61,6 +61,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.875rem;
 
   /* Physics & 120Hz Kinetic Easing Curves */
@@ -255,6 +256,15 @@ select,
 textarea {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  color-scheme: dark;
+}
+
+select,
+option,
+optgroup {
+  color-scheme: dark;
+  background-color: #12101c;
+  color: #f4f4f6;
 }
 
 /* Universal smooth momentum scrolling */
