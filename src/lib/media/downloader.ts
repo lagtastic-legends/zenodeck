@@ -7,7 +7,6 @@
 import { universalFetch } from "./innertube-bridge";
 import type { UniversalMediaInfo, UniversalQualityOption } from "./types";
 import { nativeSave } from "@/lib/native-save";
-import { updateDownloadNotification } from "@/lib/notifications";
 import { getOrInitTurboEngine } from "@/lib/youtube/turbo-downloader";
 import { getYouTubeApiUrl } from "@/lib/youtube/innertube";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
@@ -281,15 +280,6 @@ export async function downloadUniversalMedia(
 
       onProgress({ phase: "saving", message: "Saving to device…", percent: 90 });
       await nativeSave(finalBlob, finalFilename);
-
-      void updateDownloadNotification({
-        id: 8888,
-        title: "Download Complete",
-        itemTitle: finalFilename,
-        progress: 100,
-        speedMbps: 0,
-        isComplete: true,
-      });
       onProgress({ phase: "complete", message: "Download and muxing complete!", percent: 100 });
 
       return {
@@ -356,15 +346,6 @@ export async function downloadUniversalMedia(
 
   onProgress({ phase: "saving", message: "Saving file…", percent: 90 });
   await nativeSave(blob, filename);
-
-  void updateDownloadNotification({
-    id: 8888,
-    title: "Download Complete",
-    itemTitle: filename,
-    progress: 100,
-    speedMbps: 0,
-    isComplete: true,
-  });
   onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
 
   return {

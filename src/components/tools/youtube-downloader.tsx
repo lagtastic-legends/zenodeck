@@ -73,7 +73,6 @@ import {
   type BatchItem,
   type QueueStats,
 } from "@/lib/youtube/batch-queue";
-import { updateDownloadNotification } from "@/lib/notifications";
 import {
   detectPlatform,
   PLATFORM_CONFIGS,
@@ -518,14 +517,6 @@ export function YouTubeDownloader() {
               etaSeconds: 0,
               statusMessage: `Streaming media: ${(received / (1024 * 1024)).toFixed(1)} MB transferred…`,
             });
-            void updateDownloadNotification({
-              id: 7777,
-              title: `Downloading ${selectedQuality.badge || selectedQuality.label}`,
-              itemTitle: videoInfo.title,
-              progress: pct,
-              speedMbps: 0,
-              isComplete: false,
-            });
           },
           abortControllerRef.current?.signal
         );
@@ -606,14 +597,6 @@ export function YouTubeDownloader() {
         platform: "youtube",
       });
 
-      void updateDownloadNotification({
-        id: 7777,
-        title: "Download Complete",
-        itemTitle: filename,
-        progress: 100,
-        isComplete: true,
-      });
-
       setProgress({
         phase: "complete",
         progress: 100,
@@ -659,14 +642,6 @@ export function YouTubeDownloader() {
             stallWatchdogTimer = null;
           }
           setProgress(p);
-          void updateDownloadNotification({
-            id: 7777,
-            title: `Downloading ${selectedQuality.badge || selectedQuality.label}`,
-            itemTitle: videoInfo.title,
-            progress: p.progress,
-            speedMbps: p.speedMbps,
-            isComplete: p.phase === "complete",
-          });
         },
         signal: abortControllerRef.current.signal,
       });
@@ -696,15 +671,6 @@ export function YouTubeDownloader() {
           localFileName: result.filename,
         });
       }
-
-      // Notify completion in status bar
-      void updateDownloadNotification({
-        id: 7777,
-        title: "Download Complete",
-        itemTitle: result.filename,
-        progress: 100,
-        isComplete: true,
-      });
     } catch (err: any) {
       if (stallWatchdogTimer) clearTimeout(stallWatchdogTimer);
       if (didFallback) return;
@@ -1121,42 +1087,33 @@ export function YouTubeDownloader() {
 
         {/* Error message */}
         {resolveError && (
-          <div className="rounded-2xl border border-red-500/40 bg-gradient-to-b from-red-500/15 via-red-950/20 to-card/60 p-4 sm:p-5 space-y-3 text-xs font-mono text-red-300 shadow-elevation2">
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-xs font-mono text-red-300 shadow-elevation1">
             <div className="flex items-start gap-3">
               <AlertCircle className="size-5 shrink-0 text-red-400 mt-0.5" />
-              <div className="space-y-1.5 flex-1">
+              <div className="space-y-1 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-display font-bold text-sm text-red-200">
                     {resolveError.toLowerCase().includes("bot") || resolveError.includes("LOGIN_REQUIRED")
-                      ? "YouTube Cloud Bot Protection Active"
-                      : "Unable to Resolve YouTube Stream"}
-                  </span>
-                  <span className="rounded-md border border-red-500/40 bg-red-500/20 px-1.5 py-0.2 font-mono text-[9px] uppercase font-bold text-red-300">
-                    Cloud Restricted
+                      ? "Stream Extraction Restricted"
+                      : "Unable to Resolve Stream"}
                   </span>
                 </div>
-                <p className="text-xs text-red-200/90 leading-relaxed font-sans">
+                <p className="text-xs text-red-200/80 leading-relaxed font-sans">
                   {resolveError.toLowerCase().includes("bot") || resolveError.includes("LOGIN_REQUIRED")
-                    ? "YouTube has restricted cloud server IPs (Vercel/AWS) from extracting this stream. To download in full 4K 60FPS or studio audio with zero restrictions, use the official ZenoDeck Android App on your direct mobile or Wi-Fi network."
+                    ? "YouTube has restricted access for this video from the cloud. Please try a different quality tier or video."
                     : resolveError}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setResolveError(null)}
+                className="shrink-0 p-1 rounded-lg text-red-400 hover:text-red-200 hover:bg-red-500/20 transition-colors cursor-pointer"
+                title="Dismiss"
+                aria-label="Dismiss error"
+              >
+                <X className="size-4" />
+              </button>
             </div>
-            {(resolveError.toLowerCase().includes("bot") || resolveError.includes("LOGIN_REQUIRED")) && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1 pl-8">
-                <a
-                  href="/zenodeck.apk"
-                  download="zenodeck.apk"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 px-4 py-2 text-xs font-display font-bold text-white shadow-md transition-all cursor-pointer w-fit"
-                >
-                  <Download className="size-3.5" />
-                  <span>Download ZenoDeck APK (Free & Unrestricted)</span>
-                </a>
-                <span className="text-[11px] text-muted-foreground font-mono">
-                  Runs 100% on-device · Direct residential network
-                </span>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -1532,16 +1489,6 @@ export function YouTubeDownloader() {
                   {selectedQuality ? `${selectedQuality.label} · ${formatBytes(selectedQuality.approxSizeBytes)}` : ""}
                 </span>
               </div>
-
-              {/* Direct Audio Banner */}
-              {mediaTypeTab === "audio" && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-3.5 py-2 text-xs font-mono text-violet-300">
-                  <Sparkles className="size-3.5 shrink-0 text-violet-400" />
-                  <span>
-                    Direct Audio Mode: Downloads only the audio stream (~3–15 MB) for instant extraction at maximum speed.
-                  </span>
-                </div>
-              )}
 
               {/* Quality Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">

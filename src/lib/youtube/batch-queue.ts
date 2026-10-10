@@ -17,11 +17,6 @@ import {
   type TurboDownloadResult,
   type TurboProgress,
 } from "./turbo-downloader";
-import {
-  updateDownloadNotification,
-  notifyJobSuccess,
-  notifyJobError,
-} from "@/lib/notifications";
 
 export interface BatchItem {
   id: string;
@@ -113,14 +108,6 @@ export class BatchQueueController {
 
     this.isRunning = false;
     this.onQueueComplete(this.items);
-
-    const stats = this.getStats();
-    if (stats.completed > 0) {
-      void notifyJobSuccess(
-        "Batch Download Finished",
-        `Successfully downloaded ${stats.completed} of ${stats.total} items.`
-      );
-    }
   }
 
   private async processItem(index: number): Promise<void> {
@@ -174,15 +161,6 @@ export class BatchQueueController {
           item.progress = 10 + Math.round((prog.progress / 100) * 88);
           item.speedMbps = prog.speedMbps;
           this.onItemUpdate(item, this.getStats());
-
-          // Update Android notification
-          void updateDownloadNotification({
-            id: 8888,
-            title: `Batch Downloading (${index + 1}/${this.items.length})`,
-            itemTitle: item.title,
-            progress: item.progress,
-            speedMbps: item.speedMbps,
-          });
         },
       });
 

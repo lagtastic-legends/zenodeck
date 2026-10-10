@@ -166,8 +166,6 @@ export async function notifyJobError(
   }
 }
 
-let lastProgressTime = 0;
-
 export interface DownloadNotificationParams {
   id?: number;
   title: string;
@@ -178,47 +176,12 @@ export interface DownloadNotificationParams {
 }
 
 /**
- * Updates download progress in the Android notification drawer with speed & percentage
+ * Download notification updater (silenced to prevent intrusive vibrations & status bar spam)
  */
-export async function updateDownloadNotification({
-  id = 9999,
-  title,
-  itemTitle,
-  progress,
-  speedMbps = 0,
-  isComplete = false,
-}: DownloadNotificationParams): Promise<void> {
-  if (typeof window === "undefined" || !Capacitor.isNativePlatform()) return;
-
-  const now = Date.now();
-  if (!isComplete && now - lastProgressTime < 1500 && progress < 100) {
-    return; // Throttle to prevent spamming the system status bar
-  }
-  lastProgressTime = now;
-
-  try {
-    await ensureAndroidChannel();
-    const speedStr = speedMbps > 0 ? ` · ${speedMbps.toFixed(1)} MB/s` : "";
-    const body = itemTitle
-      ? `${itemTitle} (${progress}%${speedStr})`
-      : `${progress}% downloaded${speedStr}`;
-
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          id,
-          title: isComplete ? `✓ ${title}` : `⚡ ${title}`,
-          body,
-          channelId: CHANNEL_ID,
-          schedule: { at: new Date(Date.now() + 50) },
-          ongoing: !isComplete,
-          autoCancel: isComplete,
-          smallIcon: "ic_stat_name",
-          iconColor: isComplete ? "#10B981" : "#06B6D4",
-        },
-      ],
-    });
-  } catch (e) {
-    console.warn("Download notification update failed:", e);
-  }
+export async function updateDownloadNotification(
+  _params?: DownloadNotificationParams
+): Promise<void> {
+  // Intentionally silent no-op: in-app telemetry UI provides real-time progress,
+  // preventing unwanted system alerts and device vibrations.
+  return;
 }
