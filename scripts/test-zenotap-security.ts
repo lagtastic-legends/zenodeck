@@ -91,9 +91,26 @@ async function runTests() {
   const pairConfirmation = zenoTapDb.confirmPairCode(pairCode, "Pixel 8 Pro", syncToken);
   assert(pairConfirmation !== null && pairConfirmation.userId === testUser, "Pairing code confirmed for user");
 
+  // Re-confirmation attempt with consumed pair code MUST fail
+  const reConfirm = zenoTapDb.confirmPairCode(pairCode, "Attacker Device", "bad_token");
+  assert(reConfirm === null, "Re-using consumed pair code is rejected (anti-hijack)");
+
   const link = zenoTapDb.getDeviceLinkBySyncToken(syncToken);
   assert(link !== null && link.userId === testUser, "Sync token resolves to correct user account");
   assert(link?.deviceName === "Pixel 8 Pro", "Device name recorded");
+
+  // Safe reuse of the same 6-digit number in the future
+  zenoTapDb.createPairCode(testUser, pairCode, Date.now() + 600_000);
+  const secondConfirmation = zenoTapDb.confirmPairCode(pairCode, "Tablet Keyboard", syncToken + "_v2");
+  assert(secondConfirmation !== null && secondConfirmation.userId === testUser, "Pair code can be safely generated again without collision");
+
+  // Device listing
+  const devices = zenoTapDb.getUserDevices(testUser);
+  assert(devices.length >= 2, "getUserDevices lists paired active devices");
+
+  // Unlink device
+  const unlinked = zenoTapDb.deleteDeviceLink(devices[0].id, testUser);
+  assert(unlinked, "deleteDeviceLink successfully unlinks device");
 
   // Expired / Bad Code rejection
   const badConfirmation = zenoTapDb.confirmPairCode("999999", "Hacker Device", "bad_token");

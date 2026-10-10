@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   zenoTapClient,
+  getStoredSyncToken,
   type CloudDeckItem,
   type PairCodeResponse,
 } from "@/lib/zenotap/client-sdk";
@@ -18,7 +20,8 @@ import {
   ShieldCheck,
   Film,
   KeyRound,
-  ExternalLink,
+  CloudDownload,
+  Link as LinkIcon,
 } from "lucide-react";
 
 interface ZenoTapDeckManagerProps {
@@ -30,9 +33,12 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
   const [deck, setDeck] = useState<CloudDeckItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [pairData, setPairData] = useState<PairCodeResponse | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
   const [pairSecondsLeft, setPairSecondsLeft] = useState(0);
+  const [showEnterCode, setShowEnterCode] = useState(false);
+  const [enterCodeInput, setEnterCodeInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDeck = useCallback(async () => {
@@ -118,12 +124,60 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
       const res = await zenoTapClient.createDevicePairCode();
       setPairData(res);
       setPairSecondsLeft(res.expiresInSeconds);
+      setShowEnterCode(false);
       toast.success("Pairing code generated!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to generate pair code";
       toast.error(msg);
     } finally {
       setPairingLoading(false);
+    }
+  };
+
+  const handleConfirmPairCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = enterCodeInput.replace(/\s+/g, "").trim();
+    if (code.length !== 6) {
+      toast.error("Please enter a 6-digit code");
+      return;
+    }
+
+    setPairingLoading(true);
+    const toastId = toast.loading("Linking device...");
+    try {
+      const res = await zenoTapClient.confirmPairCode(code);
+      toast.success(res.message || "Device linked successfully!", { id: toastId });
+      setShowEnterCode(false);
+      setEnterCodeInput("");
+      void handleSyncToLocal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Pairing failed";
+      toast.error(msg, { id: toastId });
+    } finally {
+      setPairingLoading(false);
+    }
+  };
+
+  const handleSyncToLocal = async () => {
+    setIsSyncing(true);
+    const toastId = toast.loading("Syncing GIFs into keyboard deck...");
+    try {
+      const res = await zenoTapClient.syncCloudDeckToLocal();
+      if (res.errors > 0) {
+        toast.warning(
+          `Sync completed: ${res.downloaded} new, ${res.skipped} up to date (${res.errors} errors)`,
+          { id: toastId }
+        );
+      } else if (res.downloaded > 0) {
+        toast.success(`Downloaded ${res.downloaded} GIF(s) to keyboard storage!`, { id: toastId });
+      } else {
+        toast.success(`Keyboard storage is up to date (${res.total} items).`, { id: toastId });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sync failed";
+      toast.error(msg, { id: toastId });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -155,19 +209,53 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
               <Smartphone className="w-5 h-5 text-indigo-400" />
               <h3 className="font-semibold text-sm text-neutral-200">Link Mobile Keyboard</h3>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pairingLoading}
-              onClick={handleGeneratePairCode}
-              className="text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"
-            >
-              <KeyRound className="w-3.5 h-3.5 mr-1.5" />
-              {pairData ? "Regenerate Code" : "Generate Pairing Code"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowEnterCode(!showEnterCode);
+                  setPairData(null);
+                }}
+                className="text-xs text-neutral-400 hover:text-neutral-200"
+              >
+                <LinkIcon className="w-3.5 h-3.5 mr-1" />
+                {showEnterCode ? "Show Generator" : "Enter Code"}
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pairingLoading}
+                onClick={handleGeneratePairCode}
+                className="text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"
+              >
+                <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                {pairData ? "Regenerate Code" : "Generate Pairing Code"}
+              </Button>
+            </div>
           </div>
 
-          {pairData ? (
+          {showEnterCode ? (
+            <form onSubmit={(e) => void handleConfirmPairCode(e)} className="p-3 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center gap-2">
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="Enter 6-digit code"
+                value={enterCodeInput}
+                onChange={(e) => setEnterCodeInput(e.target.value.replace(/[^0-9]/g, ""))}
+                className="w-40 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 font-mono text-sm tracking-wider text-white focus:outline-none focus:border-indigo-500"
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={pairingLoading || enterCodeInput.length !== 6}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs"
+              >
+                Connect Device
+              </Button>
+            </form>
+          ) : pairData ? (
             <div className="p-4 rounded-lg bg-indigo-950/30 border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <p className="text-xs text-neutral-400">Enter this code in your ZenoTap Android app:</p>
@@ -180,9 +268,9 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
               </div>
               <div className="text-xs text-neutral-400 max-w-xs space-y-1">
                 <p className="font-medium text-neutral-300">How to connect:</p>
-                <p>1. Open ZenoTap on Android</p>
-                <p>2. Tap &ldquo;Sync with ZenoDeck&rdquo;</p>
-                <p>3. Enter the 6 digits to enable instant deck sync</p>
+                <p>1. Open ZenoDeck on Android</p>
+                <p>2. Go to Keyboard Deck Manager</p>
+                <p>3. Tap &ldquo;Enter 6-Digit Pairing Code&rdquo;</p>
               </div>
             </div>
           ) : (
@@ -193,7 +281,7 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
         </div>
 
         {/* Upload & Actions Bar */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-neutral-200">Your Cloud GIFs</h3>
             <Badge variant="secondary" className="bg-neutral-800 text-neutral-300 text-xs">
@@ -202,6 +290,17 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSyncToLocal}
+              disabled={isSyncing}
+              className="text-xs border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10"
+            >
+              <CloudDownload className={`w-3.5 h-3.5 mr-1.5 ${isSyncing ? "animate-bounce" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync to Keyboard"}
+            </Button>
+
             <Button
               size="sm"
               variant="ghost"

@@ -127,11 +127,22 @@ export const zenoTapSecurity = {
         "127.0.0.1:3000",
         "localhost",
         "capacitor",
+        "vercel.app",
       ];
+
+      // Allow configured app domain
+      if (process.env.NEXT_PUBLIC_APP_URL) {
+        try {
+          const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL);
+          allowedHosts.push(appUrl.host.toLowerCase());
+        } catch {
+          // ignore
+        }
+      }
 
       // Also allow host of current request
       const reqHost = req.headers.get("host")?.toLowerCase();
-      if (reqHost && host === reqHost) return true;
+      if (reqHost && (host === reqHost || reqHost.includes(host) || host.includes(reqHost))) return true;
 
       return allowedHosts.some((allowed) => host.includes(allowed));
     } catch {
@@ -190,3 +201,19 @@ export const zenoTapSecurity = {
     return { userId: guestId, isGuest: true };
   },
 };
+
+export const zenoTapCorsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-zenotap-user-id",
+  "Access-Control-Max-Age": "86400",
+};
+
+export function zenoTapResponse(data: unknown, init?: ResponseInit): Response {
+  const headers = new Headers(init?.headers);
+  for (const [key, val] of Object.entries(zenoTapCorsHeaders)) {
+    headers.set(key, val);
+  }
+  return Response.json(data, { ...init, headers });
+}
+

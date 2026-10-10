@@ -10,8 +10,13 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Cloud,
+  CloudDownload,
+  Link as LinkIcon,
+  Unlink,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   getKeyboardDeckGifs,
   deleteGifFromKeyboardDeck,
@@ -22,8 +27,15 @@ import {
   type DeckGifItem,
   type KeyboardStatus,
 } from "@/lib/zenodeck-bridge";
+import {
+  zenoTapClient,
+  getStoredSyncToken,
+  getStoredDeviceName,
+  clearStoredSyncToken,
+} from "@/lib/zenotap/client-sdk";
 import { formatBytes } from "@/lib/format";
 import { useHaptics } from "@/hooks/use-haptics";
+import { toast } from "sonner";
 
 export function KeyboardDeckManager() {
   const haptics = useHaptics();
@@ -31,6 +43,14 @@ export function KeyboardDeckManager() {
   const [status, setStatus] = useState<KeyboardStatus>({ enabled: false, selected: false });
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Cloud Pairing state
+  const [syncToken, setSyncToken] = useState<string | null>(null);
+  const [pairedDeviceName, setPairedDeviceName] = useState<string | null>(null);
+  const [pairCodeInput, setPairCodeInput] = useState("");
+  const [isPairing, setIsPairing] = useState(false);
+  const [showPairDialog, setShowPairDialog] = useState(false);
 
   const loadDeck = useCallback(async () => {
     setLoading(true);
@@ -41,6 +61,8 @@ export function KeyboardDeckManager() {
       ]);
       setGifs(deckItems);
       setStatus(imeStatus);
+      setSyncToken(getStoredSyncToken());
+      setPairedDeviceName(getStoredDeviceName());
     } catch (e) {
       console.error("Failed to load keyboard deck:", e);
     } finally {
@@ -57,7 +79,10 @@ export function KeyboardDeckManager() {
     const success = await deleteGifFromKeyboardDeck(filename);
     if (success) {
       setGifs((prev) => prev.filter((g) => g.filename !== filename));
+      toast.success("GIF removed from keyboard");
       void haptics.success();
+    } else {
+      toast.error("Failed to delete GIF");
     }
   };
 
@@ -74,14 +99,89 @@ export function KeyboardDeckManager() {
           await saveGifToKeyboardDeck(file, file.name);
         }
       }
+      toast.success(`Added ${files.length} GIF(s) to keyboard deck`);
       void haptics.success();
       await loadDeck();
     } catch (err) {
       console.error("Failed uploading GIFs to keyboard deck:", err);
+      toast.error("Failed to add GIF to keyboard");
     } finally {
       setIsUploading(false);
       e.target.value = "";
     }
+  };
+
+  const handleSyncCloud = async () => {
+    setIsSyncing(true);
+    void haptics.impact();
+    const toastId = toast.loading("Syncing GIFs from ZenoTap Cloud Deck...");
+    try {
+      const result = await zenoTapClient.syncCloudDeckToLocal();
+      if (result.errors > 0) {
+        toast.warning(
+          `Sync completed: ${result.downloaded} new, ${result.skipped} up to date (${result.errors} errors)`,
+          { id: toastId }
+        );
+      } else if (result.downloaded > 0) {
+        toast.success(`Cloud sync complete! Downloaded ${result.downloaded} new GIF(s).`, {
+          id: toastId,
+        });
+      } else {
+        toast.success(`Cloud deck is already up to date (${result.total} items).`, { id: toastId });
+      }
+      void haptics.success();
+      await loadDeck();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Sync failed";
+      toast.error(msg, { id: toastId });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleConfirmPair = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = pairCodeInput.replace(/\s+/g, "").trim();
+    if (code.length !== 6) {
+      toast.error("Please enter a valid 6-digit pairing code");
+      return;
+    }
+
+    setIsPairing(true);
+    const toastId = toast.loading("Linking device to ZenoTap cloud...");
+    try {
+      const deviceName = Capacitor.isNativePlatform() ? "Android Keyboard" : "ZenoDeck Companion";
+      const res = await zenoTapClient.confirmPairCode(code, deviceName);
+      setSyncToken(res.syncToken);
+      setPairedDeviceName(res.deviceName);
+      setPairCodeInput("");
+      setShowPairDialog(false);
+      toast.success(res.message || "Device paired successfully!", { id: toastId });
+      void haptics.success();
+
+      // Trigger automatic initial sync
+      void handleSyncCloud();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Pairing failed";
+      toast.error(msg, { id: toastId });
+    } finally {
+      setIsPairing(false);
+    }
+  };
+
+  const handleUnlink = () => {
+    clearStoredSyncToken();
+    setSyncToken(null);
+    setPairedDeviceName(null);
+    toast.info("Device unlinked from cloud deck");
+    void haptics.impact();
+  };
+
+  const resolveImageSrc = (path: string) => {
+    if (Capacitor.isNativePlatform()) {
+      return Capacitor.convertFileSrc(path);
+    }
+    return path.startsWith("web://") ? "" : path;
   };
 
   return (
@@ -103,6 +203,16 @@ export function KeyboardDeckManager() {
         <div className="flex items-center gap-2">
           <motion.button
             whileTap={{ scale: 0.95 }}
+            onClick={() => void handleSyncCloud()}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+          >
+            <CloudDownload className={`size-3.5 ${isSyncing ? "animate-bounce" : ""}`} />
+            {isSyncing ? "Syncing..." : "Sync Cloud"}
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => void loadDeck()}
             className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
@@ -110,6 +220,85 @@ export function KeyboardDeckManager() {
             Refresh
           </motion.button>
         </div>
+      </div>
+
+      {/* Cloud Sync & Device Pairing Card */}
+      <div className="rounded-2xl border border-border/50 bg-card/40 p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Cloud className="size-4 text-primary" />
+            <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Cloud Deck Synchronization
+            </span>
+          </div>
+
+          {syncToken ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="size-3" />
+                Linked: {pairedDeviceName || "Android Keyboard"}
+              </span>
+              <button
+                onClick={handleUnlink}
+                className="text-xs text-muted-foreground hover:text-red-400 p-1"
+                title="Unlink device"
+              >
+                <Unlink className="size-3.5" />
+              </button>
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+              Not linked to cloud pairing code
+            </span>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {syncToken
+            ? "Your keyboard is securely linked to your ZenoTap Cloud Deck. New GIFs added on desktop sync down automatically."
+            : "Generate a 6-digit pairing code on your desktop or web session, then enter it here to link your keyboard."}
+        </p>
+
+        {!syncToken && (
+          <div className="pt-1">
+            {!showPairDialog ? (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowPairDialog(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3.5 py-2 font-display text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+              >
+                <LinkIcon className="size-3.5" />
+                ENTER 6-DIGIT PAIRING CODE
+              </motion.button>
+            ) : (
+              <form onSubmit={(e) => void handleConfirmPair(e)} className="flex items-center gap-2 max-w-sm">
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={pairCodeInput}
+                  onChange={(e) => setPairCodeInput(e.target.value.replace(/[^0-9]/g, ""))}
+                  className="w-32 rounded-xl border border-border/80 bg-background/80 px-3 py-2 text-center font-mono text-sm tracking-widest text-foreground focus:border-primary focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={isPairing || pairCodeInput.length !== 6}
+                  className="rounded-xl bg-primary px-3 py-2 font-display text-xs font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {isPairing ? "Linking..." : "Connect"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPairDialog(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground px-2"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
+          </div>
+        )}
       </div>
 
       {/* System IME Setup Card */}
@@ -190,7 +379,7 @@ export function KeyboardDeckManager() {
             <Keyboard className="size-10 text-muted-foreground/40 mb-3" />
             <h4 className="font-display text-sm font-bold text-foreground">Your Deck is Empty</h4>
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-              Forge GIFs using the GIF Maker or upload an existing .gif file to populate your keyboard.
+              Forge GIFs using the GIF Maker, upload an existing .gif file, or sync from your cloud deck.
             </p>
           </div>
         )}
@@ -205,9 +394,9 @@ export function KeyboardDeckManager() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="group relative overflow-hidden rounded-xl border border-border/50 bg-card/30 p-2 transition-all hover:border-primary/40 hover:bg-card/60"
             >
-              <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/40">
+              <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/40 flex items-center justify-center">
                 <img
-                  src={`capacitor://localhost/_capacitor_file_${item.path}`}
+                  src={resolveImageSrc(item.path)}
                   alt={item.filename}
                   className="size-full object-contain"
                   onError={(e) => {

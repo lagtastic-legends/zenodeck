@@ -139,8 +139,17 @@ export const zenoTapDb = {
   createPairCode(userId: string, pairCode: string, expiresAt: number): void {
     const db = getDb();
     const now = Date.now();
-    // Clean up expired pair codes first
+    // 1. Clean up expired unconfirmed pair codes
     db.prepare(`DELETE FROM zenotap_device_links WHERE expires_at < ? AND device_name IS NULL`).run(now);
+
+    // 2. Clean up any existing unconfirmed codes for this user
+    db.prepare(`DELETE FROM zenotap_device_links WHERE user_id = ? AND device_name IS NULL`).run(userId);
+
+    // 3. Clean up any unconfirmed codes with this exact pair_code
+    db.prepare(`DELETE FROM zenotap_device_links WHERE pair_code = ? AND device_name IS NULL`).run(pairCode);
+
+    // 4. Ensure no legacy confirmed row retains this pair_code
+    db.prepare(`UPDATE zenotap_device_links SET pair_code = 'consumed_' || id WHERE pair_code = ?`).run(pairCode);
 
     const stmt = db.prepare(`
       INSERT INTO zenotap_device_links (id, user_id, pair_code, sync_token, device_name, expires_at, created_at)
@@ -158,21 +167,42 @@ export const zenoTapDb = {
     const checkStmt = db.prepare(`
       SELECT id, user_id as userId, expires_at as expiresAt 
       FROM zenotap_device_links 
-      WHERE pair_code = ? AND expires_at >= ?
+      WHERE pair_code = ? AND expires_at >= ? AND device_name IS NULL
     `);
     const row = checkStmt.get(pairCode, now) as { id: string; userId: string; expiresAt: number } | undefined;
     if (!row) return null;
 
-    // Permanent 1-year sync token for the paired device
+    // Permanent 1-year sync token for the paired device, and consume pair_code so it cannot be reused
     const updateStmt = db.prepare(`
       UPDATE zenotap_device_links 
-      SET sync_token = ?, device_name = ?, expires_at = ? 
+      SET pair_code = ?, sync_token = ?, device_name = ?, expires_at = ? 
       WHERE id = ?
     `);
     const oneYear = now + 365 * 24 * 60 * 60 * 1000;
-    updateStmt.run(activeSyncToken, deviceName || "Android Keyboard", oneYear, row.id);
+    const consumedCode = `consumed_${row.id}`;
+    updateStmt.run(consumedCode, activeSyncToken, deviceName || "Android Keyboard", oneYear, row.id);
 
     return { userId: row.userId };
+  },
+
+  getUserDevices(userId: string): ZenoTapDeviceLink[] {
+    const db = getDb();
+    const now = Date.now();
+    const stmt = db.prepare(`
+      SELECT id, user_id as userId, pair_code as pairCode, sync_token as syncToken,
+             device_name as deviceName, expires_at as expiresAt, created_at as createdAt
+      FROM zenotap_device_links
+      WHERE user_id = ? AND device_name IS NOT NULL AND expires_at >= ?
+      ORDER BY created_at DESC
+    `);
+    return stmt.all(userId, now) as unknown as ZenoTapDeviceLink[];
+  },
+
+  deleteDeviceLink(id: string, userId: string): boolean {
+    const db = getDb();
+    const stmt = db.prepare(`DELETE FROM zenotap_device_links WHERE id = ? AND user_id = ?`);
+    const res = stmt.run(id, userId);
+    return (res.changes ?? 0) > 0;
   },
 
   getDeviceLinkBySyncToken(syncToken: string): ZenoTapDeviceLink | null {

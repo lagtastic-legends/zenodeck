@@ -1,14 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import path from "node:path";
 import fs from "node:fs/promises";
 import crypto from "node:crypto";
-import { zenoTapSecurity } from "@/lib/zenotap/security";
+import { zenoTapSecurity, zenoTapResponse, zenoTapCorsHeaders } from "@/lib/zenotap/security";
 import { zenoTapDb } from "@/lib/zenotap/db";
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: zenoTapCorsHeaders });
+}
 
 export async function POST(req: NextRequest) {
   // 1. Origin verification
   if (!zenoTapSecurity.isAllowedOrigin(req)) {
-    return NextResponse.json({ error: "Untrusted origin or cross-site request" }, { status: 403 });
+    return zenoTapResponse({ error: "Untrusted origin or cross-site request" }, { status: 403 });
   }
 
   // 2. Parse multipart form data
@@ -16,7 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     formData = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Invalid multipart form data" }, { status: 400 });
+    return zenoTapResponse({ error: "Invalid multipart form data" }, { status: 400 });
   }
 
   const ticket = formData.get("ticket") as string | null;
@@ -24,13 +28,13 @@ export async function POST(req: NextRequest) {
   const originalName = (formData.get("originalName") as string | null) || file?.name || "animation.gif";
 
   if (!ticket || !file) {
-    return NextResponse.json({ error: "Missing upload ticket or file payload" }, { status: 400 });
+    return zenoTapResponse({ error: "Missing upload ticket or file payload" }, { status: 400 });
   }
 
   // 3. Verify single-use HMAC-SHA256 signed ticket
   const ticketPayload = zenoTapSecurity.verifyAndConsumeUploadTicket(ticket);
   if (!ticketPayload) {
-    return NextResponse.json(
+    return zenoTapResponse(
       { error: "Invalid, expired, or already consumed upload ticket. Request a new ticket first." },
       { status: 403 }
     );
@@ -38,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   // 4. Validate file size against ticket constraint
   if (file.size > ticketPayload.maxSizeBytes) {
-    return NextResponse.json(
+    return zenoTapResponse(
       { error: `File size exceeds allowed limit of ${Math.round(ticketPayload.maxSizeBytes / 1024 / 1024)}MB` },
       { status: 413 }
     );
@@ -51,7 +55,7 @@ export async function POST(req: NextRequest) {
   // 6. Deep Magic-Byte & Header Dimension Inspection
   const gifValidation = zenoTapSecurity.validateGifBuffer(buffer);
   if (!gifValidation.valid) {
-    return NextResponse.json(
+    return zenoTapResponse(
       { error: gifValidation.error || "Invalid file format. File is not a valid GIF or contains a forged header." },
       { status: 400 }
     );
@@ -86,12 +90,12 @@ export async function POST(req: NextRequest) {
       tags: null,
     });
 
-    return NextResponse.json({
+    return zenoTapResponse({
       success: true,
       item: deckItem,
     });
   } catch (err) {
     console.error("Failed to store GIF:", err);
-    return NextResponse.json({ error: "Failed to persist media asset" }, { status: 500 });
+    return zenoTapResponse({ error: "Failed to persist media asset" }, { status: 500 });
   }
 }
