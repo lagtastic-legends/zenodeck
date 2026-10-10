@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   zenoTapClient,
   type CloudDeckItem,
@@ -35,12 +35,25 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
   const [pairSecondsLeft, setPairSecondsLeft] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const loadDeck = useCallback(async () => {
+    setLoading(true);
+    try {
+      const items = await zenoTapClient.fetchCloudDeck();
+      setDeck(items);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to load cloud deck";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Load cloud deck when modal opens
   useEffect(() => {
     if (open) {
-      loadDeck();
+      void loadDeck();
     }
-  }, [open]);
+  }, [open, loadDeck]);
 
   // Countdown timer for pairing code
   useEffect(() => {
@@ -54,19 +67,6 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
     }, 1000);
     return () => clearInterval(interval);
   }, [pairData]);
-
-  const loadDeck = async () => {
-    setLoading(true);
-    try {
-      const items = await zenoTapClient.fetchCloudDeck();
-      setDeck(items);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load cloud deck";
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

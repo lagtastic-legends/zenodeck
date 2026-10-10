@@ -62,7 +62,7 @@ export function AsciiGenerator() {
     if (!originalImageSrc) return;
 
     if (removeBgEnabled) {
-      setIsRemovingBg(true);
+      queueMicrotask(() => setIsRemovingBg(true));
       import("@imgly/background-removal").then(({ removeBackground }) => {
         removeBackground(originalImageSrc).then((blob) => {
           if (bgRemovedUrlRef.current) {
@@ -170,7 +170,7 @@ export function AsciiGenerator() {
 
   useEffect(() => {
     if (!imageSrc) return;
-    setIsProcessing(true);
+    queueMicrotask(() => setIsProcessing(true));
     const img = new Image();
     img.onload = () => generateAscii(img, resolution);
     img.src = imageSrc;

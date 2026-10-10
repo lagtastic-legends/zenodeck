@@ -1501,82 +1501,88 @@ export function YouTubeDownloader() {
               </div>
 
               {/* Quality Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {displayedQualities.map((q) => {
-                  const isSelected = selectedQuality?.id === q.id;
-                  const isAudio = q.isAudioOnly;
+              {displayedQualities.length === 0 ? (
+                <div className="p-8 rounded-xl border border-dashed border-border/70 text-center font-mono text-xs text-muted-foreground">
+                  No {mediaTypeTab} streams available for this media. Try the {mediaTypeTab === "video" ? "audio" : "video"} tab.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {displayedQualities.map((q) => {
+                    const isSelected = selectedQuality?.id === q.id;
+                    const isAudio = q.isAudioOnly;
 
-                  let badgeColor = "bg-primary/15 text-primary border border-primary/30";
-                  if (q.is4K) badgeColor = "bg-amber-500/20 text-amber-300 border border-amber-500/40";
-                  else if (q.badge.includes("60")) badgeColor = "bg-red-500/20 text-red-300 border border-red-500/40";
-                  else if (q.badge === "320 KBPS") badgeColor = "bg-violet-500/20 text-violet-300 border border-violet-500/40";
-                  else if (q.badge === "256 KBPS") badgeColor = "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40";
-                  else if (q.badge === "192 KBPS") badgeColor = "bg-blue-500/20 text-blue-300 border border-blue-500/40";
-                  else if (q.badge === "128 KBPS") badgeColor = "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
-                  else if (q.badge === "NATIVE AAC") badgeColor = "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
-                  else if (q.badge === "WAV PCM") badgeColor = "bg-amber-500/20 text-amber-300 border border-amber-500/40";
-                  else if (isAudio) badgeColor = "bg-violet-500/20 text-violet-300 border border-violet-500/40";
+                    let badgeColor = "bg-primary/15 text-primary border border-primary/30";
+                    if (q.is4K) badgeColor = "bg-amber-500/20 text-amber-300 border border-amber-500/40";
+                    else if (q.badge.includes("60")) badgeColor = "bg-red-500/20 text-red-300 border border-red-500/40";
+                    else if (q.badge === "320 KBPS") badgeColor = "bg-violet-500/20 text-violet-300 border border-violet-500/40";
+                    else if (q.badge === "256 KBPS") badgeColor = "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40";
+                    else if (q.badge === "192 KBPS") badgeColor = "bg-blue-500/20 text-blue-300 border border-blue-500/40";
+                    else if (q.badge === "128 KBPS") badgeColor = "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+                    else if (q.badge === "NATIVE AAC") badgeColor = "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+                    else if (q.badge === "WAV PCM") badgeColor = "bg-amber-500/20 text-amber-300 border border-amber-500/40";
+                    else if (isAudio) badgeColor = "bg-violet-500/20 text-violet-300 border border-violet-500/40";
 
-                  return (
-                    <button
-                      key={q.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedQuality(q);
-                        void haptics.light();
-                      }}
-                      disabled={isDownloading}
-                      className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? isAudio
-                            ? "border-violet-500/80 bg-violet-500/15 shadow-[0_0_16px_rgba(139,92,246,0.25)] ring-1 ring-violet-500/50"
-                            : "border-red-500/80 bg-red-500/15 shadow-[0_0_16px_rgba(239,68,68,0.2)] ring-1 ring-red-500/50"
-                          : "border-border/70 bg-card/40 hover:border-primary/40 hover:bg-card/70"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1.5">
-                        <span className={`rounded-md px-2 py-0.5 font-mono text-[10px] font-bold ${badgeColor}`}>
-                          {q.badge}
-                        </span>
-                        <span className="font-mono text-xs font-semibold text-foreground/90">
-                          {formatBytes(q.approxSizeBytes)}
-                        </span>
-                      </div>
-
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          {isAudio ? (
-                            <Music className="size-3.5 text-violet-400" />
-                          ) : (
-                            <Film className="size-3.5 text-red-400" />
-                          )}
-                          <span className="font-display text-xs font-bold text-foreground">
-                            {q.label}
+                    return (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedQuality(q);
+                          void haptics.light();
+                        }}
+                        disabled={isDownloading}
+                        className={`relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? isAudio
+                              ? "border-violet-500/80 bg-violet-500/15 shadow-[0_0_16px_rgba(139,92,246,0.25)] ring-1 ring-violet-500/50"
+                              : "border-red-500/80 bg-red-500/15 shadow-[0_0_16px_rgba(239,68,68,0.2)] ring-1 ring-red-500/50"
+                            : "border-border/70 bg-card/40 hover:border-primary/40 hover:bg-card/70"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-1.5">
+                          <span className={`rounded-md px-2 py-0.5 font-mono text-[10px] font-bold ${badgeColor}`}>
+                            {q.badge}
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-foreground/90">
+                            {formatBytes(q.approxSizeBytes)}
                           </span>
                         </div>
-                        <p className="font-mono text-[10px] text-muted-foreground">
-                          {q.resolutionLabel} {q.fps > 0 ? `· ${q.fps} fps` : ""}
-                        </p>
-                      </div>
 
-                      {/* Selected radio dot */}
-                      <div className="absolute top-3 right-3">
-                        <div
-                          className={`size-3 rounded-full border flex items-center justify-center ${
-                            isSelected
-                              ? isAudio
-                                ? "border-violet-500 bg-violet-500"
-                                : "border-red-500 bg-red-500"
-                              : "border-border"
-                          }`}
-                        >
-                          {isSelected && <div className="size-1 rounded-full bg-white" />}
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            {isAudio ? (
+                              <Music className="size-3.5 text-violet-400" />
+                            ) : (
+                              <Film className="size-3.5 text-red-400" />
+                            )}
+                            <span className="font-display text-xs font-bold text-foreground">
+                              {q.label}
+                            </span>
+                          </div>
+                          <p className="font-mono text-[10px] text-muted-foreground">
+                            {q.resolutionLabel} {q.fps > 0 ? `· ${q.fps} fps` : ""}
+                          </p>
                         </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+
+                        {/* Selected radio dot */}
+                        <div className="absolute top-3 right-3">
+                          <div
+                            className={`size-3 rounded-full border flex items-center justify-center ${
+                              isSelected
+                                ? isAudio
+                                  ? "border-violet-500 bg-violet-500"
+                                  : "border-red-500 bg-red-500"
+                                : "border-border"
+                            }`}
+                          >
+                            {isSelected && <div className="size-1 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Speed & Acceleration Settings */}

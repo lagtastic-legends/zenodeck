@@ -24,9 +24,13 @@ export async function OPTIONS() {
 
 async function handleResolve(urlOrId: string, clientIp?: string) {
   // 1. Try yt-dlp Python engine first (supports YouTube 4K, 1700+ social platforms)
-  const pyResult = await resolveMediaWithPython(urlOrId);
-  if (pyResult && Array.isArray(pyResult.qualities) && pyResult.qualities.length > 0) {
-    return pyResult;
+  try {
+    const pyResult = await resolveMediaWithPython(urlOrId);
+    if (pyResult && Array.isArray(pyResult.qualities) && pyResult.qualities.length > 0) {
+      return pyResult;
+    }
+  } catch (pyErr) {
+    console.warn("Python engine resolve error, falling back to TypeScript extractors:", pyErr);
   }
 
   // 2. Fallbacks based on detected platform

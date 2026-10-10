@@ -220,11 +220,13 @@ export const VaultPreviewModal = memo(function VaultPreviewModal({
   const [imageRotation, setImageRotation] = useState(0);
   const haptics = useHaptics();
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!item) {
-      setPreviewUrl(null);
+      queueMicrotask(() => setPreviewUrl(null));
       return;
     }
     const url = URL.createObjectURL(item.blob);

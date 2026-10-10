@@ -325,7 +325,11 @@ export async function downloadUniversalMedia(
       message: "Downloading high-speed stream via yt-dlp engine…",
       percent: 40,
     });
-    const fallbackUrl = getYouTubeApiUrl(`/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(option.badge || option.resolution || "best")}`);
+    const fallbackUrl = getYouTubeApiUrl(
+      `/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(
+        option.badge || option.resolution || "best"
+      )}${option.ext ? `&format=${encodeURIComponent(option.ext)}` : ""}`
+    );
     bytes = await fetchStreamWithProgress(fallbackUrl, (rec, tot) => {
       const pct = tot ? Math.min(85, 40 + Math.round((rec / tot) * 45)) : 65;
       onProgress({

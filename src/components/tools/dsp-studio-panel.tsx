@@ -134,12 +134,12 @@ export function DspStudioPanel({ audioRef, isOpen, onToggle }: DspStudioPanelPro
       const engine = AudioDspEngine.getInstance();
       engine.attachElement(audioRef.current);
     }
-  }, [audioRef?.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [audioRef, isOpen]);
 
   // Sync persisted state with engine on mount
   useEffect(() => {
     syncWithEngine();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [syncWithEngine]);
 
   const cycleVocal = useCallback(() => {
     const idx = VOCAL_CYCLE.indexOf(vocalMode);

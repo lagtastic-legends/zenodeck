@@ -219,13 +219,29 @@ async function handleDownload(url: string, quality = "best", format?: string) {
         }
       }
 
+      const isAudioTarget =
+        format === "mp3" ||
+        format === "m4a" ||
+        format === "wav" ||
+        quality.toLowerCase().includes("audio") ||
+        quality.toLowerCase().includes("mp3");
+
       const chosen =
+        qualities.find(
+          (q) =>
+            (isAudioTarget ? q.isAudioOnly : !q.isAudioOnly) &&
+            (q.label.toLowerCase() === quality.toLowerCase() ||
+              q.badge?.toLowerCase() === quality.toLowerCase() ||
+              q.resolution?.toLowerCase() === quality.toLowerCase())
+        ) ||
         qualities.find(
           (q) =>
             q.label.toLowerCase() === quality.toLowerCase() ||
             q.badge?.toLowerCase() === quality.toLowerCase() ||
             q.resolution?.toLowerCase() === quality.toLowerCase()
-        ) || qualities[0];
+        ) ||
+        (isAudioTarget ? qualities.find((q) => q.isAudioOnly) : undefined) ||
+        qualities[0];
 
       if (chosen?.downloadUrl) {
         const upstreamHeaders: Record<string, string> = {
@@ -258,7 +274,15 @@ async function handleDownload(url: string, quality = "best", format?: string) {
         if (upstream.ok && upstream.body) {
           const safeTitle = mediaTitle.replace(/[^\w\s.-]/g, "_").trim().slice(0, 60);
           const filename = `${safeTitle}.${chosen.ext}`;
-          const mimeType = chosen.isAudioOnly ? (chosen.ext === "mp3" ? "audio/mpeg" : "audio/mp4") : "video/mp4";
+          const mimeType = chosen.isAudioOnly
+            ? chosen.ext === "mp3"
+              ? "audio/mpeg"
+              : chosen.ext === "wav"
+              ? "audio/wav"
+              : "audio/mp4"
+            : chosen.ext === "webm"
+            ? "video/webm"
+            : "video/mp4";
 
           const responseHeaders = new Headers(corsHeaders);
           responseHeaders.set("Content-Type", mimeType);
