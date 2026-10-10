@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.10.2-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.10.2" />
+    <img src="https://img.shields.io/badge/Release-v3.10.3-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.10.3" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.2/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.2/zenodeck-v3.10.2-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.10.2-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.10.3-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -61,37 +61,33 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.2/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.10.2-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.2/zenodeck-v3.10.2-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.10.2-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.2/zenodeck-v3.10.2-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.10.2-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.2/zenodeck-v3.10.2-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.10.3-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.10.3-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.10.3-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.10.3/zenodeck-v3.10.3-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.10.2)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.10.2) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.10.3)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.10.3) | Full release notes, raw SHA256 checksums, and source tarballs. |
 
 ---
 
-## 🌟 What's New in v3.10.2
+## 🌟 What's New in v3.10.3
 
+- **✨ Complete Mobile Dialog & Select Menu Refinement**:
+  - **Eliminated Native OS SingleChoice Dialog Interception**: Replaced all raw HTML `<select>` and `<option>` elements in `StudioRecorder` (`src/components/tools/studio-recorder.tsx`) with Radix UI's `<Select>` primitive, eliminating native Android OS dialog interception and providing a unified in-DOM glassmorphic experience.
+  - **Eradicated Dark-on-Dark Text Contrast Bug**: Added system-level `color-scheme: dark;` to `:root` and form controls in `globals.css` with explicit fallback styling on `select, option, optgroup`, permanently resolving the black-ink-on-dark-background text readability issue on mobile WebViews.
+  - **Glassmorphic Popup System Elevation**: Harmonized `Select`, `DropdownMenu`, `ContextMenu`, and `Menubar` primitives with `bg-card/95 text-card-foreground border-border/80 backdrop-blur-2xl rounded-2xl shadow-2xl`, top ambient laser edge glow accents, and tactile `rounded-xl` items with primary checkmark indicators.
 - **🎨 Comprehensive Modal Dialog & Overlay Design System Polish**:
-  - **Glassmorphic Overlays & Ambient Edge Glows**: Standardized `Dialog`, `AlertDialog`, `Sheet`, and `Popover` components with high-opacity `bg-black/80 backdrop-blur-md` scrims, `rounded-2xl border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl` surfaces, and top ambient laser glow lines.
-  - **Eradicated Raw Browser Alerts**: Replaced all instances of unstyled `window.confirm` in the YouTube Vault with an accessible, dark-mode `<AlertDialog>` with clear confirmation copy.
-  - **Accidental Deletion & Unlink Guards**: Integrated inline confirmation states in `VaultPreviewModal` (`isConfirmingDelete`) to prevent media loss, and wrapped cloud/local GIF deletions and mobile keyboard unlinking with structured `<AlertDialog>` prompts.
-  - **Full Accessibility (a11y) & Focus Conformance**: Equipped all modals, drawers, and overlay gates (`AppDownloadModal`, `UpdateModal`, `VaultPreviewModal`, `MobileTransitionsDrawer`, `YouTubeDownloader` Subtitle Modal, `PermissionGate`) with `role="dialog"`, `aria-modal="true"`, `Escape` key listeners, and document body scroll locking.
-  - **Streamlined Updater UI**: Removed confusing red "Remove" buttons from the software update available and up-to-date dialog screens, replacing them with `<Clock /> Remind Later` and `<Check /> Done`.
-  - **Dynamic Storage Paths & Polished Copy**: Fixed hardcoded directory paths in `save-result-modal.tsx` to dynamic filesystem paths and harmonized UI copywriting across permission gates, downloads, and navigation guards.
-- **⚡ ZenoTap Cloud Deck & Keyboard Sync**:
-  - SQLite pair code anti-collision with atomic consumption to `consumed_<id>`, eliminating `UNIQUE constraint failed` errors.
-  - Automatic background synchronization downloading cloud reaction GIFs to local device storage with `ACTION_DECK_UPDATED` broadcasts.
+  - Standardized `Dialog`, `AlertDialog`, `Sheet`, and `Popover` components with high-opacity `bg-black/80 backdrop-blur-md` scrims, `rounded-2xl border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl` surfaces, and top ambient laser glow lines.
+  - Replaced all instances of unstyled `window.confirm` in the YouTube Vault with an accessible, dark-mode `<AlertDialog>` with clear confirmation copy.
+  - Integrated inline confirmation states in `VaultPreviewModal` (`isConfirmingDelete`) to prevent media loss, and wrapped cloud/local GIF deletions and mobile keyboard unlinking with structured `<AlertDialog>` prompts.
 - **🧪 100% Automated Test Suite Verified**:
   - E2E Test Suite: **138/138 passing (100%)**.
-  - ZenoTap Security Test Suite: **8/8 passing (100%)**.
-  - ZenoTap Sync Test Suite: **4/4 passing (100%)**.
   - App Updater & Semver Test Suite: **12/12 passing (100%)**.
   - TypeScript strict compilation: **0 Errors**.
 
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.10.2.md](RELEASE_NOTES_v3.10.2.md)).*
+*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.10.3.md](RELEASE_NOTES_v3.10.3.md)).*
 
 ---
 

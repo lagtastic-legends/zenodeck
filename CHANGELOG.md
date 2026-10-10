@@ -5,6 +5,14 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.10.3] — 2026-10-10
+
+### Fixed & Refined
+- **✨ Complete Mobile Dialog & Select Menu Refinement**:
+  - **Eliminated Native OS SingleChoice Dialog Interception**: Replaced all raw HTML `<select>` and `<option>` elements in `StudioRecorder` (`src/components/tools/studio-recorder.tsx`) with Radix UI's `<Select>` primitive, eliminating native Android OS dialog interception and providing a unified in-DOM glassmorphic experience.
+  - **Eradicated Dark-on-Dark Text Contrast Bug**: Added system-level `color-scheme: dark;` to `:root` and form controls in `globals.css` with explicit fallback styling on `select, option, optgroup`, permanently resolving the black-ink-on-dark-background text readability issue on mobile WebViews.
+  - **Glassmorphic Popup System Elevation**: Harmonized `Select`, `DropdownMenu`, `ContextMenu`, and `Menubar` primitives with `bg-card/95 text-card-foreground border-border/80 backdrop-blur-2xl rounded-2xl shadow-2xl`, top ambient laser edge glow accents, and tactile `rounded-xl` items with primary checkmark indicators.
+
 ## [3.10.2] — 2026-10-10
 
 ### Refined & Hardened
