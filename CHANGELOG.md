@@ -5,6 +5,19 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.12.0] — 2026-10-11
+
+### Added & Enhanced
+- **⚡ Effortless ZenoTap Cloud Deck & Keyboard Sync Architecture**:
+  - **Instant QR Code Camera Pairing (`ZenoTapPairScanner.tsx`)**: Point mobile camera at desktop QR code to pair in under 1 second. Features interactive laser beam viewfinder, flashlight/permissions fallback via `ensureCameraPermission`, and multi-source code extraction (`Html5Qrcode`).
+  - **Dynamic QR Code Generation & Deep Linking (`QRCode.toDataURL`)**: Desktop pairing automatically renders QR codes encoding magic link URLs (`/?pair=123456`) and single-use 6-digit codes with 10-minute expiry.
+  - **Real-Time Desktop Auto-Polling**: Desktop sessions now query `GET /api/zenotap/v1/device/pair?linkId=...` every 2 seconds, instantly detecting companion confirmation and displaying a celebratory `🎉 Linked to [DeviceName]!` banner without page refresh.
+  - **Tactile 6-Digit Segmented PIN Input (`PinCodeInput.tsx`)**: High-contrast, glassmorphic 6-slot OTP input with automatic forward advance on digit entry, backspace jumps, arrow navigation, and smart paste auto-distribution.
+  - **Smart System Clipboard Detection**: Mobile companion detects 6-digit pair codes and deep links in the system clipboard on app launch and window focus, surfacing a 1-tap `Connect Now` action pill.
+  - **Deep Link Navigation**: Direct query parameter `?pair=123456` support automatically routes `app-shell.tsx` into the `keyboard-deck` tool and pre-fills the PIN.
+  - **Background Auto-Sync on App Resume**: Toggleable background synchronization (`getStoredAutoSync` / `setStoredAutoSync`) automatically initiates delta syncs on app resume, keeping WhatsApp & messaging custom keyboard keys synced with desktop. Live relative telemetry badge (`Last synced: Just now`).
+  - **Shell & Tool Registry Integration**: Registered `keyboard-deck` in `TOOL_REGISTRY` (Phase 6), mapped in `app-shell.tsx` lazy component table, and added workstation header status in `workstation-ribbon.tsx`.
+
 ## [3.11.0] — 2026-10-10
 
 ### Added

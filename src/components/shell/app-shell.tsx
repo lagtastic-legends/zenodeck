@@ -56,6 +56,7 @@ const WatermarkRemover = lazy(() => import("@/components/tools/watermark-remover
 const VaultView = lazy(() => import("@/components/vault/vault-view").then((m) => ({ default: m.VaultView })));
 const StudioRecorder = lazy(() => import("@/components/tools/studio-recorder").then((m) => ({ default: m.StudioRecorder })));
 const QrStudio = lazy(() => import("@/components/tools/qr-studio").then((m) => ({ default: m.QrStudio })));
+const KeyboardDeckTool = lazy(() => import("@/components/tools/keyboard-deck-manager").then((m) => ({ default: m.KeyboardDeckManager })));
 const UnifiedAudioStudio = lazy(() => import("@/components/audio/UnifiedAudioStudio").then((m) => ({ default: m.UnifiedAudioStudio })));
 const AudioEffectsPanel = lazy(() => import("@/components/audio/AudioEffectsPanel").then((m) => ({ default: m.AudioEffectsPanel })));
 
@@ -125,6 +126,7 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   vault: VaultView,
   "studio-recorder": StudioRecorder,
   "qr-studio": QrStudio,
+  "keyboard-deck": KeyboardDeckTool,
   "auth-gateway": AuthGateway,
   "audio-dsp": AudioDspTool,
   "vocal-remover": VocalRemoverTool,
@@ -278,6 +280,14 @@ export function AppShell() {
   useEffect(() => {
     (window as any).__omni_navigate = navigate;
     (window as any).__omni_nav_store = useNavStore;
+
+    // Deep link routing: navigate directly to keyboard-deck if ?pair= param is in URL
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("pair")) {
+        navigate("keyboard-deck");
+      }
+    }
   }, [navigate]);
 
   useEffect(() => {

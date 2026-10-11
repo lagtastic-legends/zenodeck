@@ -33,7 +33,12 @@ import {
   KeyRound,
   CloudDownload,
   Link as LinkIcon,
+  Copy,
+  Check,
+  QrCode,
 } from "lucide-react";
+import QRCode from "qrcode";
+import { PinCodeInput } from "./PinCodeInput";
 
 interface ZenoTapDeckManagerProps {
   open: boolean;
@@ -50,6 +55,10 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
   const [pairSecondsLeft, setPairSecondsLeft] = useState(0);
   const [showEnterCode, setShowEnterCode] = useState(false);
   const [enterCodeInput, setEnterCodeInput] = useState("");
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+  const [pairedDeviceSuccess, setPairedDeviceSuccess] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDeck = useCallback(async () => {
@@ -72,17 +81,61 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
     }
   }, [open, loadDeck]);
 
-  // Countdown timer for pairing code
+  // Countdown timer, QR generation, & auto-polling for pairing confirmation
   useEffect(() => {
-    if (!pairData) return;
-    const interval = setInterval(() => {
+    if (!pairData) {
+      setQrCodeDataUrl(null);
+      return;
+    }
+
+    // 1. Generate QR Code containing deep link
+    const origin =
+      typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : "https://omni-tool-two.vercel.app";
+    const magicUrl = `${origin}/?pair=${pairData.pairCode}`;
+
+    void QRCode.toDataURL(magicUrl, {
+      width: 240,
+      margin: 1,
+      color: {
+        dark: "#0f172a",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl) => setQrCodeDataUrl(dataUrl))
+      .catch((err) => console.error("QR Code generation error:", err));
+
+    // 2. Countdown timer
+    const countdownInterval = setInterval(() => {
       const remaining = Math.max(0, Math.floor((pairData.expiresAt - Date.now()) / 1000));
       setPairSecondsLeft(remaining);
       if (remaining <= 0) {
         setPairData(null);
       }
     }, 1000);
-    return () => clearInterval(interval);
+
+    // 3. Real-time auto-polling for mobile confirmation
+    const targetId = pairData.linkId || pairData.pairCode;
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await zenoTapClient.checkPairCodeStatus(targetId);
+        if (status.confirmed) {
+          clearInterval(pollInterval);
+          clearInterval(countdownInterval);
+          setPairData(null);
+          setPairedDeviceSuccess(status.deviceName || "Mobile Keyboard");
+          toast.success(`🎉 Linked to ${status.deviceName || "device"}!`);
+        }
+      } catch {
+        /* poll silently */
+      }
+    }, 2000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      clearInterval(pollInterval);
+    };
   }, [pairData]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,12 +184,13 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
 
   const handleGeneratePairCode = async () => {
     setPairingLoading(true);
+    setPairedDeviceSuccess(null);
     try {
       const res = await zenoTapClient.createDevicePairCode();
       setPairData(res);
       setPairSecondsLeft(res.expiresInSeconds);
       setShowEnterCode(false);
-      toast.success("Pairing code generated!");
+      toast.success("Pairing code & QR generated!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to generate pair code";
       toast.error(msg);
@@ -145,9 +199,8 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
     }
   };
 
-  const handleConfirmPairCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = enterCodeInput.replace(/\s+/g, "").trim();
+  const handleConfirmPairCode = async (codeOverride?: string) => {
+    const code = (codeOverride || enterCodeInput).replace(/\s+/g, "").trim();
     if (code.length !== 6) {
       toast.error("Please enter a 6-digit code");
       return;
@@ -160,6 +213,7 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
       toast.success(res.message || "Device linked successfully!", { id: toastId });
       setShowEnterCode(false);
       setEnterCodeInput("");
+      setPairedDeviceSuccess(res.deviceName || "Connected Keyboard");
       void handleSyncToLocal();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Pairing failed";
@@ -227,11 +281,12 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
                 onClick={() => {
                   setShowEnterCode(!showEnterCode);
                   setPairData(null);
+                  setPairedDeviceSuccess(null);
                 }}
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
                 <LinkIcon className="w-3.5 h-3.5 mr-1" />
-                {showEnterCode ? "Show Generator" : "Enter Code"}
+                {showEnterCode ? "Show QR Generator" : "Enter Code"}
               </Button>
 
               <Button
@@ -242,46 +297,123 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
                 className="text-xs border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10"
               >
                 <KeyRound className="w-3.5 h-3.5 mr-1.5" />
-                {pairData ? "Regenerate Code" : "Generate Pairing Code"}
+                {pairData ? "Regenerate QR & Code" : "Generate Pairing Code & QR"}
               </Button>
             </div>
           </div>
 
-          {showEnterCode ? (
-            <form onSubmit={(e) => void handleConfirmPairCode(e)} className="p-3 rounded-xl bg-background/60 border border-border/70 flex items-center gap-2">
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit code"
-                value={enterCodeInput}
-                onChange={(e) => setEnterCodeInput(e.target.value.replace(/[^0-9]/g, ""))}
-                className="w-44 rounded-lg border border-border/80 bg-background px-3 py-1.5 font-mono text-sm tracking-wider text-foreground focus:outline-none focus:border-indigo-500"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                disabled={pairingLoading || enterCodeInput.length !== 6}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
-              >
-                Connect Device
-              </Button>
-            </form>
-          ) : pairData ? (
-            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Enter this code in your ZenoTap Android app:</p>
-                <div className="text-3xl font-mono font-bold tracking-widest text-indigo-400 mt-1">
-                  {pairData.pairCode.slice(0, 3)} {pairData.pairCode.slice(3)}
+          {/* Success Banner */}
+          {pairedDeviceSuccess && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/40 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                  <Check className="w-4 h-4" />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Expires in <span className="font-semibold text-foreground">{pairSecondsLeft}s</span> (single-use)
+                <div>
+                  <p className="text-sm font-semibold text-emerald-400">Successfully Linked!</p>
+                  <p className="text-xs text-muted-foreground">Connected to {pairedDeviceSuccess}. Ready to sync.</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setPairedDeviceSuccess(null)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Dismiss
+              </Button>
+            </div>
+          )}
+
+          {showEnterCode ? (
+            <div className="p-4 rounded-xl bg-background/60 border border-border/70 space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">Enter 6-digit code shown on another device:</p>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <PinCodeInput
+                  value={enterCodeInput}
+                  onChange={setEnterCodeInput}
+                  onComplete={(code) => void handleConfirmPairCode(code)}
+                  disabled={pairingLoading}
+                  autoFocus
+                />
+                <Button
+                  onClick={() => void handleConfirmPairCode(enterCodeInput)}
+                  disabled={pairingLoading || enterCodeInput.length !== 6}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold h-11 px-5"
+                >
+                  Connect Device
+                </Button>
+              </div>
+            </div>
+          ) : pairData ? (
+            <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 flex flex-col md:flex-row items-center gap-5">
+              {/* QR Code Container */}
+              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-background/80 border border-border/70 text-center shrink-0">
+                {qrCodeDataUrl ? (
+                  <img
+                    src={qrCodeDataUrl}
+                    alt="ZenoTap Pairing QR Code"
+                    className="w-36 h-36 rounded-lg bg-white p-1.5 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-36 h-36 rounded-lg bg-muted flex items-center justify-center">
+                    <QrCode className="w-8 h-8 text-muted-foreground animate-pulse" />
+                  </div>
+                )}
+                <p className="text-[11px] font-medium text-muted-foreground mt-2 flex items-center gap-1">
+                  <Smartphone className="w-3 h-3 text-indigo-400" />
+                  Point phone camera to pair
                 </p>
               </div>
-              <div className="text-xs text-muted-foreground max-w-xs space-y-1">
-                <p className="font-medium text-foreground">How to connect:</p>
-                <p>1. Open ZenoDeck on Android</p>
-                <p>2. Open Keyboard Deck Manager</p>
-                <p>3. Tap &ldquo;Enter 6-Digit Pairing Code&rdquo;</p>
+
+              {/* Code Details & Polling */}
+              <div className="flex-1 space-y-2.5 w-full">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Or enter manual 6-digit code:</p>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-indigo-400 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                    Listening for scan...
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="text-3xl font-mono font-bold tracking-widest text-indigo-400 bg-background/60 px-4 py-1.5 rounded-lg border border-indigo-500/30">
+                    {pairData.pairCode.slice(0, 3)} {pairData.pairCode.slice(3)}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-10 text-xs border-indigo-500/30 hover:bg-indigo-500/10"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(pairData.pairCode);
+                      setCopiedCode(true);
+                      toast.success("Pairing code copied!");
+                      setTimeout(() => setCopiedCode(false), 2000);
+                    }}
+                  >
+                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                    {copiedCode ? "Copied" : "Copy Code"}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center justify-between pt-1 gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Expires in <span className="font-semibold text-foreground">{pairSecondsLeft}s</span> (single-use)
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-[11px] text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      const origin = typeof window !== "undefined" ? window.location.origin : "https://omni-tool-two.vercel.app";
+                      void navigator.clipboard.writeText(`${origin}/?pair=${pairData.pairCode}`);
+                      setCopiedLink(true);
+                      toast.success("Magic pairing link copied!");
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    }}
+                  >
+                    {copiedLink ? <Check className="w-3 h-3 text-emerald-400 mr-1" /> : <LinkIcon className="w-3 h-3 mr-1" />}
+                    {copiedLink ? "Link Copied" : "Copy Magic Link"}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (

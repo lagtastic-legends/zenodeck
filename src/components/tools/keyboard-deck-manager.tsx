@@ -14,6 +14,11 @@ import {
   CloudDownload,
   Link as LinkIcon,
   Unlink,
+  Camera,
+  ClipboardPaste,
+  Sparkles,
+  Check,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
@@ -32,7 +37,13 @@ import {
   getStoredSyncToken,
   getStoredDeviceName,
   clearStoredSyncToken,
+  getStoredAutoSync,
+  setStoredAutoSync,
+  getStoredLastSynced,
+  extractPairCode,
 } from "@/lib/zenotap/client-sdk";
+import { PinCodeInput } from "@/components/zenotap/PinCodeInput";
+import { ZenoTapPairScanner } from "@/components/zenotap/ZenoTapPairScanner";
 import { formatBytes } from "@/lib/format";
 import { useHaptics } from "@/hooks/use-haptics";
 import { toast } from "sonner";
@@ -62,6 +73,10 @@ export function KeyboardDeckManager() {
   const [pairCodeInput, setPairCodeInput] = useState("");
   const [isPairing, setIsPairing] = useState(false);
   const [showPairDialog, setShowPairDialog] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
+  const [lastSyncedTime, setLastSyncedTime] = useState<number | null>(null);
+  const [clipboardCode, setClipboardCode] = useState<string | null>(null);
 
   const loadDeck = useCallback(async () => {
     setLoading(true);
@@ -74,12 +89,56 @@ export function KeyboardDeckManager() {
       setStatus(imeStatus);
       setSyncToken(getStoredSyncToken());
       setPairedDeviceName(getStoredDeviceName());
+      setAutoSync(getStoredAutoSync());
+      setLastSyncedTime(getStoredLastSynced());
     } catch (e) {
       console.error("Failed to load keyboard deck:", e);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const checkClipboard = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.readText) return;
+    if (getStoredSyncToken()) return; // Already paired
+    try {
+      const text = await navigator.clipboard.readText();
+      const code = extractPairCode(text);
+      if (code && code.length === 6) {
+        setClipboardCode(code);
+      }
+    } catch {
+      // Clipboard read permissions may be restricted; ignore silently
+    }
+  }, []);
+
+  // Deep-link ?pair= query parameter check
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const pairParam = params.get("pair");
+    if (pairParam) {
+      const extracted = extractPairCode(pairParam);
+      if (extracted && !getStoredSyncToken()) {
+        setPairCodeInput(extracted);
+        setShowPairDialog(true);
+        toast.info(`Pair code ${extracted} detected from link!`);
+      }
+    }
+  }, []);
+
+  // Clipboard & background auto-sync check on focus
+  useEffect(() => {
+    void checkClipboard();
+    const handleFocus = () => {
+      void checkClipboard();
+      if (getStoredSyncToken() && getStoredAutoSync()) {
+        void handleSyncCloud();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [checkClipboard]);
 
   useEffect(() => {
     void loadDeck();
@@ -128,6 +187,7 @@ export function KeyboardDeckManager() {
     const toastId = toast.loading("Syncing GIFs from ZenoTap Cloud Deck...");
     try {
       const result = await zenoTapClient.syncCloudDeckToLocal();
+      setLastSyncedTime(getStoredLastSynced());
       if (result.errors > 0) {
         toast.warning(
           `Sync completed: ${result.downloaded} new, ${result.skipped} up to date (${result.errors} errors)`,
@@ -150,9 +210,8 @@ export function KeyboardDeckManager() {
     }
   };
 
-  const handleConfirmPair = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = pairCodeInput.replace(/\s+/g, "").trim();
+  const handlePairWithCode = async (codeToPair: string) => {
+    const code = codeToPair.replace(/\s+/g, "").trim();
     if (code.length !== 6) {
       toast.error("Please enter a valid 6-digit pairing code");
       return;
@@ -167,6 +226,7 @@ export function KeyboardDeckManager() {
       setPairedDeviceName(res.deviceName);
       setPairCodeInput("");
       setShowPairDialog(false);
+      setClipboardCode(null);
       toast.success(res.message || "Device paired successfully!", { id: toastId });
       void haptics.success();
 
@@ -178,6 +238,22 @@ export function KeyboardDeckManager() {
     } finally {
       setIsPairing(false);
     }
+  };
+
+  const handleToggleAutoSync = () => {
+    const nextVal = !autoSync;
+    setAutoSync(nextVal);
+    setStoredAutoSync(nextVal);
+    toast.success(nextVal ? "Auto-sync enabled on app resume" : "Auto-sync paused");
+  };
+
+  const formatRelativeTime = (ts: number | null) => {
+    if (!ts) return "Never";
+    const diffSec = Math.floor((Date.now() - ts) / 1000);
+    if (diffSec < 60) return "Just now";
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return new Date(ts).toLocaleDateString();
   };
 
   const handleUnlink = () => {
@@ -233,8 +309,39 @@ export function KeyboardDeckManager() {
         </div>
       </div>
 
+      {/* Smart Clipboard Pair Detection */}
+      {clipboardCode && !syncToken && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300"
+        >
+          <div className="flex items-center gap-2.5">
+            <ClipboardPaste className="size-4 text-indigo-400 shrink-0" />
+            <span className="text-xs">
+              Pair code <strong className="font-mono text-indigo-200">{clipboardCode}</strong> detected in clipboard
+            </span>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              onClick={() => void handlePairWithCode(clipboardCode)}
+              disabled={isPairing}
+              className="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-indigo-500 transition-colors"
+            >
+              Connect (1-Tap)
+            </button>
+            <button
+              onClick={() => setClipboardCode(null)}
+              className="text-xs text-muted-foreground hover:text-foreground px-1"
+            >
+              Dismiss
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Cloud Sync & Device Pairing Card */}
-      <div className="rounded-2xl border border-border/50 bg-card/40 p-5 space-y-3">
+      <div className="rounded-2xl border border-border/50 bg-card/40 p-5 space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cloud className="size-4 text-primary" />
@@ -263,7 +370,7 @@ export function KeyboardDeckManager() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Unlink Mobile Keyboard?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will disconnect this device from your ZenoTap Cloud Deck sync token. You can re-link at any time by generating a new 6-digit code on desktop.
+                      This will disconnect this device from your ZenoTap Cloud Deck sync token. You can re-link at any time by scanning a QR code or entering a new 6-digit PIN.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -287,51 +394,92 @@ export function KeyboardDeckManager() {
 
         <p className="text-xs text-muted-foreground">
           {syncToken
-            ? "Your keyboard is securely linked to your ZenoTap Cloud Deck. New GIFs added on desktop sync down automatically."
-            : "Generate a 6-digit pairing code on your desktop or web session, then enter it here to link your keyboard."}
+            ? "Your keyboard is securely linked to your ZenoTap Cloud Deck. GIFs created on desktop or web sync down directly into keyboard storage."
+            : "Effortlessly connect to your desktop session: scan the desktop QR code with your camera or enter the 6-digit PIN."}
         </p>
 
-        {!syncToken && (
-          <div className="pt-1">
-            {!showPairDialog ? (
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowPairDialog(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3.5 py-2 font-display text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+        {syncToken ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/40">
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span>Last synced: <strong className="text-foreground">{formatRelativeTime(lastSyncedTime)}</strong></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleAutoSync}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
+                  autoSync
+                    ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+                    : "bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <LinkIcon className="size-3.5" />
-                ENTER 6-DIGIT PAIRING CODE
-              </motion.button>
+                <Zap className={`size-3 ${autoSync ? "text-primary" : "text-muted-foreground"}`} />
+                Auto-Sync: {autoSync ? "ON" : "OFF"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="pt-2 space-y-3">
+            {!showPairDialog ? (
+              <div className="flex flex-wrap items-center gap-2.5">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowScanner(true)}
+                  className="flex items-center gap-2 rounded-xl border border-primary/50 bg-primary px-4 py-2.5 font-display text-xs font-bold text-primary-foreground shadow transition-colors hover:bg-primary/90"
+                >
+                  <Camera className="size-4" />
+                  SCAN QR CODE TO PAIR
+                </motion.button>
+
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowPairDialog(true)}
+                  className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-3.5 py-2.5 font-display text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground hover:border-primary/40"
+                >
+                  <LinkIcon className="size-3.5" />
+                  Enter 6-Digit PIN
+                </motion.button>
+              </div>
             ) : (
-              <form onSubmit={(e) => void handleConfirmPair(e)} className="flex items-center gap-2 max-w-sm">
-                <input
-                  type="text"
-                  maxLength={6}
-                  placeholder="123456"
-                  value={pairCodeInput}
-                  onChange={(e) => setPairCodeInput(e.target.value.replace(/[^0-9]/g, ""))}
-                  className="w-32 rounded-xl border border-border/80 bg-background/80 px-3 py-2 text-center font-mono text-sm tracking-widest text-foreground focus:border-primary focus:outline-none"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  disabled={isPairing || pairCodeInput.length !== 6}
-                  className="rounded-xl bg-primary px-3 py-2 font-display text-xs font-bold text-primary-foreground disabled:opacity-50"
-                >
-                  {isPairing ? "Linking..." : "Connect"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPairDialog(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground px-2"
-                >
-                  Cancel
-                </button>
-              </form>
+              <div className="p-4 rounded-xl bg-background/60 border border-border/70 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground font-medium">Enter 6-digit code shown on your desktop ZenoDeck:</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPairDialog(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <PinCodeInput
+                    value={pairCodeInput}
+                    onChange={setPairCodeInput}
+                    onComplete={(code) => void handlePairWithCode(code)}
+                    disabled={isPairing}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handlePairWithCode(pairCodeInput)}
+                    disabled={isPairing || pairCodeInput.length !== 6}
+                    className="rounded-xl bg-primary px-4 py-2.5 font-display text-xs font-bold text-primary-foreground disabled:opacity-50 h-12 w-full sm:w-auto"
+                  >
+                    {isPairing ? "Linking..." : "Connect"}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
       </div>
+
+      {/* QR Scanner Modal */}
+      <ZenoTapPairScanner
+        open={showScanner}
+        onOpenChange={setShowScanner}
+        onScanSuccess={(code) => void handlePairWithCode(code)}
+      />
 
       {/* System IME Setup Card */}
       <div className="rounded-2xl border border-border/50 bg-card/40 p-5 space-y-4">

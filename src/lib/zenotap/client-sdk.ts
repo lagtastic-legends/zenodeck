@@ -32,9 +32,17 @@ export interface UploadTicketResponse {
 
 export interface PairCodeResponse {
   success: boolean;
+  linkId?: string;
   pairCode: string;
   expiresAt: number;
   expiresInSeconds: number;
+}
+
+export interface PairStatusResponse {
+  success: boolean;
+  confirmed: boolean;
+  deviceName?: string | null;
+  expired?: boolean;
 }
 
 export interface PairDeviceResponse {
@@ -74,6 +82,8 @@ export interface DeckSyncResult {
 
 const SYNC_TOKEN_KEY = "zenotap_sync_token";
 const DEVICE_NAME_KEY = "zenotap_device_name";
+const AUTO_SYNC_KEY = "zenotap_auto_sync";
+const LAST_SYNCED_KEY = "zenotap_last_synced";
 
 export function getStoredSyncToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -113,6 +123,90 @@ export function clearStoredSyncToken(): void {
   } catch {
     // ignore
   }
+}
+
+export function getStoredAutoSync(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const val = localStorage.getItem(AUTO_SYNC_KEY);
+    return val === null ? true : val === "true";
+  } catch {
+    return true;
+  }
+}
+
+export function setStoredAutoSync(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(AUTO_SYNC_KEY, String(enabled));
+  } catch {}
+}
+
+export function getStoredLastSynced(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const val = localStorage.getItem(LAST_SYNCED_KEY);
+    return val ? parseInt(val, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredLastSynced(timestamp = Date.now()): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LAST_SYNCED_KEY, String(timestamp));
+  } catch {}
+}
+
+/**
+ * Extracts a 6-digit pairing code from raw text, deep-links, or magic URLs.
+ * Examples handled: "123456", "123 456", "zenodeck://pair?code=123456", "https://.../?pair=123456"
+ */
+export function extractPairCode(input: string): string | null {
+  if (!input) return null;
+  const str = input.trim();
+
+  // 1. URL search parameter
+  if (str.includes("pair=") || str.includes("code=") || str.includes("zenotap_pair=")) {
+    try {
+      const url = new URL(str, "https://zenodeck.app");
+      const code =
+        url.searchParams.get("pair") ||
+        url.searchParams.get("code") ||
+        url.searchParams.get("zenotap_pair");
+      if (code) {
+        const cleaned = code.replace(/\D/g, "");
+        if (cleaned.length === 6) return cleaned;
+      }
+    } catch {}
+  }
+
+  // 2. JSON payload
+  if (str.startsWith("{") && str.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(str);
+      const code = parsed.pairCode || parsed.code || parsed.pair;
+      if (code) {
+        const cleaned = String(code).replace(/\D/g, "");
+        if (cleaned.length === 6) return cleaned;
+      }
+    } catch {}
+  }
+
+  // 3. Exact 6 digits when non-digits stripped (e.g. "847 291", "847-291")
+  const digitsOnly = str.replace(/\D/g, "");
+  if (digitsOnly.length === 6) {
+    return digitsOnly;
+  }
+
+  // 4. Isolated 6-digit sequence in text/clipboard (e.g. "CODE: 847291 (use within 10 min)")
+  const match = str.match(/(?<!\d)(\d{6})(?!\d)/);
+  if (match) {
+    return match[1];
+  }
+
+  return null;
 }
 
 export function getZenoTapApiUrl(path: string): string {
@@ -296,6 +390,20 @@ export const zenoTapClient = {
   },
 
   /**
+   * Polls pairing status by linkId or pairCode (used by desktop session).
+   */
+  async checkPairCodeStatus(linkIdOrCode: string): Promise<PairStatusResponse> {
+    const url = getZenoTapApiUrl(
+      `/api/zenotap/v1/device/pair?linkId=${encodeURIComponent(linkIdOrCode)}&pairCode=${encodeURIComponent(linkIdOrCode)}`
+    );
+    const res = await fetch(url);
+    if (!res.ok) {
+      return { success: false, confirmed: false, expired: true };
+    }
+    return (await res.json()) as PairStatusResponse;
+  },
+
+  /**
    * Queries the device sync endpoint via Bearer sync token.
    */
   async fetchDeviceSync(token?: string): Promise<DeviceSyncResponse> {
@@ -391,6 +499,8 @@ export const zenoTapClient = {
         errors++;
       }
     }
+
+    setStoredLastSynced();
 
     return {
       total: itemsToSync.length,

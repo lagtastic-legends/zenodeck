@@ -52,6 +52,7 @@ const VIEW_TITLES: Record<string, { label: string; tag: string }> = {
   "text-to-pdf": { label: "TEXT TO PDF", tag: "P4 DOC" },
   "lock-pdf": { label: "LOCK PDF", tag: "P4 DOC" },
   vault: { label: "LOCAL VAULT IDB", tag: "P5 STORAGE" },
+  "keyboard-deck": { label: "KEYBOARD DECK", tag: "P6 MOBILE" },
 };
 
 export function WorkstationRibbon() {

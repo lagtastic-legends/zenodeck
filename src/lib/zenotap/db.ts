@@ -136,7 +136,7 @@ export const zenoTapDb = {
     return (result.changes ?? 0) > 0;
   },
 
-  createPairCode(userId: string, pairCode: string, expiresAt: number): void {
+  createPairCode(userId: string, pairCode: string, expiresAt: number): string {
     const db = getDb();
     const now = Date.now();
     // 1. Clean up expired unconfirmed pair codes
@@ -159,6 +159,26 @@ export const zenoTapDb = {
     // Temporary placeholder sync token until confirmed
     const tempToken = `pending_${pairCode}_${Date.now()}`;
     stmt.run(id, userId, pairCode, tempToken, expiresAt, now);
+    return id;
+  },
+
+  checkPairStatus(linkIdOrCode: string): { confirmed: boolean; deviceName?: string; expired?: boolean } | null {
+    const db = getDb();
+    const now = Date.now();
+    const stmt = db.prepare(`
+      SELECT id, device_name as deviceName, expires_at as expiresAt
+      FROM zenotap_device_links
+      WHERE id = ? OR pair_code = ?
+    `);
+    const row = stmt.get(linkIdOrCode, linkIdOrCode) as { id: string; deviceName?: string | null; expiresAt: number } | undefined;
+    if (!row) return null;
+    if (row.deviceName) {
+      return { confirmed: true, deviceName: row.deviceName, expired: false };
+    }
+    if (row.expiresAt < now) {
+      return { confirmed: false, expired: true };
+    }
+    return { confirmed: false, expired: false };
   },
 
   confirmPairCode(pairCode: string, deviceName: string, activeSyncToken: string): { userId: string } | null {

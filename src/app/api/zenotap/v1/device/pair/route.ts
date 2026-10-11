@@ -7,6 +7,29 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: zenoTapCorsHeaders });
 }
 
+// GET: Poll pairing code status (Called by desktop session)
+export async function GET(req: NextRequest) {
+  const linkId = req.nextUrl.searchParams.get("linkId") || "";
+  const pairCode = req.nextUrl.searchParams.get("pairCode") || "";
+  const query = linkId || pairCode;
+
+  if (!query) {
+    return zenoTapResponse({ error: "Missing linkId or pairCode" }, { status: 400 });
+  }
+
+  const status = zenoTapDb.checkPairStatus(query);
+  if (!status) {
+    return zenoTapResponse({ success: true, confirmed: false, expired: true, notFound: true });
+  }
+
+  return zenoTapResponse({
+    success: true,
+    confirmed: status.confirmed,
+    deviceName: status.deviceName || null,
+    expired: status.expired,
+  });
+}
+
 // POST: Generate a new 6-digit pair code (Called from ZenoDeck Web / App)
 export async function POST(req: NextRequest) {
   if (!zenoTapSecurity.isAllowedOrigin(req)) {
@@ -22,10 +45,11 @@ export async function POST(req: NextRequest) {
   const pairCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-  zenoTapDb.createPairCode(user.userId, pairCode, expiresAt);
+  const linkId = zenoTapDb.createPairCode(user.userId, pairCode, expiresAt);
 
   return zenoTapResponse({
     success: true,
+    linkId,
     pairCode,
     expiresAt,
     expiresInSeconds: 600,

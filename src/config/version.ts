@@ -2,7 +2,7 @@
  * ZenoDeck — Application Version & Release Configurations
  */
 
-export const APP_VERSION = "3.11.0";
+export const APP_VERSION = "3.12.0";
 export const GITHUB_REPO_OWNER = "lagtastic-legends";
 export const GITHUB_REPO_NAME = "zenodeck";
 export const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}`;
