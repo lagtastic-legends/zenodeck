@@ -160,18 +160,18 @@ export function TopBar() {
             <button
               type="button"
               onClick={() => setIsUpdateModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-1 text-emerald-300 hover:bg-emerald-500/25 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shadow-[0_0_8px_rgba(52,211,153,0.25)]"
+              className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2 sm:px-2.5 py-1 text-emerald-300 hover:bg-emerald-500/25 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shadow-[0_0_8px_rgba(52,211,153,0.25)] shrink-0"
               title={`New version v${storeUpdateInfo.latestVersion} available! Click to install or remove.`}
             >
               <span className="flex size-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="hidden xs:inline">Update</span>
-              <span>v{storeUpdateInfo.latestVersion}</span>
+              <span className="text-[9px] sm:text-[10px]">v{storeUpdateInfo.latestVersion}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={() => setIsUpdateModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-2 sm:px-2.5 py-1 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-all cursor-pointer font-mono text-[10px]"
+              className="hidden sm:flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-2 sm:px-2.5 py-1 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-all cursor-pointer font-mono text-[10px] shrink-0"
               title={`Auto-Update: ${autoUpdateEnabled ? "ON" : "OFF"} — Click to configure or check for updates`}
               aria-label={`Auto-Update: ${autoUpdateEnabled ? "ON" : "OFF"}`}
             >
@@ -179,7 +179,7 @@ export function TopBar() {
                 className={`size-3 text-primary ${autoUpdateEnabled ? "animate-spin" : ""}`}
                 style={{ animationDuration: "8s" }}
               />
-              <span className="hidden xs:inline uppercase tracking-wider font-semibold text-[9px]">
+              <span className="hidden sm:inline uppercase tracking-wider font-semibold text-[9px]">
                 UPDATES
               </span>
               <span
@@ -196,11 +196,11 @@ export function TopBar() {
             <button
               type="button"
               onClick={() => setDownloadModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-primary hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer"
+              className="hidden xs:flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2 sm:px-2.5 py-1 text-primary hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
               title="Download Android APK or Install Web App"
             >
               <Download className="size-3 shrink-0" />
-              <span className="hidden xs:inline sm:inline">Get App</span>
+              <span className="hidden sm:inline">Get App</span>
             </button>
           ) : (
             <button
@@ -210,7 +210,7 @@ export function TopBar() {
                   window.dispatchEvent(new CustomEvent("omni:show-permissions"));
                 }
               }}
-              className="grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer"
+              className="grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
               title="Manage Device Permissions"
               aria-label="Manage Device Permissions"
             >
@@ -221,11 +221,11 @@ export function TopBar() {
           <button
             type="button"
             onClick={() => setIsDeckManagerOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer"
+            className="hidden xs:flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 sm:px-2.5 py-1 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
             title="Manage ZenoTap Keyboard Deck & Device Pairing"
           >
             <Keyboard className="size-3 shrink-0 text-indigo-400" />
-            <span className="hidden xs:inline sm:inline">ZenoTap</span>
+            <span className="hidden sm:inline">ZenoTap</span>
           </button>
 
           {mounted && user ? (

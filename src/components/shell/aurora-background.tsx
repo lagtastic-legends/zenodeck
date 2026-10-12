@@ -66,7 +66,7 @@ export function AuroraBackground() {
       <div className="absolute inset-0 bg-hud-grid" />
 
       {/* Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_60%_at_50%_40%,transparent_40%,oklch(0.07_0.012_295/0.85)_100%)]" />
+      <div className="absolute inset-0 aurora-vignette" />
 
       {/* Bottom fade into the abyss */}
       <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-abyss/90 to-transparent" />

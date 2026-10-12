@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.12.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.12.0" />
+    <img src="https://img.shields.io/badge/Release-v3.13.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.13.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.12.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.12.0/zenodeck-v3.12.0-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.12.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.13.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -61,37 +61,43 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.12.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.12.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.12.0/zenodeck-v3.12.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.12.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.12.0/zenodeck-v3.12.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.12.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.12.0/zenodeck-v3.12.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| Platform / Binary | Download Link | Architecture & Description |
+| :--- | :--- | :--- |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.13.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.13.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.13.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.12.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.12.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.13.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.13.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
 
 ---
 
-## 🌟 What's New in v3.12.0
+## 🌟 What's New in v3.13.0
 
-- **⚡ Effortless ZenoTap Cloud Deck & Android Keyboard Sync Architecture**:
-  - **Instant QR Code Camera Pairing (`ZenoTapPairScanner.tsx`)**: Point mobile camera at desktop QR code to pair in under 1 second. Features interactive laser beam viewfinder, permission fallbacks via `ensureCameraPermission`, and multi-source code extraction (`Html5Qrcode`).
-  - **Dynamic QR Code Generation (`QRCode.toDataURL`)**: Desktop pairing renders a dynamic QR code containing magic link URLs (`/?pair=123456`) and the single-use 6-digit code.
-  - **Real-Time Desktop Auto-Polling**: Desktop sessions query `GET /api/zenotap/v1/device/pair?linkId=...` every 2 seconds, immediately detecting companion connection and transitioning to `🎉 Linked to [DeviceName]!` without manual refresh.
-  - **Tactile 6-Digit Segmented PIN Input (`PinCodeInput.tsx`)**: Glassmorphic 6-slot OTP input with automatic forward advance on digit entry, smart backspace jumps, arrow navigation, and paste auto-distribution.
-  - **Smart System Clipboard Detection**: Mobile companion detects 6-digit pair codes and deep links in the clipboard on launch, surfacing a 1-tap `Connect Now` action pill.
-  - **Deep Link Navigation**: Direct query parameter `?pair=123456` support automatically routes `app-shell.tsx` into the `keyboard-deck` tool and pre-fills the PIN.
-  - **Background Auto-Sync on App Resume**: Toggleable background synchronization (`getStoredAutoSync` / `setStoredAutoSync`) automatically initiates delta syncs on app resume, keeping WhatsApp & messaging custom keyboard keys synced with desktop. Live relative telemetry badge (`Last synced: Just now`).
-  - **Shell & Tool Registry Integration**: Registered `keyboard-deck` in `TOOL_REGISTRY` (Phase 6), mapped in `app-shell.tsx` lazy component table, and added workstation header status in `workstation-ribbon.tsx`.
+- **📱 Universal Phone Form-Factor Layout Architecture**:
+  - **Screen Size & Density Scaling (`AndroidManifest.xml`)**: Configured `<supports-screens>` for `smallScreens`, `normalScreens`, `largeScreens`, and `xlargeScreens` with any-density and resizable scaling across all mobile devices.
+  - **Sub-380px Compact Breakpoint (`xs: 380px`)**: Fine-grained responsive breakpoint in `tailwind.config.ts` guaranteeing clean scaling on budget phones and compact displays.
+  - **Adaptive Quick Action Matrix (`ToolGrid.tsx`)**: Re-engineered to `grid-cols-2 xs:grid-cols-4 sm:grid-cols-4`. Compact displays (<380px) render a 2-column thumb-friendly layout; standard and flagship displays (≥380px) render a dense 4-column matrix with zero card blowout (`min-w-0`, `break-words`).
+  - **Zero-Overflow TopBar (`top-bar.tsx`)**: Rigid `shrink-0` bounds and responsive visibility for action pills (`hidden xs:flex`), eliminating horizontal scrolling and badge crowding on 320px viewports while preserving update alert visibility.
+  - **Touch-Optimized Hero Callouts (`dashboard-view.tsx`)**: Added `w-full min-[420px]:w-auto` to primary CTAs for single-thumb taps on narrow viewports.
+  - **Horizontal Overscroll Containment (`globals.css`)**: Enforced `overscroll-behavior-x: none` across root HTML and body, eliminating edge bounce displacement during touch swipes.
+- **🎨 Terracotta 60:30:10 Design System & Color Harmony Architecture**:
+  - **60% Raw Linen Canvas**: High-end parchment background (`#FAF5EE`) offering soothing eye comfort and organic warmth.
+  - **30% Timber & Sandstone Contours**: Deep espresso timber typography (`#342A24`), warm sandstone card surfaces (`#F3ECE0`, `#EDE3D4`), and crisp linen borders (`#DFD3C2`).
+  - **10% Fired Clay Hero Accent**: Radiant burnt sienna and clay hero buttons (`#C2652A`, `#964228`) with specular top rim highlight, tactile depression, and amber glow shadows.
+  - **Dynamic Harmony Swatch in Theme Toggle (`theme-toggle.tsx`)**: 3-swatch inline indicator visually communicating the 60:30:10 ratio with immediate theme switching.
+- **📦 Universal Signed Multi-Architecture Android APK**:
+  - Signed release binary bundling native Capacitor plugins and WebAssembly engines for `arm64-v8a`, `armeabi-v7a`, and `x86_64`.
+  - Android 7.0 (API 24) to Android 15 (API 36) compatibility.
 - **🧪 100% Automated Test Suite Verified**:
-  - ZenoTap Pairing Ease Suite: **5/5 passing (100%)**.
-  - ZenoTap Cloud Sync Suite: **4/4 passing (100%)**.
-  - ZenoTap HMAC & Security Suite: **7/7 passing (100%)**.
   - Universal E2E Test Suite: **138/138 passing (100%)** across all 4 tiers.
   - App Updater & Semver Test Suite: **12/12 passing (100%)**.
+  - ZenoTap Pairing Ease Suite: **5/5 passing (100%)**.
   - TypeScript strict compilation: **0 Errors**.
 
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.12.0.md](RELEASE_NOTES_v3.12.0.md)).*
+*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.13.0.md](RELEASE_NOTES_v3.13.0.md)).*
 
 ---
 

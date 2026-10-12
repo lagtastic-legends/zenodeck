@@ -151,60 +151,64 @@
 [data-theme="terracotta"] {
   color-scheme: light;
 
+  /* 60% Dominant Canvas / Atmosphere */
   --background: #FAF5EE;
-  --foreground: #3A302A;
+  --foreground: #342A24;
 
   --card: #F3ECE0;
-  --card-foreground: #3A302A;
+  --card-foreground: #342A24;
 
   --popover: #FAF5EE;
-  --popover-foreground: #3A302A;
+  --popover-foreground: #342A24;
 
+  /* 10% Hero Accent (Fired Terracotta, Burnt Sienna, Earthen Flame) */
   --primary: #C2652A;
-  --primary-foreground: #FAF5EE;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #EDE4D6;
-  --secondary-foreground: #3A302A;
+  /* 30% Secondary Surfaces, Contours & Deep Timber Typography */
+  --secondary: #EDE3D4;
+  --secondary-foreground: #342A24;
 
-  --muted: #EAE0D2;
-  --muted-foreground: #7C6E63;
+  --muted: #EDE3D4;
+  --muted-foreground: #756457;
 
-  --accent: #E4D5C2;
-  --accent-foreground: #3A302A;
+  --accent: #E5D9C7;
+  --accent-foreground: #342A24;
 
-  --destructive: #8C3C3C;
+  --destructive: #A33224;
 
-  --border: #E0D4C3;
-  --input: #E0D4C3;
+  --border: #DFD3C2;
+  --input: #EDE3D4;
   --ring: #C2652A;
 
   --chart-1: #C2652A;
-  --chart-2: #8C3C3C;
-  --chart-3: #A35C2B;
-  --chart-4: #D98B54;
-  --chart-5: #6A5649;
+  --chart-2: #964228;
+  --chart-3: #D97736;
+  --chart-4: #756457;
+  --chart-5: #342A24;
 
   --sidebar: #FAF5EE;
-  --sidebar-foreground: #3A302A;
+  --sidebar-foreground: #342A24;
   --sidebar-primary: #C2652A;
-  --sidebar-primary-foreground: #FAF5EE;
-  --sidebar-accent: #EDE4D6;
-  --sidebar-accent-foreground: #3A302A;
-  --sidebar-border: #E0D4C3;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EDE3D4;
+  --sidebar-accent-foreground: #342A24;
+  --sidebar-border: #DFD3C2;
   --sidebar-ring: #C2652A;
 
   --neon: #C2652A;
-  --plasma: #8C3C3C;
-  --pulse: #A35C2B;
+  --plasma: #964228;
+  --pulse: #D97736;
   --abyss: #FAF5EE;
 
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-eb-garamond), serif;
 
-  --shadow-subtle: 0 2px 6px -1px rgba(58, 48, 42, 0.06), 0 1px 3px -1px rgba(58, 48, 42, 0.04);
-  --shadow-tactile: 0 4px 14px -2px rgba(58, 48, 42, 0.12), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
-  --shadow-elevation-1: 0 8px 24px -4px rgba(58, 48, 42, 0.14), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.7);
-  --shadow-elevation-2: 0 16px 36px -6px rgba(58, 48, 42, 0.18), inset 0 1px 2px 0 rgba(255, 255, 255, 0.8);
+  --shadow-subtle: 0 2px 6px -1px rgba(52, 42, 36, 0.05), 0 1px 3px -1px rgba(52, 42, 36, 0.03);
+  --shadow-tactile: 0 4px 14px -2px rgba(52, 42, 36, 0.10), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7);
+  --shadow-elevation-1: 0 8px 24px -4px rgba(52, 42, 36, 0.12), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.8);
+  --shadow-elevation-2: 0 16px 36px -6px rgba(52, 42, 36, 0.16), inset 0 1px 2px 0 rgba(255, 255, 255, 0.85);
+  --shadow-elevation-floating: 0 24px 50px -8px rgba(52, 42, 36, 0.20), 0 10px 20px -4px rgba(52, 42, 36, 0.10), inset 0 1px 2px 0 rgba(255, 255, 255, 0.9);
 }
 
 :root {
@@ -228,6 +232,7 @@ html {
   width: 100%;
   min-height: 100%;
   overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -239,6 +244,7 @@ body {
   touch-action: pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
 }
 
 /* Ensure all media cannot exceed device viewport width */
@@ -259,12 +265,29 @@ textarea {
   color-scheme: dark;
 }
 
+[data-theme="terracotta"] button,
+[data-theme="terracotta"] [role="button"],
+[data-theme="terracotta"] a,
+[data-theme="terracotta"] input,
+[data-theme="terracotta"] select,
+[data-theme="terracotta"] textarea {
+  color-scheme: light;
+}
+
 select,
 option,
 optgroup {
   color-scheme: dark;
   background-color: #12101c;
   color: #f4f4f6;
+}
+
+[data-theme="terracotta"] select,
+[data-theme="terracotta"] option,
+[data-theme="terracotta"] optgroup {
+  color-scheme: light;
+  background-color: #F3ECE0;
+  color: #342A24;
 }
 
 /* Universal smooth momentum scrolling */
@@ -321,11 +344,11 @@ body,
   background:
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.8) 0%,
-      rgba(255, 255, 255, 0.3) 100%
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.4) 100%
     ),
     #F3ECE0;
-  border: 1px solid #E0D4C3;
+  border: 1px solid #DFD3C2;
   box-shadow: var(--shadow-tactile);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -349,9 +372,18 @@ body,
 
 [data-theme="terracotta"] .bg-hud-grid {
   background-image:
-    linear-gradient(rgba(194, 101, 42, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(194, 101, 42, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(194, 101, 42, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(194, 101, 42, 0.07) 1px, transparent 1px);
   background-size: 44px 44px;
+}
+
+/* Atmospheric aurora vignette */
+.aurora-vignette {
+  background: radial-gradient(ellipse 75% 60% at 50% 40%, transparent 40%, oklch(0.07 0.012 295 / 0.85) 100%);
+}
+
+[data-theme="terracotta"] .aurora-vignette {
+  background: radial-gradient(ellipse 75% 60% at 50% 40%, transparent 55%, rgba(223, 211, 194, 0.45) 100%);
 }
 
 /* Subtle CRT scanline texture for physical feel */
@@ -410,6 +442,20 @@ body,
     0 0 0 1px oklch(0.84 0.14 202 / 0.35),
     0 0 28px -4px oklch(0.84 0.14 202 / 0.42),
     inset 0 0 20px -10px oklch(0.84 0.14 202 / 0.48);
+}
+
+[data-theme="terracotta"] .glow-box-violet {
+  box-shadow:
+    0 0 0 1px rgba(194, 101, 42, 0.35),
+    0 0 28px -4px rgba(194, 101, 42, 0.32),
+    inset 0 0 18px -10px rgba(194, 101, 42, 0.25);
+}
+
+[data-theme="terracotta"] .glow-box-cyan {
+  box-shadow:
+    0 0 0 1px rgba(217, 119, 54, 0.4),
+    0 0 24px -4px rgba(217, 119, 54, 0.28),
+    inset 0 0 16px -10px rgba(217, 119, 54, 0.22);
 }
 
 /* Fluid typography utilities */
@@ -479,9 +525,9 @@ body,
 [data-theme="terracotta"] .skeleton-organic {
   background: linear-gradient(
     90deg,
-    #EDE4D6 0%,
+    #EDE3D4 0%,
     rgba(194, 101, 42, 0.15) 50%,
-    #EDE4D6 100%
+    #EDE3D4 100%
   );
   background-size: 200% 100%;
   animation: organic-shimmer 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -512,6 +558,24 @@ body,
     180deg,
     oklch(0.65 0.2 300 / 0.85),
     oklch(0.7 0.12 205 / 0.7)
+  );
+}
+
+[data-theme="terracotta"] .scroll-hud {
+  scrollbar-color: rgba(194, 101, 42, 0.45) transparent;
+}
+[data-theme="terracotta"] .scroll-hud::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(194, 101, 42, 0.65),
+    rgba(150, 66, 40, 0.65)
+  );
+}
+[data-theme="terracotta"] .scroll-hud::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(194, 101, 42, 0.9),
+    rgba(150, 66, 40, 0.9)
   );
 }
 

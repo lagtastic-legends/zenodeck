@@ -48,9 +48,9 @@ export const buttonVariants = cva(
         neon:
           "bg-gradient-to-b from-neon to-neon/80 text-background font-bold border border-neon/50 shadow-[0_4px_18px_-2px_oklch(0.84_0.14_202/0.45),inset_0_1px_1px_0_rgba(255,255,255,0.35)] hover:shadow-[0_8px_28px_-2px_oklch(0.84_0.14_202/0.65)]",
 
-        // 7. Terracotta: Warm clay with parchment tactile softness
+        // 7. Terracotta: 10% Fired clay hero action with specular rim & burnt sienna depth
         terracotta:
-          "bg-[#C2652A] text-[#FAF5EE] border border-[#C2652A]/60 shadow-[0_4px_14px_-2px_rgba(194,101,42,0.35),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:bg-[#A8531E] hover:shadow-[0_8px_22px_-2px_rgba(194,101,42,0.45)]",
+          "bg-gradient-to-b from-[#C2652A] via-[#C2652A] to-[#964228] text-white font-medium border border-[#A8521C]/80 shadow-[0_4px_16px_-2px_rgba(194,101,42,0.45),inset_0_1px_1.5px_0_rgba(255,255,255,0.4)] hover:from-[#D97736] hover:to-[#A8521C] hover:shadow-[0_8px_24px_-2px_rgba(194,101,42,0.55),inset_0_1px_2px_0_rgba(255,255,255,0.5)] active:from-[#964228] active:to-[#7E331E]",
 
         // 8. Link
         link:

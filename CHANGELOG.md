@@ -5,6 +5,25 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.13.0] — 2026-10-12
+
+### Added & Enhanced
+- **📱 Universal Phone Form-Factor Layout Architecture**:
+  - **Screen Size & Multi-Density Support (`AndroidManifest.xml`)**: Configured `<supports-screens>` for `smallScreens`, `normalScreens`, `largeScreens`, and `xlargeScreens` with any-density and resizable scaling across all mobile devices.
+  - **Sub-380px Compact Viewport Breakpoint (`xs: 380px`)**: Added fine-grained responsive breakpoint in `tailwind.config.ts` for compact budget phones and legacy narrow screens.
+  - **Adaptive Quick Action Matrix (`ToolGrid.tsx`)**: Re-engineered tool matrix to dynamic `grid-cols-2 xs:grid-cols-4 sm:grid-cols-4`. Compact displays (<380px) render a 2-column thumb-friendly layout; standard and flagship displays (≥380px) render a dense 4-column matrix with zero card clipping (`min-w-0`, `break-words`).
+  - **Zero-Overflow TopBar (`top-bar.tsx`)**: Integrated `shrink-0` bounds and responsive visibility for action pills (`hidden xs:flex`), preserving clean status indicators without horizontal scrolling on 320px–360px phones.
+  - **Touch-Optimized Hero Callouts (`dashboard-view.tsx`)**: Added `w-full min-[420px]:w-auto` to primary CTAs for ergonomic single-thumb taps on narrow viewports.
+  - **Horizontal Overscroll Containment (`globals.css`)**: Enforced `overscroll-behavior-x: none` across root HTML and body, eliminating edge bounce displacement during touch swipes.
+- **🎨 Terracotta 60:30:10 Design System & Color Harmony Architecture**:
+  - **60% Raw Linen Canvas**: High-end parchment background (`#FAF5EE`) offering soothing eye comfort and organic warmth.
+  - **30% Timber & Sandstone Contours**: Deep espresso timber typography (`#342A24`), warm sandstone card surfaces (`#F3ECE0`, `#EDE3D4`), and crisp linen borders (`#DFD3C2`).
+  - **10% Fired Clay Hero Accent**: Radiant burnt sienna and clay hero buttons (`#C2652A`, `#964228`) with specular top rim highlight, tactile depression, and amber glow shadows.
+  - **Dynamic Harmony Swatch in Theme Toggle (`theme-toggle.tsx`)**: 3-swatch inline indicator visually communicating the 60:30:10 ratio with immediate theme switching.
+- **📦 Universal Signed Multi-Architecture Android APK**:
+  - Signed release binary bundling native Capacitor plugins and WebAssembly engines for `arm64-v8a`, `armeabi-v7a`, and `x86_64`.
+  - Android 7.0 (API 24) to Android 15 (API 36) compatibility.
+
 ## [3.12.0] — 2026-10-11
 
 ### Added & Enhanced

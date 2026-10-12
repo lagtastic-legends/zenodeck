@@ -166,7 +166,7 @@ export function DashboardView() {
           initial="hidden"
           animate="show"
           custom={0.28}
-          className="mx-auto flex flex-wrap items-center justify-center gap-3.5 pt-3 sm:pt-4"
+          className="mx-auto flex flex-wrap items-center justify-center gap-3 sm:gap-3.5 pt-3 sm:pt-4 max-w-lg"
         >
           <Button
             size="lg"
@@ -177,7 +177,7 @@ export function DashboardView() {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
               }
             }}
-            className="font-display text-xs sm:text-sm font-bold uppercase tracking-widest px-7 sm:px-8"
+            className="w-full min-[420px]:w-auto font-display text-xs sm:text-sm font-bold uppercase tracking-widest px-7 sm:px-8"
           >
             <Sparkles className="size-4" />
             <span>Explore Toolkit</span>
@@ -188,7 +188,7 @@ export function DashboardView() {
             size="lg"
             variant="secondary"
             onClick={() => navigate("vault")}
-            className="font-mono text-xs font-semibold px-6 sm:px-7"
+            className="w-full min-[420px]:w-auto font-mono text-xs font-semibold px-6 sm:px-7"
           >
             <Database className="size-4 text-neon" />
             <span>Open Vault</span>
@@ -199,7 +199,7 @@ export function DashboardView() {
               size="lg"
               variant="outline"
               onClick={() => setDownloadModalOpen(true)}
-              className="font-mono text-xs font-semibold px-5 sm:px-6 border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/60 cursor-pointer"
+              className="w-full min-[420px]:w-auto font-mono text-xs font-semibold px-5 sm:px-6 border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/60 cursor-pointer"
             >
               <Smartphone className="size-4" />
               <span>Get App</span>

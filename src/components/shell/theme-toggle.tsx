@@ -27,24 +27,47 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       whileTap={{ scale: 0.92 }}
-      title={isTerracotta ? "Switch to Cyber Dark Theme" : "Switch to Terracotta Studio Theme"}
+      title={
+        isTerracotta
+          ? "Terracotta 60-30-10 Studio Palette (Click to switch to Cyber Dark)"
+          : "Cyber Dark Palette (Click to switch to Terracotta 60-30-10 Studio)"
+      }
       aria-label="Toggle Theme"
       className={cn(
-        "relative flex h-8 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[10px] font-bold tracking-wider transition-all duration-300",
+        "relative flex h-8 items-center gap-2 rounded-full border px-2.5 font-mono text-[10px] font-bold tracking-wider transition-all duration-300",
         isTerracotta
-          ? "border-[#C2652A]/50 bg-[#FAF5EE] text-[#3A302A] shadow-sm hover:border-[#C2652A]"
+          ? "border-[#DFD3C2] bg-[#FAF5EE] text-[#342A24] shadow-sm hover:border-[#C2652A]/60"
           : "border-border/70 bg-card/60 text-muted-foreground hover:border-primary/50 hover:text-foreground"
       )}
     >
-      {/* Color indicator dot */}
-      <span
-        className={cn(
-          "size-2 rounded-full transition-all duration-300",
-          isTerracotta
-            ? "bg-[#C2652A] shadow-[0_0_8px_#C2652A]"
-            : "bg-primary shadow-[0_0_8px_oklch(0.62_0.22_300)]"
+      {/* 60-30-10 Color harmony swatch */}
+      <span className="flex items-center -space-x-0.5">
+        {isTerracotta ? (
+          <>
+            {/* 60% Canvas */}
+            <span
+              className="size-2 rounded-full bg-[#FAF5EE] border border-[#DFD3C2]"
+              title="60% Raw Linen Canvas"
+            />
+            {/* 30% Timber / Sandstone */}
+            <span
+              className="size-2 rounded-full bg-[#342A24]"
+              title="30% Espresso Timber & Sandstone"
+            />
+            {/* 10% Fired Clay Accent */}
+            <span
+              className="size-2 rounded-full bg-[#C2652A] shadow-[0_0_6px_#C2652A]"
+              title="10% Fired Terracotta Hero"
+            />
+          </>
+        ) : (
+          <>
+            <span className="size-2 rounded-full bg-background border border-border/70" />
+            <span className="size-2 rounded-full bg-secondary" />
+            <span className="size-2 rounded-full bg-primary shadow-[0_0_6px_oklch(0.64_0.24_298)]" />
+          </>
         )}
-      />
+      </span>
 
       <span className="hidden sm:inline uppercase">
         {isTerracotta ? "Terracotta" : "Cyber"}

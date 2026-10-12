@@ -64,7 +64,7 @@ const ToolCard = memo(function ToolCard({
           navigate(tool.id);
         }
       }}
-      className={`panel-hud group relative flex min-h-11 flex-col justify-between text-left shadow-tactile transition-all duration-200 ${
+      className={`panel-hud group relative flex min-h-11 flex-col justify-between text-left shadow-tactile transition-all duration-200 min-w-0 ${
         isMatrixView
           ? "rounded-xl sm:rounded-tactile p-2 sm:p-3.5 md:p-4 gap-1.5 sm:gap-2.5 min-h-[96px] sm:min-h-11"
           : "rounded-tactile p-3.5 sm:p-4 gap-3"
@@ -185,9 +185,9 @@ const ToolCard = memo(function ToolCard({
 
       <div>
         <p
-          className={`flex items-center gap-1 font-display font-bold text-foreground leading-[1.25] ${
+          className={`flex items-center gap-1 font-display font-bold text-foreground leading-[1.25] break-words ${
             isMatrixView
-              ? "text-[10px] sm:text-xs md:text-[13px] tracking-tight sm:tracking-wide line-clamp-2 min-h-[25px] sm:min-h-0"
+              ? "text-[9px] xs:text-[10px] sm:text-xs md:text-[13px] tracking-tight sm:tracking-wide line-clamp-2 min-h-[25px] sm:min-h-0"
               : "text-xs sm:text-[13px] tracking-wide"
           }`}
         >
@@ -358,7 +358,7 @@ export function ToolGrid() {
       <div
         className={
           layoutMode === "grid"
-            ? "grid grid-cols-4 gap-1.5 sm:gap-3 lg:gap-3.5"
+            ? "grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 gap-1.5 sm:gap-3 lg:gap-3.5"
             : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         }
       >

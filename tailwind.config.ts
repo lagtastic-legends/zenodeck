@@ -14,6 +14,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        xs: "380px",
+      },
       /* ------------------------------------------------------------------ */
       /* 1. OPINIONATED TYPOGRAPHY & FLUID SCALES                           */
       /* ------------------------------------------------------------------ */
@@ -93,12 +96,31 @@ const config: Config = {
           amber: "oklch(0.79 0.18 78)",
         },
         terracotta: {
+          // 60% Dominant (Canvas / Atmosphere)
+          dominant: "#FAF5EE",
           paper: "#FAF5EE",
+          linen: "#FAF5EE",
+          canvas: "#FAF5EE",
+
+          // 30% Secondary (Surfaces, Contours & Deep Timber Typography)
           surface: "#F3ECE0",
+          secondary: "#EDE3D4",
+          border: "#DFD3C2",
+          borderHover: "#CDBC9F",
+          espresso: "#342A24",
+          dark: "#342A24",
+          timber: "#342A24",
+          muted: "#756457",
+          subtle: "#8C7A6D",
+
+          // 10% Hero Accent (Fired Clay, Burnt Sienna & Radiant Ember)
           clay: "#C2652A",
-          dark: "#3A302A",
-          muted: "#7C6E63",
-          border: "#E0D4C3",
+          accent: "#C2652A",
+          accentHover: "#A8521C",
+          burnt: "#964228",
+          sienna: "#964228",
+          amber: "#D97736",
+          glow: "rgba(194, 101, 42, 0.45)",
         },
       },
 
@@ -116,7 +138,7 @@ const config: Config = {
         glowPrimary: "0 0 24px -4px oklch(0.64 0.24 298 / 0.45), 0 6px 16px -2px oklch(0.64 0.24 298 / 0.25)",
         glowCyan: "0 0 24px -4px oklch(0.84 0.14 202 / 0.45), 0 6px 16px -2px oklch(0.84 0.14 202 / 0.25)",
         glowPlasma: "0 0 24px -4px oklch(0.70 0.29 332 / 0.45), 0 6px 16px -2px oklch(0.70 0.29 332 / 0.25)",
-        glowTerracotta: "0 0 24px -4px rgba(194, 101, 42, 0.4), 0 6px 16px -2px rgba(194, 101, 42, 0.25)",
+        glowTerracotta: "0 0 24px -4px rgba(194, 101, 42, 0.45), 0 6px 16px -2px rgba(194, 101, 42, 0.28)",
       },
 
       /* ------------------------------------------------------------------ */
