@@ -57,5 +57,6 @@ server.log
 scratch/
 dist/
 *.apk
-!public/zenodeck.apk
+*.aab
+public/ffmpeg/ffmpeg-core.wasm
 .agents/

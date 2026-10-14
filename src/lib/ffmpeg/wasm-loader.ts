@@ -22,12 +22,84 @@ const DB_VERSION = 1;
 const WASM_CACHE_KEY = "ffmpeg_core_v0.12.10_wasm";
 const EXPECTED_WASM_SIZE = 32_232_419;
 
+const OPFS_DIR = "zenodeck_wasm";
+const OPFS_FILE = "ffmpeg_core_v0.12.10.wasm";
+
 export interface WasmProgressCallback {
   (progress: { received: number; total: number; percent: number; done: boolean }): void;
 }
 
 export interface WasmLogger {
   (level: "info" | "warn" | "error" | "success", message: string): void;
+}
+
+/**
+ * Checks whether Origin Private File System (OPFS) is available in current runtime.
+ */
+export async function isOpfsAvailable(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.storage?.getDirectory) {
+    return false;
+  }
+  try {
+    const root = await navigator.storage.getDirectory();
+    return root !== null && typeof root.getDirectoryHandle === "function";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves cached WASM binary from sandboxed OPFS disk storage.
+ */
+export async function getOpfsCachedWasm(): Promise<ArrayBuffer | null> {
+  try {
+    if (!(await isOpfsAvailable())) return null;
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle(OPFS_DIR, { create: false });
+    const fileHandle = await dir.getFileHandle(OPFS_FILE, { create: false });
+    const file = await fileHandle.getFile();
+    if (file.size < 4) return null;
+    const buffer = await file.arrayBuffer();
+    return isValidWasmHeader(buffer) ? buffer : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists downloaded WASM binary to OPFS sandboxed disk storage.
+ */
+export async function cacheWasmToOpfs(buffer: ArrayBuffer): Promise<boolean> {
+  try {
+    if (!isValidWasmHeader(buffer) || !(await isOpfsAvailable())) return false;
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle(OPFS_DIR, { create: true });
+    const fileHandle = await dir.getFileHandle(OPFS_FILE, { create: true });
+    if (typeof (fileHandle as any).createWritable === "function") {
+      const writable = await (fileHandle as any).createWritable();
+      await writable.write(buffer);
+      await writable.close();
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Removes cached WASM binary from OPFS.
+ */
+export async function clearOpfsCachedWasm(): Promise<boolean> {
+  try {
+    if (!(await isOpfsAvailable())) return false;
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle(OPFS_DIR, { create: false });
+    await dir.removeEntry(OPFS_FILE);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -60,7 +132,7 @@ function openDatabase(): Promise<IDBDatabase | null> {
 /**
  * Retrieve cached WASM binary from IndexedDB.
  */
-export async function getCachedWasmBinary(): Promise<ArrayBuffer | null> {
+export async function getIdbCachedWasm(): Promise<ArrayBuffer | null> {
   const db = await openDatabase();
   if (!db) return null;
 
@@ -97,9 +169,9 @@ export async function getCachedWasmBinary(): Promise<ArrayBuffer | null> {
 }
 
 /**
- * Persist downloaded WASM binary to IndexedDB for instant future boots.
+ * Persist downloaded WASM binary to IndexedDB.
  */
-export async function cacheWasmBinary(buffer: ArrayBuffer): Promise<boolean> {
+export async function cacheWasmToIdb(buffer: ArrayBuffer): Promise<boolean> {
   if (!isValidWasmHeader(buffer)) return false;
 
   const db = await openDatabase();
@@ -120,9 +192,9 @@ export async function cacheWasmBinary(buffer: ArrayBuffer): Promise<boolean> {
 }
 
 /**
- * Purge cached WASM binary from IndexedDB in case of corruption or failed compilation.
+ * Purge cached WASM binary from IndexedDB.
  */
-export async function clearCachedWasmBinary(): Promise<boolean> {
+export async function clearIdbCachedWasm(): Promise<boolean> {
   const db = await openDatabase();
   if (!db) return false;
 
@@ -141,6 +213,57 @@ export async function clearCachedWasmBinary(): Promise<boolean> {
 }
 
 /**
+ * Multi-tier offline cache lookup:
+ * 1. Checks OPFS sandboxed disk first (zero JS heap pressure).
+ * 2. Falls back to IndexedDB.
+ * 3. Re-hydrates OPFS in background if found in IndexedDB.
+ */
+export async function getCachedWasmBinary(): Promise<ArrayBuffer | null> {
+  // 1. Try OPFS first
+  try {
+    const opfsBuf = await getOpfsCachedWasm();
+    if (opfsBuf) return opfsBuf;
+  } catch {}
+
+  // 2. Fall back to IndexedDB
+  try {
+    const idbBuf = await getIdbCachedWasm();
+    if (idbBuf) {
+      cacheWasmToOpfs(idbBuf).catch(() => {});
+      return idbBuf;
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Persist downloaded WASM binary to both OPFS and IndexedDB for instant future boots.
+ */
+export async function cacheWasmBinary(buffer: ArrayBuffer): Promise<boolean> {
+  if (!isValidWasmHeader(buffer)) return false;
+
+  const [opfsOk, idbOk] = await Promise.all([
+    cacheWasmToOpfs(buffer).catch(() => false),
+    cacheWasmToIdb(buffer).catch(() => false),
+  ]);
+
+  return opfsOk || idbOk;
+}
+
+/**
+ * Purge cached WASM binary from all offline storage tiers.
+ */
+export async function clearCachedWasmBinary(): Promise<boolean> {
+  const [opfsOk, idbOk] = await Promise.all([
+    clearOpfsCachedWasm().catch(() => false),
+    clearIdbCachedWasm().catch(() => false),
+  ]);
+
+  return opfsOk || idbOk;
+}
+
+/**
  * Validates the WebAssembly magic number: '\0asm' (0x00, 0x61, 0x73, 0x6d).
  */
 export function isValidWasmHeader(buffer: ArrayBuffer | ArrayBufferLike): boolean {
@@ -155,25 +278,50 @@ export function isValidWasmHeader(buffer: ArrayBuffer | ArrayBufferLike): boolea
 }
 
 /**
+ * Helper to determine if running inside Capacitor native container.
+ */
+export function isCapacitorNative(): boolean {
+  if (typeof window === "undefined") return false;
+  const win = window as any;
+  return Boolean(
+    win?.Capacitor?.isNativePlatform?.() ||
+    win?._capacitor ||
+    typeof win?.Capacitor !== "undefined",
+  );
+}
+
+/**
  * Get prioritized mirror URLs for the WASM core.
+ * In native mobile (Capacitor), static WASM is intentionally excluded from the APK
+ * bundle (<25MB limit), so CDN edge mirrors are prioritized first.
  */
 export function getWasmMirrors(): string[] {
   const mirrors: string[] = [];
 
-  // 1. Local on-device / self-hosted asset
+  const cdnMirrors = [
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm",
+    "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm",
+    "https://cdnjs.cloudflare.com/ajax/libs/ffmpeg-core/0.12.10/ffmpeg-core.wasm",
+  ];
+
+  let localUrl: string | null = null;
   if (typeof window !== "undefined") {
     try {
-      mirrors.push(new URL("/ffmpeg/ffmpeg-core.wasm", window.location.href).href);
+      localUrl = new URL("/ffmpeg/ffmpeg-core.wasm", window.location.href).href;
     } catch {
-      mirrors.push("/ffmpeg/ffmpeg-core.wasm");
+      localUrl = "/ffmpeg/ffmpeg-core.wasm";
     }
   }
 
-  // 2. High-performance global CDN (jsDelivr with Delhi, Frankfurt, Singapore, US POPs)
-  mirrors.push("https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm");
-
-  // 3. Fallback unpkg CDN
-  mirrors.push("https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.wasm");
+  if (isCapacitorNative()) {
+    // Native mobile app: prioritize global CDN edge POPs directly
+    mirrors.push(...cdnMirrors);
+    if (localUrl) mirrors.push(localUrl);
+  } else {
+    // Web / Local dev: check local asset first if present, then CDN edge mirrors
+    if (localUrl) mirrors.push(localUrl);
+    mirrors.push(...cdnMirrors);
+  }
 
   return mirrors;
 }
