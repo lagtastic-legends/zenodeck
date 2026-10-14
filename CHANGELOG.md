@@ -5,6 +5,28 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.15.1] — 2026-10-14
+
+### Added & Enhanced
+- **⌨️ ZenoTap Native Keyboard Hardware Aesthetics & Keycap Engine**:
+  - **Tactile Keycaps (`bg_keycap_normal.xml`, `bg_keycap_special.xml`)**: Hardware keycaps with 1dp top specular highlight border, 8dp corner rounding, recessed bottom bezel depth shadow, and neon glow pressed states.
+  - **50% Ergonomic Spacebar Deck (`bg_spacebar_50.xml`)**: Spacebar set to exact 50% width (`layout_weight="0.5"`) with a centered glowing LED trackpad indicator pill.
+  - **Horizontal Cursor Scrubbing**: Horizontal thumb gesture across the 50% spacebar moves cursor left/right via `InputConnection.sendKeyEvent` with `VibrationEffect.EFFECT_TICK` haptics per step.
+  - **Accelerate-on-Hold & Swipe Word Deletion**: Backspace accelerates hold-deletion and supports swiping left to delete entire words.
+  - **Morphing Utility Ribbon**: Mode switcher pills (`[⌨️ Keys]`, `[⚡ Vault]`), live host app MIME compatibility indicator (`GIF • WebP Ready`), and animated clipboard action pills (`[⚡ Compress]`, `[🎞️ To GIF]`, `[✨ Sticker]`) with indeterminate progress feedback.
+  - **Glassmorphic Vault Cards (`item_gif_cell.xml`)**: 12dp glassmorphic framing, format badges (`GIF` / `STICKER`), file-size micro-labels, category strip filtering (`All`, `GIFs`, `Stickers`, `Pinned`), and long-press pinning/deletion.
+  - **Cross-Boundary Live Theme Sync (`ZenoDeckKeyboardBridgePlugin.kt`)**: Theme switching between `"obsidian"` (cyber-violet/cyan) and `"terracotta"` (60/30/10 `#FAF5EE` / `#342A24` / `#C2652A`).
+- **🎛️ In-App ZenoTap Studio & Live Keyboard Simulator**:
+  - **1:1 Live Keyboard Simulator (`ZenoTapKeyboardSimulator.tsx`)**: Interactive software deck preview in Next.js 16 with live key taps, mode switching, category filtering, and typing into an integrated sandbox.
+  - **Interactive Onboarding Sandbox**: 4-step progressive setup checklist with real-time status indicators.
+- **🎬 True 4K 60FPS Adaptive DASH Muxing & Zero Silent Fallback**:
+  - **Strict Resolution Lock**: Total ban on silent 360p fallback downgrades; strictly preserves requested 4K/2K/1080p resolution and output filename tags (`[4K 60FPS].mp4`).
+  - **YouTube CDN Range Chunking**: Automatically injects `&range=start-end` query parameters to prevent Google Video 403 socket drops on >64MB streams.
+  - **Android Native Disk-to-Disk `MediaMuxer`**: Zero-RAM sample muxing in `ZenoHeadlessMediaEngine.kt` merging 4K video and audio directly on flash storage (<5MB RAM, ~1.5s execution, 0% frame decode).
+  - **Public Gallery Indexing & WebView Playback**: Direct save to `Movies/ZenoDeck`, immediate `MediaScannerConnection` indexing into Google Photos, and `Capacitor.convertFileSrc()` for instant in-app playback.
+- **📦 Slimmed 11.99 MB Release APK**:
+  - Full ProGuard/R8 shrinking reducing the signed release APK to **11.99 MB**, far below the strict 25 MB limit.
+
 ## [3.14.0] — 2026-10-14
 
 ### Added & Enhanced
