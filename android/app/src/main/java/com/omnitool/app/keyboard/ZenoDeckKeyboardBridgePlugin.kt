@@ -33,6 +33,11 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         const val TAG = "ZenoDeckBridgePlugin"
         const val DECK_DIRECTORY_NAME = "zenodeck_gifs"
         const val ACTION_DECK_UPDATED = "com.omnitool.app.ACTION_GIF_DECK_UPDATED"
+        const val ACTION_THEME_UPDATED = "com.omnitool.app.ACTION_KEYBOARD_THEME_UPDATED"
+        const val PREFS_NAME = "zenodeck_prefs"
+        const val PREF_KEY_THEME = "keyboard_theme"
+        const val THEME_OBSIDIAN = "obsidian"
+        const val THEME_TERRACOTTA = "terracotta"
     }
 
     private fun getDeckDirectory(): File {
@@ -260,6 +265,58 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch IME picker", e)
             call.reject("Failed to open IME picker: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets and persists the native keyboard theme ('obsidian' or 'terracotta').
+     * Broadcasts update to ZenoDeckKeyboardService for live runtime skinning.
+     */
+    @PluginMethod
+    fun setKeyboardTheme(call: PluginCall) {
+        val theme = call.getString("theme") ?: THEME_OBSIDIAN
+        if (theme != THEME_OBSIDIAN && theme != THEME_TERRACOTTA) {
+            call.reject("Invalid theme: $theme. Supported values: '$THEME_OBSIDIAN', '$THEME_TERRACOTTA'")
+            return
+        }
+
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(PREF_KEY_THEME, theme).apply()
+
+            val intent = Intent(ACTION_THEME_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("theme", theme)
+            }
+            context.sendBroadcast(intent)
+            Log.d(TAG, "Keyboard theme updated to $theme and broadcast sent")
+
+            val ret = JSObject().apply {
+                put("success", true)
+                put("theme", theme)
+            }
+            call.resolve(ret)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update keyboard theme", e)
+            call.reject("Failed to set keyboard theme: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Gets the currently saved native keyboard theme.
+     */
+    @PluginMethod
+    fun getKeyboardTheme(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val theme = prefs.getString(PREF_KEY_THEME, THEME_OBSIDIAN) ?: THEME_OBSIDIAN
+            val ret = JSObject().apply {
+                put("theme", theme)
+            }
+            call.resolve(ret)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get keyboard theme", e)
+            call.reject("Failed to get keyboard theme: ${e.message}", e)
         }
     }
 }

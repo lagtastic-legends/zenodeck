@@ -494,60 +494,84 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1">
-            {deck.map((item) => (
-              <div
-                key={item.id}
-                className="group relative rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden hover:border-neutral-700 transition"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-square bg-neutral-950 flex items-center justify-center overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.url}
-                    alt={item.originalName}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
-                </div>
+            {deck.map((item) => {
+              const isSticker = item.originalName.toLowerCase().includes("sticker");
+              return (
+                <div
+                  key={item.id}
+                  className="group relative rounded-xl border border-border/60 bg-card/40 overflow-hidden hover:border-primary/50 transition-all shadow-sm"
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-square bg-neutral-950 flex items-center justify-center overflow-hidden relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.url}
+                      alt={item.originalName}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
 
-                {/* Footer Metadata */}
-                <div className="p-2 flex items-center justify-between bg-neutral-900/90 text-[11px] text-neutral-400">
-                  <span className="truncate max-w-[100px]" title={item.originalName}>
-                    {item.originalName}
-                  </span>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button
-                          title="Delete from deck"
-                          aria-label={`Delete ${item.originalName} from cloud deck`}
-                          className="p-1 text-destructive/80 hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Remove GIF from Cloud Deck?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete &ldquo;{item.originalName}&rdquo; from your personal cloud storage?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => void handleDelete(item)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete GIF
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {/* Micro Format Badge */}
+                    <span
+                      className={`absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase backdrop-blur-md border ${
+                        isSticker
+                          ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
+                          : "bg-sky-950/80 text-sky-300 border-sky-500/40"
+                      }`}
+                    >
+                      {isSticker ? "Sticker" : "GIF"}
+                    </span>
+                  </div>
+
+                  {/* Footer Metadata */}
+                  <div className="p-2 space-y-1 bg-card/80 text-[11px] text-muted-foreground">
+                    <div className="flex items-center justify-between">
+                      <span className="truncate max-w-[100px] font-medium text-foreground" title={item.originalName}>
+                        {item.originalName}
+                      </span>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              title="Delete from deck"
+                              aria-label={`Delete ${item.originalName} from cloud deck`}
+                              className="p-1 text-destructive/80 hover:text-destructive hover:bg-destructive/10 rounded cursor-pointer transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove GIF from Cloud Deck?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete &ldquo;{item.originalName}&rdquo; from your personal cloud storage?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => void handleDelete(item)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete GIF
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[9px] font-mono text-muted-foreground/70">
+                      <span className="text-emerald-400/80 flex items-center gap-1">
+                        <span className="size-1 rounded-full bg-emerald-400" />
+                        &lt;15KB WebP
+                      </span>
+                      <span>&lt;30MB RSS</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </DialogContent>

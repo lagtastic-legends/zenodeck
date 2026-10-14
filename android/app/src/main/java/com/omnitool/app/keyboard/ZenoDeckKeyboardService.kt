@@ -1,5 +1,6 @@
 package com.omnitool.app.keyboard
 
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipDescription
@@ -10,13 +11,19 @@ import android.content.IntentFilter
 import android.inputmethodservice.InputMethodService
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
 import android.util.Log
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -39,8 +46,13 @@ import java.io.FileOutputStream
  * (injecting GIFs and custom media) into messaging applications (WhatsApp, Google Messages,
  * Telegram, Discord, Slack, etc.) via Android's CommitContent API (InputConnectionCompat).
  *
- * Integrates an asynchronous thumbnail RecyclerView grid and the shared storage bridge
- * (ZenoDeckKeyboardBridgePlugin) to receive, observe, and inject user-generated GIFs on the fly.
+ * Upgrades:
+ * - 50% Spacebar Horizontal Cursor Trackpad Scrubbing with EFFECT_TICK haptics
+ * - Tactile Backspace with Accelerate-on-hold and Swipe-Left Word Deletion
+ * - Pre-inflated zero-lag floating key echo indicator (tv_key_echo_preview)
+ * - 12dp glassmorphic vault media cards with micro badges (GIF vs STICKER)
+ * - Long-press direct vault card actions (Pin/Unpin, Delete, Clipboard Copy)
+ * - Live cross-boundary theme engine (Obsidian vs Terracotta)
  */
 class ZenoDeckKeyboardService : InputMethodService() {
 
@@ -84,7 +96,25 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var layoutEmptyDeck: View? = null
     private var gifAdapter: GifDeckAdapter? = null
 
+    // Ribbon & Mode View References
+    private var viewMimeDot: View? = null
+    private var btnModeVault: Button? = null
+    private var btnModeKeys: Button? = null
+    private var tvKeyEchoPreview: TextView? = null
+
+    // Smart Clipboard References
     private var layoutClipboardPill: View? = null
+    private var pbClipboardProcessing: ProgressBar? = null
+
+    // Category Filter References
+    private var btnCatAll: Button? = null
+    private var btnCatGifs: Button? = null
+    private var btnCatStickers: Button? = null
+    private var btnCatPinned: Button? = null
+    private var selectedCategory: String = "all"
+
+    // Active Theme State
+    private var currentTheme: String = ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN
 
     // Target host editor state
     private var currentEditorInfo: EditorInfo? = null
@@ -98,6 +128,12 @@ class ZenoDeckKeyboardService : InputMethodService() {
     // Shared storage GIF cache
     private val deckGifs = mutableListOf<File>()
 
+    // Handler for zero-lag floating key echo auto-dismiss
+    private val echoHandler = Handler(Looper.getMainLooper())
+    private val hideEchoRunnable = Runnable {
+        tvKeyEchoPreview?.visibility = View.GONE
+    }
+
     // Broadcast receiver for live deck updates from React/Capacitor
     private val deckUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -107,22 +143,48 @@ class ZenoDeckKeyboardService : InputMethodService() {
     }
     private var isReceiverRegistered = false
 
+    // Broadcast receiver for theme synchronization from React/Capacitor
+    private val themeUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val newTheme = intent?.getStringExtra("theme") ?: loadSavedTheme()
+            Log.d(TAG, "Received ACTION_THEME_UPDATED broadcast. Applying theme: $newTheme")
+            applyKeyboardTheme(newTheme)
+        }
+    }
+    private var isThemeReceiverRegistered = false
+
     override fun onCreate() {
         super.onCreate()
         Log.i(TAG, "ZenoDeckKeyboardService initialized.")
 
+        currentTheme = loadSavedTheme()
+
         // Register broadcast receiver for shared storage synchronization
-        val filter = IntentFilter(ZenoDeckKeyboardBridgePlugin.ACTION_DECK_UPDATED)
+        val deckFilter = IntentFilter(ZenoDeckKeyboardBridgePlugin.ACTION_DECK_UPDATED)
         try {
             ContextCompat.registerReceiver(
                 this,
                 deckUpdateReceiver,
-                filter,
+                deckFilter,
                 ContextCompat.RECEIVER_NOT_EXPORTED
             )
             isReceiverRegistered = true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register deckUpdateReceiver", e)
+        }
+
+        // Register broadcast receiver for live theme switching
+        val themeFilter = IntentFilter(ZenoDeckKeyboardBridgePlugin.ACTION_THEME_UPDATED)
+        try {
+            ContextCompat.registerReceiver(
+                this,
+                themeUpdateReceiver,
+                themeFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            isThemeReceiverRegistered = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register themeUpdateReceiver", e)
         }
 
         // Default listener for logging and UI telemetry
@@ -144,6 +206,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
         keyboardRootView = view
         bindKeyboardViews(view)
+        applyKeyboardTheme(currentTheme)
         refreshDeckFiles()
         return view
     }
@@ -156,20 +219,47 @@ class ZenoDeckKeyboardService : InputMethodService() {
         rvGifDeck = root.findViewById(R.id.rv_gif_deck)
         layoutEmptyDeck = root.findViewById(R.id.layout_empty_deck)
 
+        viewMimeDot = root.findViewById(R.id.view_mime_dot)
+        btnModeVault = root.findViewById(R.id.btn_mode_vault)
+        btnModeKeys = root.findViewById(R.id.btn_mode_keys)
+        tvKeyEchoPreview = root.findViewById(R.id.tv_key_echo_preview)
+
+        btnModeVault?.setOnClickListener {
+            btnModeVault?.isSelected = true
+            btnModeKeys?.isSelected = false
+            root.findViewById<View>(R.id.media_container)?.visibility = View.VISIBLE
+            showKeyEcho("⚡ VAULT ACTIVE", 600)
+        }
+
+        btnModeKeys?.setOnClickListener {
+            btnModeKeys?.isSelected = true
+            btnModeVault?.isSelected = false
+            showKeyEcho("⌨️ FAST KEYS", 600)
+            Toast.makeText(this@ZenoDeckKeyboardService, "ZenoTap Fast QWERTY active", Toast.LENGTH_SHORT).show()
+        }
+
         val btnSwitchIme = root.findViewById<ImageButton>(R.id.btn_switch_ime)
         val btnSwitchInput = root.findViewById<Button>(R.id.btn_switch_input)
         val btnClose = root.findViewById<ImageButton>(R.id.btn_close_keyboard)
         val btnOpenApp = root.findViewById<Button>(R.id.btn_open_app)
         val btnInjectGif = root.findViewById<Button>(R.id.btn_inject_gif)
         val btnCopyFallback = root.findViewById<Button>(R.id.btn_copy_fallback)
-        // Spacebar action (50% ergonomic width button)
+
+        // Spacebar action (50% ergonomic width button) with Cursor Trackpad Gesture
         val btnSpacebar = root.findViewById<Button>(R.id.btn_spacebar)
-        btnSpacebar?.setOnClickListener {
-            currentInputConnection?.commitText(" ", 1)
+        if (btnSpacebar != null) {
+            setupSpacebarTrackpadGesture(btnSpacebar)
+        }
+
+        // Backspace action with Accelerate-on-Hold & Swipe-Left Word Deletion
+        val btnBackspace = root.findViewById<Button>(R.id.btn_backspace)
+        if (btnBackspace != null) {
+            setupBackspaceGesture(btnBackspace)
         }
 
         // Setup Clipboard Listener Pill Actions (Direct Headless Native Processing)
         layoutClipboardPill = root.findViewById(R.id.layout_clipboard_pill)
+        pbClipboardProcessing = root.findViewById(R.id.pb_clipboard_processing)
         val btnClipCompress = root.findViewById<Button>(R.id.btn_clip_compress)
         val btnClipToGif = root.findViewById<Button>(R.id.btn_clip_to_gif)
         val btnClipToSticker = root.findViewById<Button>(R.id.btn_clip_to_sticker)
@@ -178,13 +268,24 @@ class ZenoDeckKeyboardService : InputMethodService() {
         btnClipToGif?.setOnClickListener { processClipboardMedia("to_gif") }
         btnClipToSticker?.setOnClickListener { processClipboardMedia("to_sticker") }
 
+        // Category Filter Strip Wiring
+        btnCatAll = root.findViewById(R.id.btn_cat_all)
+        btnCatGifs = root.findViewById(R.id.btn_cat_gifs)
+        btnCatStickers = root.findViewById(R.id.btn_cat_stickers)
+        btnCatPinned = root.findViewById(R.id.btn_cat_pinned)
+
+        btnCatAll?.setOnClickListener { filterDeckByCategory("all") }
+        btnCatGifs?.setOnClickListener { filterDeckByCategory("gifs") }
+        btnCatStickers?.setOnClickListener { filterDeckByCategory("stickers") }
+        btnCatPinned?.setOnClickListener { filterDeckByCategory("pinned") }
+
         // Setup RecyclerView Adapter and LayoutManager (3 columns for compact vertical grid)
         gifAdapter = GifDeckAdapter(
             onItemClick = { file ->
                 commitGif(file, description = file.nameWithoutExtension)
             },
             onItemLongClick = { file ->
-                Toast.makeText(this@ZenoDeckKeyboardService, "Selected: ${file.name}", Toast.LENGTH_SHORT).show()
+                showVaultCardOptionsDialog(file)
             }
         )
 
@@ -231,10 +332,333 @@ class ZenoDeckKeyboardService : InputMethodService() {
         }
     }
 
+    /**
+     * 50% Spacebar Cursor Trackpad:
+     * When horizontal delta exceeds 12dp, moves cursor left or right via DPAD events,
+     * fires crisp EFFECT_TICK haptics, and suppresses space insertion on release.
+     */
+    private fun setupSpacebarTrackpadGesture(spacebar: Button) {
+        var downX = 0f
+        var lastScrubX = 0f
+        var isScrubbing = false
+        val scrubThreshold = 12 * resources.displayMetrics.density
+
+        spacebar.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = event.x
+                    lastScrubX = event.x
+                    isScrubbing = false
+                    v.isPressed = true
+                    false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val totalDelta = event.x - downX
+                    if (!isScrubbing && Math.abs(totalDelta) >= scrubThreshold) {
+                        isScrubbing = true
+                    }
+                    if (isScrubbing) {
+                        val deltaSinceLast = event.x - lastScrubX
+                        if (Math.abs(deltaSinceLast) >= scrubThreshold) {
+                            if (deltaSinceLast > 0) {
+                                sendDownUpKeyEvents(KeyEvent.KEYCODE_DPAD_RIGHT)
+                                showKeyEcho("CURSOR ▶", 800)
+                            } else {
+                                sendDownUpKeyEvents(KeyEvent.KEYCODE_DPAD_LEFT)
+                                showKeyEcho("◀ CURSOR", 800)
+                            }
+                            vibrateTick()
+                            lastScrubX = event.x
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    v.isPressed = false
+                    if (isScrubbing) {
+                        hideKeyEcho()
+                    } else {
+                        currentInputConnection?.commitText(" ", 1)
+                        vibrateTactileClick()
+                    }
+                    isScrubbing = false
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    isScrubbing = false
+                    hideKeyEcho()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    /**
+     * Tactile Backspace Key:
+     * - Swipe left (>24dp) deletes previous word with EFFECT_HEAVY_CLICK haptics.
+     * - Long press hold accelerates deletion repeat (starts at 350ms, ramps to 50ms).
+     * - Tap deletes single character.
+     */
+    private fun setupBackspaceGesture(backspace: Button) {
+        var downX = 0f
+        var isSwipeDeleting = false
+        var isLongPressed = false
+        val swipeThreshold = 24 * resources.displayMetrics.density
+
+        val repeatHandler = Handler(Looper.getMainLooper())
+        var currentInterval = 350L
+
+        val repeatRunnable = object : Runnable {
+            override fun run() {
+                isLongPressed = true
+                sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+                vibrateTactileClick()
+                showKeyEcho("⌫ DELETING", 500)
+                currentInterval = (currentInterval * 0.82).toLong().coerceAtLeast(45L)
+                repeatHandler.postDelayed(this, currentInterval)
+            }
+        }
+
+        backspace.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = event.x
+                    isSwipeDeleting = false
+                    isLongPressed = false
+                    currentInterval = 350L
+                    v.isPressed = true
+                    repeatHandler.postDelayed(repeatRunnable, currentInterval)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaX = event.x - downX
+                    if (!isSwipeDeleting && deltaX <= -swipeThreshold) {
+                        isSwipeDeleting = true
+                        repeatHandler.removeCallbacks(repeatRunnable)
+                        deletePreviousWord()
+                        vibrateHeavy()
+                        showKeyEcho("⌫ WORD DELETED", 1000)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    v.isPressed = false
+                    repeatHandler.removeCallbacks(repeatRunnable)
+                    if (!isSwipeDeleting && !isLongPressed) {
+                        sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+                        vibrateTactileClick()
+                    }
+                    hideKeyEcho()
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    repeatHandler.removeCallbacks(repeatRunnable)
+                    hideKeyEcho()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun deletePreviousWord() {
+        val ic = currentInputConnection ?: return
+        val textBefore = ic.getTextBeforeCursor(60, 0)?.toString() ?: ""
+        if (textBefore.isEmpty()) {
+            sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+            return
+        }
+
+        var charsToDelete = 0
+        var inWhitespace = true
+        for (i in textBefore.length - 1 downTo 0) {
+            val ch = textBefore[i]
+            if (Character.isWhitespace(ch)) {
+                if (!inWhitespace) break
+                charsToDelete++
+            } else {
+                inWhitespace = false
+                charsToDelete++
+            }
+        }
+
+        if (charsToDelete > 0) {
+            ic.deleteSurroundingText(charsToDelete, 0)
+        } else {
+            sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        }
+    }
+
+    /**
+     * Floating key echo preview indicator (zero layout-inflation lag)
+     */
+    fun showKeyEcho(text: String, autoDismissMs: Long = 1000L) {
+        echoHandler.removeCallbacks(hideEchoRunnable)
+        tvKeyEchoPreview?.apply {
+            this.text = text
+            visibility = View.VISIBLE
+        }
+        if (autoDismissMs > 0) {
+            echoHandler.postDelayed(hideEchoRunnable, autoDismissMs)
+        }
+    }
+
+    fun hideKeyEcho() {
+        echoHandler.removeCallbacks(hideEchoRunnable)
+        tvKeyEchoPreview?.visibility = View.GONE
+    }
+
+    /**
+     * Long-press management options on vault cards:
+     * - Toggle Pin / Unpin
+     * - Delete Media
+     * - Copy Media to Clipboard
+     */
+    private fun showVaultCardOptionsDialog(file: File) {
+        vibrateHeavy()
+        val isPinned = file.name.startsWith("pinned_", ignoreCase = true)
+        val pinLabel = if (isPinned) "📌 Unpin from Top" else "📌 Pin to Top"
+
+        val options = arrayOf(pinLabel, "📋 Copy to Clipboard", "🗑️ Delete Item")
+
+        AlertDialog.Builder(this)
+            .setTitle(file.nameWithoutExtension.removePrefix("pinned_"))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> togglePinFile(file)
+                    1 -> {
+                        val contentUri = FileProvider.getUriForFile(
+                            this@ZenoDeckKeyboardService,
+                            "$packageName.fileprovider",
+                            file
+                        )
+                        executeFallback(file, contentUri, null, "User copied from options")
+                    }
+                    2 -> deleteVaultFile(file)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+            .apply {
+                window?.setType(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                        android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    else
+                        @Suppress("DEPRECATION")
+                        android.view.WindowManager.LayoutParams.TYPE_PHONE
+                )
+            }
+            .show()
+    }
+
+    private fun togglePinFile(file: File) {
+        val parent = file.parentFile ?: return
+        val isPinned = file.name.startsWith("pinned_", ignoreCase = true)
+        val newName = if (isPinned) {
+            file.name.removePrefix("pinned_")
+        } else {
+            "pinned_${file.name}"
+        }
+        val target = File(parent, newName)
+        if (file.renameTo(target)) {
+            // Also rename companion thumbnail if exists
+            val thumb = File(parent, "${file.name}.thumb.webp")
+            if (thumb.exists()) {
+                val targetThumb = File(parent, "${newName}.thumb.webp")
+                thumb.renameTo(targetThumb)
+            }
+            refreshDeckFiles()
+            showKeyEcho(if (isPinned) "UNPINNED" else "PINNED 📌", 800)
+        }
+    }
+
+    private fun deleteVaultFile(file: File) {
+        val parent = file.parentFile
+        val thumb = if (parent != null) File(parent, "${file.name}.thumb.webp") else null
+        thumb?.delete()
+        if (file.delete()) {
+            refreshDeckFiles()
+            showKeyEcho("DELETED 🗑️", 800)
+            Toast.makeText(this, "Deleted ${file.nameWithoutExtension}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun loadSavedTheme(): String {
+        return try {
+            val prefs = getSharedPreferences(ZenoDeckKeyboardBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.getString(ZenoDeckKeyboardBridgePlugin.PREF_KEY_THEME, ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN)
+                ?: ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN
+        } catch (e: Exception) {
+            ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN
+        }
+    }
+
+    /**
+     * Dynamically skins the native keyboard view hierarchy based on the active theme:
+     * - "obsidian": OKLCH dark cyber-violet/cyan (#0E0F14 base, #22D3EE accent)
+     * - "terracotta": 60/30/10 rule (#FAF5EE 60% warm clay paper, #342A24 30% structural, #C2652A 10% baked clay accent)
+     */
+    fun applyKeyboardTheme(theme: String) {
+        currentTheme = theme
+        val isTerracotta = theme.equals(ZenoDeckKeyboardBridgePlugin.THEME_TERRACOTTA, ignoreCase = true)
+
+        keyboardRootView?.let { root ->
+            if (isTerracotta) {
+                root.setBackgroundColor(0xFFFAF5EE.toInt())
+                root.findViewById<View>(R.id.media_container)?.setBackgroundColor(0xFFF3ECE2.toInt())
+                deckTitleTextView?.setTextColor(0xFF342A24.toInt())
+                statusTextView?.setTextColor(0xFF79695F.toInt())
+                root.findViewById<TextView>(R.id.tv_deck_subtitle)?.setTextColor(0xFF79695F.toInt())
+                root.findViewById<Button>(R.id.btn_open_app)?.setTextColor(0xFF342A24.toInt())
+                root.findViewById<Button>(R.id.btn_spacebar)?.setTextColor(0xFF342A24.toInt())
+                root.findViewById<Button>(R.id.btn_switch_input)?.setTextColor(0xFF79695F.toInt())
+                root.findViewById<Button>(R.id.btn_backspace)?.setTextColor(0xFFC2652A.toInt())
+            } else {
+                root.setBackgroundColor(0xFF0E0F14.toInt())
+                root.findViewById<View>(R.id.media_container)?.setBackgroundColor(0xFF12131A.toInt())
+                deckTitleTextView?.setTextColor(0xFFF1F5F9.toInt())
+                statusTextView?.setTextColor(0xFF64748B.toInt())
+                root.findViewById<TextView>(R.id.tv_deck_subtitle)?.setTextColor(0xFF64748B.toInt())
+                root.findViewById<Button>(R.id.btn_open_app)?.setTextColor(0xFFE2E8F0.toInt())
+                root.findViewById<Button>(R.id.btn_spacebar)?.setTextColor(0xFFF1F5F9.toInt())
+                root.findViewById<Button>(R.id.btn_switch_input)?.setTextColor(0xFF94A3B8.toInt())
+                root.findViewById<Button>(R.id.btn_backspace)?.setTextColor(0xFFF87171.toInt())
+            }
+            filterDeckByCategory(selectedCategory)
+        }
+    }
+
+    private fun filterDeckByCategory(category: String) {
+        selectedCategory = category
+        val isTerracotta = currentTheme.equals(ZenoDeckKeyboardBridgePlugin.THEME_TERRACOTTA, ignoreCase = true)
+        val activeColor = if (isTerracotta) 0xFFC2652A.toInt() else 0xFF22D3EE.toInt()
+        val inactiveColor = if (isTerracotta) 0xFF79695F.toInt() else 0xFF94A3B8.toInt()
+
+        btnCatAll?.setTextColor(if (category == "all") activeColor else inactiveColor)
+        btnCatGifs?.setTextColor(if (category == "gifs") activeColor else inactiveColor)
+        btnCatStickers?.setTextColor(if (category == "stickers") activeColor else inactiveColor)
+        btnCatPinned?.setTextColor(if (category == "pinned") activeColor else inactiveColor)
+
+        val filtered = when (category) {
+            "stickers" -> deckGifs.filter { it.name.contains("sticker", ignoreCase = true) }
+            "gifs" -> deckGifs.filter { !it.name.contains("sticker", ignoreCase = true) }
+            "pinned" -> deckGifs.filter { it.name.startsWith("pinned_", ignoreCase = true) }
+                .ifEmpty { deckGifs.take(4) }
+            else -> deckGifs
+        }
+
+        gifAdapter?.submitList(filtered.toList())
+    }
+
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         currentEditorInfo = info
 
+        currentTheme = loadSavedTheme()
+        applyKeyboardTheme(currentTheme)
         refreshDeckFiles()
 
         if (info == null) {
@@ -299,10 +723,16 @@ class ZenoDeckKeyboardService : InputMethodService() {
         } ?: emptyArray()
 
         deckGifs.clear()
-        deckGifs.addAll(files.sortedByDescending { it.lastModified() })
+        // Sort with pinned items first, then by last modified descending
+        deckGifs.addAll(
+            files.sortedWith(
+                compareByDescending<File> { it.name.startsWith("pinned_", ignoreCase = true) }
+                    .thenByDescending { it.lastModified() }
+            )
+        )
 
         val count = deckGifs.size
-        deckTitleTextView?.text = "⚡ ZenoDeck GIF Deck ($count)"
+        deckTitleTextView?.text = "ZenoTap ($count)"
 
         if (count == 0) {
             rvGifDeck?.visibility = View.GONE
@@ -310,7 +740,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
         } else {
             rvGifDeck?.visibility = View.VISIBLE
             layoutEmptyDeck?.visibility = View.GONE
-            gifAdapter?.submitList(deckGifs.toList())
+            filterDeckByCategory(selectedCategory)
         }
 
         return deckGifs.toList()
@@ -476,17 +906,25 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
     private fun updateHostCapabilitiesDisplay(hostPackage: String, supported: Boolean, emptyMime: Boolean) {
         statusTextView?.text = when {
-            supported -> "Target: $hostPackage (GIF Insertion Active)"
+            supported -> "Target: $hostPackage (GIF • WebP Ready)"
             emptyMime -> "Target: $hostPackage (Standard Text Input)"
             else -> "Target: $hostPackage (Rich Content Restricted)"
         }
 
+        viewMimeDot?.setBackgroundColor(
+            when {
+                supported -> 0xFF10B981.toInt() // Emerald Green dot
+                emptyMime -> 0xFF64748B.toInt() // Slate Gray dot
+                else -> 0xFFF59E0B.toInt()      // Amber dot
+            }
+        )
+
         richContentBadge?.apply {
             if (supported) {
-                text = "⚡ CommitContent"
+                text = "GIF • WebP Ready"
                 setTextColor(0xFF10B981.toInt()) // Emerald Green
             } else {
-                text = "⚠️ Fallback"
+                text = "Text Only"
                 setTextColor(0xFFF59E0B.toInt()) // Amber Yellow
             }
         }
@@ -516,6 +954,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
             clipText = item.text?.toString()
         }
 
+        pbClipboardProcessing?.visibility = View.VISIBLE
         updateCommitResultDisplay("⚡ Processing $action headlessly…", isSuccess = null)
 
         ZenoHeadlessMediaEngine.getInstance(applicationContext).processClipboardActionAsync(
@@ -523,12 +962,12 @@ class ZenoDeckKeyboardService : InputMethodService() {
             clipUri = clipUri,
             clipText = clipText
         ) { result ->
+            pbClipboardProcessing?.visibility = View.GONE
             if (result.isSuccess) {
                 val outputFile = result.getOrNull()
                 if (outputFile != null && outputFile.exists()) {
                     refreshDeckFiles()
                     vibrateTactileClick()
-                    // Finish composing text before committing rich media content
                     currentInputConnection?.finishComposingText()
                     commitGif(outputFile, description = "ZenoTap $action")
                     updateCommitResultDisplay("✓ Injected $action into active chat", isSuccess = true)
@@ -544,15 +983,47 @@ class ZenoDeckKeyboardService : InputMethodService() {
         }
     }
 
+    private fun vibrateTick() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(10)
+            }
+        } catch (ignored: Exception) {}
+    }
+
+    private fun vibrateHeavy() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(VibrationEffect.createOneShot(35, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(35)
+            }
+        } catch (ignored: Exception) {}
+    }
+
     private fun vibrateTactileClick() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(25, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                vibrator?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-                vibrator?.vibrate(25)
+                vibrator?.vibrate(20)
             }
         } catch (ignored: Exception) {}
     }
@@ -579,6 +1050,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         currentEditorInfo = null
+        hideKeyEcho()
         Log.d(TAG, "onFinishInputView: finishingInput=$finishingInput")
     }
 
@@ -589,6 +1061,13 @@ class ZenoDeckKeyboardService : InputMethodService() {
             } catch (ignored: Exception) {}
             isReceiverRegistered = false
         }
+        if (isThemeReceiverRegistered) {
+            try {
+                unregisterReceiver(themeUpdateReceiver)
+            } catch (ignored: Exception) {}
+            isThemeReceiverRegistered = false
+        }
+        echoHandler.removeCallbacks(hideEchoRunnable)
         GifThumbnailLoader.clearCache()
         keyboardRootView = null
         statusTextView = null
@@ -598,6 +1077,15 @@ class ZenoDeckKeyboardService : InputMethodService() {
         rvGifDeck = null
         layoutEmptyDeck = null
         gifAdapter = null
+        viewMimeDot = null
+        btnModeVault = null
+        btnModeKeys = null
+        tvKeyEchoPreview = null
+        pbClipboardProcessing = null
+        btnCatAll = null
+        btnCatGifs = null
+        btnCatStickers = null
+        btnCatPinned = null
         currentEditorInfo = null
         commitContentListener = null
         deckGifs.clear()

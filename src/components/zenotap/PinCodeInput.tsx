@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 
 export interface PinCodeInputProps {
   length?: number;
@@ -25,6 +27,7 @@ export function PinCodeInput({
   ariaLabel = "6-digit pairing code",
 }: PinCodeInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const sensory = useSensoryFeedback();
 
   // Pad or slice value to match length
   const digits = Array.from({ length }, (_, i) => value[i] || "");
@@ -44,6 +47,7 @@ export function PinCodeInput({
       newDigits[index] = "";
       const newCode = newDigits.join("");
       onChange?.(newCode);
+      sensory.triggerTap();
       return;
     }
 
@@ -52,9 +56,11 @@ export function PinCodeInput({
     newDigits[index] = lastDigit;
     const newCode = newDigits.join("");
 
+    sensory.triggerTap();
     onChange?.(newCode);
 
     if (newCode.length === length) {
+      sensory.triggerSuccess();
       onComplete?.(newCode);
     }
 
@@ -67,6 +73,7 @@ export function PinCodeInput({
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
+      sensory.triggerTap();
       if (!digits[index] && index > 0) {
         // Current slot is already empty, jump to previous and clear it
         e.preventDefault();
@@ -99,6 +106,7 @@ export function PinCodeInput({
     const numericChars = pastedData.replace(/\D/g, "").slice(0, length);
     if (!numericChars) return;
 
+    sensory.triggerSuccess();
     onChange?.(numericChars);
 
     if (numericChars.length === length) {
@@ -119,6 +127,7 @@ export function PinCodeInput({
     >
       {Array.from({ length }).map((_, index) => {
         const isMiddle = length === 6 && index === 3;
+        const hasValue = Boolean(digits[index]);
         return (
           <React.Fragment key={index}>
             {isMiddle && (
@@ -126,29 +135,37 @@ export function PinCodeInput({
                 –
               </span>
             )}
-            <input
-              ref={(el) => {
-                inputRefs.current[index] = el;
+            <motion.div
+              initial={false}
+              animate={{
+                scale: hasValue ? [1, 1.08, 1] : 1,
               }}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={1}
-              value={digits[index]}
-              disabled={disabled}
-              onChange={(e) => handleInputChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              onPaste={handlePaste}
-              onFocus={(e) => e.target.select()}
-              aria-label={`Digit ${index + 1} of ${length}`}
-              className={cn(
-                "w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-mono font-bold",
-                "bg-background/80 border-2 rounded-xl text-foreground shadow-sm transition-all duration-150",
-                "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary",
-                digits[index] ? "border-primary/60 bg-primary/5" : "border-border/60",
-                disabled && "opacity-50 cursor-not-allowed"
-              )}
-            />
+              transition={{ type: "spring", stiffness: 450, damping: 25 }}
+            >
+              <input
+                ref={(el) => {
+                  inputRefs.current[index] = el;
+                }}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={1}
+                value={digits[index]}
+                disabled={disabled}
+                onChange={(e) => handleInputChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={handlePaste}
+                onFocus={(e) => e.target.select()}
+                aria-label={`Digit ${index + 1} of ${length}`}
+                className={cn(
+                  "w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-mono font-bold",
+                  "bg-card/70 border-2 rounded-xl text-foreground shadow-sm transition-all duration-150 backdrop-blur-md",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary focus:shadow-[0_0_15px_rgba(99,102,241,0.25)]",
+                  hasValue ? "border-primary/70 bg-primary/10 text-primary" : "border-border/60",
+                  disabled && "opacity-50 cursor-not-allowed"
+                )}
+              />
+            </motion.div>
           </React.Fragment>
         );
       })}

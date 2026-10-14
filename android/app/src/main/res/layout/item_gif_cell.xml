@@ -3,11 +3,13 @@
     android:layout_width="match_parent"
     android:layout_height="96dp"
     android:layout_margin="3dp"
-    android:background="#27272A"
+    android:background="@drawable/bg_vault_card"
+    android:clipToOutline="true"
     android:foreground="?android:attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
+    <!-- Thumbnail Preview Image -->
     <ImageView
         android:id="@+id/iv_gif_thumb"
         android:layout_width="match_parent"
@@ -15,14 +17,29 @@
         android:scaleType="centerCrop"
         android:contentDescription="GIF Preview" />
 
-    <!-- Gradient footer for filename overlay -->
+    <!-- Top-Right Pin Indicator (Visible if item is pinned) -->
+    <TextView
+        android:id="@+id/tv_pin_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/bg_format_badge"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="1dp"
+        android:text="📌"
+        android:textSize="8sp"
+        android:visibility="gone" />
+
+    <!-- Bottom Metadata Bar: Filename, Format Badge, and File Size -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="#B318181B"
+        android:background="#CC0A0B10"
         android:orientation="horizontal"
-        android:paddingHorizontal="6dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="5dp"
         android:paddingVertical="3dp">
 
         <TextView
@@ -30,16 +47,31 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#E4E4E7"
+            android:textColor="#F1F5F9"
             android:textSize="9sp"
+            android:textStyle="bold"
             android:singleLine="true"
             android:ellipsize="end" />
+
+        <!-- Format Micro Badge (GIF / STICKER) -->
+        <TextView
+            android:id="@+id/tv_gif_format"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="3dp"
+            android:background="@drawable/bg_format_badge"
+            android:paddingHorizontal="3dp"
+            android:paddingVertical="1dp"
+            android:text="GIF"
+            android:textColor="#38BDF8"
+            android:textSize="7sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tv_gif_size"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#A1A1AA"
+            android:textColor="#94A3B8"
             android:textSize="8sp" />
     </LinearLayout>
 

@@ -14,7 +14,13 @@ import java.util.Locale
 /**
  * GifDeckAdapter
  *
- * RecyclerView adapter for displaying user-generated GIF items in the keyboard deck.
+ * Ultra-lightweight RecyclerView adapter for displaying user-generated media cards in the ZenoTap vault tray.
+ * Features:
+ * - 12dp rounded glassmorphic cards with thumbnail preview
+ * - Format badges (GIF vs STICKER) and micro file-size labels
+ * - Pinned status indicator badge
+ * - Click to inject, long-press to open management drawer (pin/delete)
+ * - Keeps memory consumption strictly <30MB via GifThumbnailLoader
  */
 class GifDeckAdapter(
     private val onItemClick: (File) -> Unit,
@@ -61,10 +67,27 @@ class GifDeckAdapter(
         private val ivThumb: ImageView = itemView.findViewById(R.id.iv_gif_thumb)
         private val tvName: TextView = itemView.findViewById(R.id.tv_gif_name)
         private val tvSize: TextView = itemView.findViewById(R.id.tv_gif_size)
+        private val tvFormat: TextView = itemView.findViewById(R.id.tv_gif_format)
+        private val tvPinBadge: TextView = itemView.findViewById(R.id.tv_pin_badge)
 
         fun bind(file: File) {
-            tvName.text = file.nameWithoutExtension.replace('_', ' ')
+            val cleanName = file.nameWithoutExtension
+                .removePrefix("pinned_")
+                .replace('_', ' ')
+            tvName.text = cleanName
             tvSize.text = formatFileSize(file.length())
+
+            val isSticker = file.name.contains("sticker", ignoreCase = true)
+            if (isSticker) {
+                tvFormat.text = "STICKER"
+                tvFormat.setTextColor(0xFF34D399.toInt()) // Emerald/Mint
+            } else {
+                tvFormat.text = "GIF"
+                tvFormat.setTextColor(0xFF38BDF8.toInt()) // Cyan/Sky
+            }
+
+            val isPinned = file.name.startsWith("pinned_", ignoreCase = true)
+            tvPinBadge.visibility = if (isPinned) View.VISIBLE else View.GONE
 
             GifThumbnailLoader.loadThumbnail(file, ivThumb)
 

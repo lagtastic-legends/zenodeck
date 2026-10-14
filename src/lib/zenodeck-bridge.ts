@@ -28,6 +28,8 @@ interface ZenoDeckNativePlugin {
   isKeyboardEnabled(): Promise<KeyboardStatus>;
   openKeyboardSettings(): Promise<{ success: boolean }>;
   openInputMethodPicker(): Promise<{ success: boolean }>;
+  setKeyboardTheme(options: { theme: string }): Promise<{ success: boolean; theme: string }>;
+  getKeyboardTheme(): Promise<{ theme: string }>;
 }
 
 const NativeBridge = registerPlugin<ZenoDeckNativePlugin>("ZenoDeckKeyboardBridge");
@@ -227,3 +229,42 @@ export async function openKeyboardPicker(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Updates the native Android keyboard theme ('obsidian' or 'terracotta').
+ * Syncs seamlessly across the Capacitor bridge and persists in SharedPreferences.
+ */
+export async function setKeyboardTheme(theme: "obsidian" | "terracotta"): Promise<boolean> {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("zenotap_keyboard_theme", theme);
+  }
+  if (!Capacitor.isNativePlatform()) {
+    return true;
+  }
+  try {
+    const res = await NativeBridge.setKeyboardTheme({ theme });
+    return res.success;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves the currently persisted native Android keyboard theme.
+ */
+export async function getKeyboardTheme(): Promise<"obsidian" | "terracotta"> {
+  if (!Capacitor.isNativePlatform()) {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("zenotap_keyboard_theme");
+      if (stored === "terracotta" || stored === "obsidian") return stored;
+    }
+    return "obsidian";
+  }
+  try {
+    const res = await NativeBridge.getKeyboardTheme();
+    return res.theme === "terracotta" ? "terracotta" : "obsidian";
+  } catch {
+    return "obsidian";
+  }
+}
+

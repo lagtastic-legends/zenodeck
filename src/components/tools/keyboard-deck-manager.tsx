@@ -19,9 +19,33 @@ import {
   Sparkles,
   Check,
   Zap,
+  GripVertical,
+  Pin,
+  PinOff,
+  Film,
+  Image as ImageIcon,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useId } from "react";
 import { Capacitor } from "@capacitor/core";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   getKeyboardDeckGifs,
   deleteGifFromKeyboardDeck,
@@ -44,6 +68,7 @@ import {
 } from "@/lib/zenotap/client-sdk";
 import { PinCodeInput } from "@/components/zenotap/PinCodeInput";
 import { ZenoTapPairScanner } from "@/components/zenotap/ZenoTapPairScanner";
+import { ZenoTapKeyboardSimulator } from "@/components/zenotap/ZenoTapKeyboardSimulator";
 import { formatBytes } from "@/lib/format";
 import { useHaptics } from "@/hooks/use-haptics";
 import { toast } from "sonner";
@@ -58,6 +83,146 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+interface SortableDeckItemProps {
+  item: DeckGifItem;
+  resolveImageSrc: (path: string) => string;
+  onDelete: (filename: string) => void;
+  onTogglePin: (filename: string) => void;
+}
+
+function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: SortableDeckItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.filename,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : 1,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  const isPinned = item.filename.startsWith("pinned_");
+  const isSticker = item.filename.includes("sticker");
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 p-2.5 transition-all hover:border-primary/50 hover:bg-card/80 shadow-sm"
+    >
+      {/* Top Action Bar: Drag Grip, Pin Button, Delete Button */}
+      <div className="flex items-center justify-between mb-1.5 px-0.5">
+        <button
+          {...attributes}
+          {...listeners}
+          type="button"
+          aria-label="Drag to reorder"
+          className="text-muted-foreground/60 hover:text-foreground cursor-grab active:cursor-grabbing p-0.5"
+        >
+          <GripVertical className="size-3.5" />
+        </button>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onTogglePin(item.filename)}
+            className={`p-1 rounded-md transition-colors cursor-pointer text-xs ${
+              isPinned
+                ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                : "text-muted-foreground/60 hover:text-foreground"
+            }`}
+            title={isPinned ? "Unpin item" : "Pin to top"}
+            aria-label={isPinned ? "Unpin item" : "Pin to top"}
+          >
+            <Pin className="size-3" />
+          </button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Delete ${item.filename} from deck`}
+                title="Delete from deck"
+                className="p-1 rounded-md text-muted-foreground/60 hover:bg-destructive/20 hover:text-destructive transition-colors cursor-pointer"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove from Keyboard Deck?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to remove &ldquo;{item.filename}&rdquo; from your keyboard storage?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(item.filename)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Remove Media
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+
+      {/* Media Thumbnail Container with Format Badge */}
+      <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/50 relative flex items-center justify-center border border-border/30">
+        <img
+          src={resolveImageSrc(item.path)}
+          alt={item.filename}
+          className="size-full object-contain"
+          onError={(e) => {
+            (e.target as HTMLElement).style.display = "none";
+          }}
+        />
+
+        {/* Micro Format Badge */}
+        <span
+          className={`absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase backdrop-blur-md shadow-sm border ${
+            isSticker
+              ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
+              : "bg-sky-950/80 text-sky-300 border-sky-500/40"
+          }`}
+        >
+          {isSticker ? "Sticker" : "GIF"}
+        </span>
+
+        {isPinned && (
+          <span className="absolute top-1.5 left-1.5 size-4 rounded-full bg-amber-500 text-black flex items-center justify-center text-[9px] font-bold shadow">
+            📌
+          </span>
+        )}
+      </div>
+
+      {/* Bottom Metadata & RAM Protection Telemetry */}
+      <div className="mt-2 space-y-1">
+        <div className="flex items-center justify-between gap-1">
+          <span className="truncate font-mono text-[11px] font-medium text-foreground" title={item.filename}>
+            {item.filename.replace(/^pinned_/, "").replace(/\.gif$/i, "").replace(/_/g, " ")}
+          </span>
+          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+            {formatBytes(item.size)}
+          </span>
+        </div>
+
+        {/* RAM Telemetry Badge (<15KB WebP Companion) */}
+        <div className="flex items-center justify-between text-[9px] font-mono text-muted-foreground/70">
+          <span className="text-emerald-400/80 flex items-center gap-1">
+            <span className="size-1 rounded-full bg-emerald-400" />
+            &lt;15KB WebP
+          </span>
+          <span>&lt;30MB RSS</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function KeyboardDeckManager() {
   const haptics = useHaptics();
@@ -77,6 +242,18 @@ export function KeyboardDeckManager() {
   const [autoSync, setAutoSync] = useState(true);
   const [lastSyncedTime, setLastSyncedTime] = useState<number | null>(null);
   const [clipboardCode, setClipboardCode] = useState<string | null>(null);
+
+  const dndId = useId();
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const loadDeck = useCallback(async () => {
     setLoading(true);
@@ -100,7 +277,7 @@ export function KeyboardDeckManager() {
 
   const checkClipboard = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.clipboard?.readText) return;
-    if (getStoredSyncToken()) return; // Already paired
+    if (getStoredSyncToken()) return;
     try {
       const text = await navigator.clipboard.readText();
       const code = extractPairCode(text);
@@ -108,11 +285,10 @@ export function KeyboardDeckManager() {
         setClipboardCode(code);
       }
     } catch {
-      // Clipboard read permissions may be restricted; ignore silently
+      /* ignore */
     }
   }, []);
 
-  // Deep-link ?pair= query parameter check
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -127,7 +303,6 @@ export function KeyboardDeckManager() {
     }
   }, []);
 
-  // Clipboard & background auto-sync check on focus
   useEffect(() => {
     void checkClipboard();
     const handleFocus = () => {
@@ -149,10 +324,39 @@ export function KeyboardDeckManager() {
     const success = await deleteGifFromKeyboardDeck(filename);
     if (success) {
       setGifs((prev) => prev.filter((g) => g.filename !== filename));
-      toast.success("GIF removed from keyboard");
+      toast.success("Media removed from keyboard");
       void haptics.success();
     } else {
-      toast.error("Failed to delete GIF");
+      toast.error("Failed to delete media");
+    }
+  };
+
+  const handleTogglePin = (filename: string) => {
+    void haptics.impact();
+    setGifs((prev) => {
+      const isPinned = filename.startsWith("pinned_");
+      const target = prev.find((g) => g.filename === filename);
+      if (!target) return prev;
+
+      const newFilename = isPinned ? filename.replace(/^pinned_/, "") : `pinned_${filename}`;
+      const updatedItem: DeckGifItem = { ...target, filename: newFilename };
+      const rest = prev.filter((g) => g.filename !== filename);
+
+      toast.success(isPinned ? "Unpinned from top" : "Pinned to top of deck 📌");
+      return isPinned ? [...rest, updatedItem] : [updatedItem, ...rest];
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      void haptics.impact();
+      setGifs((items) => {
+        const oldIndex = items.findIndex((i) => i.filename === active.id);
+        const newIndex = items.findIndex((i) => i.filename === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+      toast.success("Vault deck order updated");
     }
   };
 
@@ -169,7 +373,7 @@ export function KeyboardDeckManager() {
           await saveGifToKeyboardDeck(file, file.name);
         }
       }
-      toast.success(`Added ${files.length} GIF(s) to keyboard deck`);
+      toast.success(`Added ${files.length} item(s) to keyboard deck`);
       void haptics.success();
       await loadDeck();
     } catch (err) {
@@ -194,7 +398,7 @@ export function KeyboardDeckManager() {
           { id: toastId }
         );
       } else if (result.downloaded > 0) {
-        toast.success(`Cloud sync complete! Downloaded ${result.downloaded} new GIF(s).`, {
+        toast.success(`Cloud sync complete! Downloaded ${result.downloaded} new item(s).`, {
           id: toastId,
         });
       } else {
@@ -229,8 +433,6 @@ export function KeyboardDeckManager() {
       setClipboardCode(null);
       toast.success(res.message || "Device paired successfully!", { id: toastId });
       void haptics.success();
-
-      // Trigger automatic initial sync
       void handleSyncCloud();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Pairing failed";
@@ -272,94 +474,186 @@ export function KeyboardDeckManager() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4">
-      {/* Header Banner */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Keyboard className="size-5 text-primary" />
-            <h2 className="font-display text-base font-bold tracking-wide text-foreground">
-              ZenoDeck Custom Keyboard
-            </h2>
+    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+      {/* 3-Step Interactive Onboarding Connection Banner */}
+      <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-card/80 via-card/50 to-cyan-950/20 p-4 sm:p-5 backdrop-blur-xl shadow-lg space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Zap className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-display text-base font-bold text-foreground flex items-center gap-2">
+                ZenoTap Setup &amp; Live Studio
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  v3.15.0 Flagship
+                </span>
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                3-step status check for direct media insertion across WhatsApp, Discord, Messages &amp; Telegram.
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Manage your custom AI media and GIFs for 1-tap injection into messaging apps.
-          </p>
+
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => void loadDeck()}
+              className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </motion.button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => void handleSyncCloud()}
-            disabled={isSyncing}
-            className="flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+        {/* 3 Interactive Steps */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          {/* Step 1: IME Enabled in Settings */}
+          <div
+            className={`rounded-xl border p-3 flex flex-col justify-between transition-all ${
+              status.enabled
+                ? "bg-emerald-950/20 border-emerald-500/30"
+                : "bg-amber-950/20 border-amber-500/40"
+            }`}
           >
-            <CloudDownload className={`size-3.5 ${isSyncing ? "animate-bounce" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync Cloud"}
-          </motion.button>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                Step 1: Settings
+              </span>
+              {status.enabled ? (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                  <CheckCircle2 className="size-3.5" />
+                  Enabled
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400">
+                  <AlertCircle className="size-3.5" />
+                  Pending
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              {status.enabled
+                ? "ZenoTap input method is active in Android system."
+                : "Enable ZenoTap in Android On-Screen Keyboard settings."}
+            </p>
+            <button
+              type="button"
+              onClick={() => void openKeyboardSettings()}
+              className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                status.enabled
+                  ? "bg-secondary text-foreground hover:bg-secondary/80"
+                  : "bg-amber-500 hover:bg-amber-400 text-black shadow"
+              }`}
+            >
+              <Settings className="size-3.5" />
+              {status.enabled ? "Keyboard Settings" : "Enable Keyboard (1-Tap)"}
+              <ExternalLink className="size-3" />
+            </button>
+          </div>
 
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => void loadDeck()}
-            className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          {/* Step 2: Selected Default IME */}
+          <div
+            className={`rounded-xl border p-3 flex flex-col justify-between transition-all ${
+              status.selected
+                ? "bg-emerald-950/20 border-emerald-500/30"
+                : "bg-indigo-950/20 border-indigo-500/40"
+            }`}
           >
-            <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </motion.button>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                Step 2: Active IME
+              </span>
+              {status.selected ? (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                  <CheckCircle2 className="size-3.5" />
+                  Active Default
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-400">
+                  <Keyboard className="size-3.5" />
+                  Select Deck
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              {status.selected
+                ? "ZenoTap is currently chosen as the active input method."
+                : "Switch input method picker to ZenoTap when typing."}
+            </p>
+            <button
+              type="button"
+              onClick={() => void openKeyboardPicker()}
+              className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                status.selected
+                  ? "bg-secondary text-foreground hover:bg-secondary/80"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white shadow"
+              }`}
+            >
+              <Keyboard className="size-3.5" />
+              {status.selected ? "Switch Keyboard" : "Select ZenoTap (1-Tap)"}
+            </button>
+          </div>
+
+          {/* Step 3: Vault Synced */}
+          <div
+            className={`rounded-xl border p-3 flex flex-col justify-between transition-all ${
+              gifs.length > 0
+                ? "bg-emerald-950/20 border-emerald-500/30"
+                : "bg-sky-950/20 border-sky-500/40"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                Step 3: Vault Deck
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+                <CheckCircle2 className="size-3.5" />
+                {gifs.length} Items
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              {gifs.length > 0
+                ? "Media is synced to internal keyboard filesDir sandbox."
+                : "No media in deck. Upload or sync cloud GIFs."}
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleSyncCloud()}
+              disabled={isSyncing}
+              className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 transition-colors cursor-pointer"
+            >
+              <CloudDownload className={`size-3.5 ${isSyncing ? "animate-bounce" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync Cloud Deck"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Smart Clipboard Pair Detection */}
-      {clipboardCode && !syncToken && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300"
-        >
-          <div className="flex items-center gap-2.5">
-            <ClipboardPaste className="size-4 text-indigo-400 shrink-0" />
-            <span className="text-xs">
-              Pair code <strong className="font-mono text-indigo-200">{clipboardCode}</strong> detected in clipboard
-            </span>
-          </div>
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <button
-              onClick={() => void handlePairWithCode(clipboardCode)}
-              disabled={isPairing}
-              className="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-indigo-500 transition-colors"
-            >
-              Connect (1-Tap)
-            </button>
-            <button
-              onClick={() => setClipboardCode(null)}
-              className="text-xs text-muted-foreground hover:text-foreground px-1"
-            >
-              Dismiss
-            </button>
-          </div>
-        </motion.div>
-      )}
+      {/* Embedded 1:1 Live Keyboard Preview & Chat Injection Sandbox */}
+      <ZenoTapKeyboardSimulator vaultItems={gifs} />
 
-      {/* Cloud Sync & Device Pairing Card */}
-      <div className="rounded-2xl border border-border/50 bg-card/40 p-5 space-y-3.5">
+      {/* Cloud Sync & Device Pairing Section */}
+      <div className="rounded-2xl border border-border/60 bg-card/40 p-5 space-y-3.5 backdrop-blur-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cloud className="size-4 text-primary" />
             <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Cloud Deck Synchronization
+              Encrypted Cloud Deck Sync
             </span>
           </div>
 
           {syncToken ? (
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
-                <CheckCircle2 className="size-3" />
+                <ShieldCheck className="size-3" />
                 Linked: {pairedDeviceName || "Android Keyboard"}
               </span>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <button
-                    className="size-7 grid place-items-center rounded-lg border border-border/70 bg-card text-muted-foreground hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all"
+                    className="size-7 grid place-items-center rounded-lg border border-border/70 bg-card text-muted-foreground hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all cursor-pointer"
                     title="Unlink device"
                     aria-label="Unlink device"
                   >
@@ -368,9 +662,9 @@ export function KeyboardDeckManager() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Unlink Mobile Keyboard?</AlertDialogTitle>
+                    <AlertDialogTitle>Unlink Keyboard Device?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will disconnect this device from your ZenoTap Cloud Deck sync token. You can re-link at any time by scanning a QR code or entering a new 6-digit PIN.
+                      This will disconnect this device from your cloud sync token. You can re-link at any time.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -379,61 +673,50 @@ export function KeyboardDeckManager() {
                       onClick={handleUnlink}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      Unlink Keyboard
+                      Unlink
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </div>
           ) : (
-            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
-              Not linked to cloud pairing code
-            </span>
+            <span className="font-mono text-[11px] text-muted-foreground">Not paired to cloud</span>
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          {syncToken
-            ? "Your keyboard is securely linked to your ZenoTap Cloud Deck. GIFs created on desktop or web sync down directly into keyboard storage."
-            : "Effortlessly connect to your desktop session: scan the desktop QR code with your camera or enter the 6-digit PIN."}
-        </p>
-
         {syncToken ? (
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/40">
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-              <span>Last synced: <strong className="text-foreground">{formatRelativeTime(lastSyncedTime)}</strong></span>
+            <div className="text-[11px] text-muted-foreground">
+              Last synced: <strong className="text-foreground">{formatRelativeTime(lastSyncedTime)}</strong>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleToggleAutoSync}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
-                  autoSync
-                    ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
-                    : "bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Zap className={`size-3 ${autoSync ? "text-primary" : "text-muted-foreground"}`} />
-                Auto-Sync: {autoSync ? "ON" : "OFF"}
-              </button>
-            </div>
+            <button
+              onClick={handleToggleAutoSync}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
+                autoSync
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted/40 border-border/60 text-muted-foreground"
+              }`}
+            >
+              <Zap className={`size-3 ${autoSync ? "text-primary" : "text-muted-foreground"}`} />
+              Auto-Sync: {autoSync ? "ON" : "OFF"}
+            </button>
           </div>
         ) : (
-          <div className="pt-2 space-y-3">
+          <div className="pt-2">
             {!showPairDialog ? (
               <div className="flex flex-wrap items-center gap-2.5">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowScanner(true)}
-                  className="flex items-center gap-2 rounded-xl border border-primary/50 bg-primary px-4 py-2.5 font-display text-xs font-bold text-primary-foreground shadow transition-colors hover:bg-primary/90"
+                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 font-display text-xs font-bold text-primary-foreground shadow hover:bg-primary/90 transition-colors"
                 >
                   <Camera className="size-4" />
-                  SCAN QR CODE TO PAIR
+                  SCAN QR TO PAIR
                 </motion.button>
-
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowPairDialog(true)}
-                  className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-3.5 py-2.5 font-display text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground hover:border-primary/40"
+                  className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-3.5 py-2 font-display text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <LinkIcon className="size-3.5" />
                   Enter 6-Digit PIN
@@ -442,7 +725,7 @@ export function KeyboardDeckManager() {
             ) : (
               <div className="p-4 rounded-xl bg-background/60 border border-border/70 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground font-medium">Enter 6-digit code shown on your desktop ZenoDeck:</p>
+                  <p className="text-xs text-muted-foreground font-medium">Enter 6-digit PIN from desktop ZenoDeck:</p>
                   <button
                     type="button"
                     onClick={() => setShowPairDialog(false)}
@@ -463,7 +746,7 @@ export function KeyboardDeckManager() {
                     type="button"
                     onClick={() => void handlePairWithCode(pairCodeInput)}
                     disabled={isPairing || pairCodeInput.length !== 6}
-                    className="rounded-xl bg-primary px-4 py-2.5 font-display text-xs font-bold text-primary-foreground disabled:opacity-50 h-12 w-full sm:w-auto"
+                    className="rounded-xl bg-primary px-4 py-2.5 font-display text-xs font-bold text-primary-foreground disabled:opacity-50 h-12 w-full sm:w-auto cursor-pointer"
                   >
                     {isPairing ? "Linking..." : "Connect"}
                   </button>
@@ -474,79 +757,33 @@ export function KeyboardDeckManager() {
         )}
       </div>
 
-      {/* QR Scanner Modal */}
       <ZenoTapPairScanner
         open={showScanner}
         onOpenChange={setShowScanner}
         onScanSuccess={(code) => void handlePairWithCode(code)}
       />
 
-      {/* System IME Setup Card */}
-      <div className="rounded-2xl border border-border/50 bg-card/40 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            Android System Integration
-          </span>
-          <div className="flex items-center gap-1.5 font-mono text-xs">
-            {status.enabled ? (
-              <span className="flex items-center gap-1 text-emerald-400">
-                <CheckCircle2 className="size-3.5" />
-                Enabled in OS
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-amber-400">
-                <AlertCircle className="size-3.5" />
-                Keyboard Disabled
-              </span>
-            )}
-            {status.selected && (
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400">
-                Active Default
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => void openKeyboardSettings()}
-            className="flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 p-3 font-display text-xs font-bold text-primary transition-colors hover:bg-primary/20"
-          >
-            <Settings className="size-4" />
-            1. ENABLE IN SYSTEM SETTINGS
-            <ExternalLink className="size-3" />
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => void openKeyboardPicker()}
-            className="flex items-center justify-center gap-2 rounded-xl border border-muted-foreground/30 bg-muted/20 p-3 font-display text-xs font-bold text-foreground transition-colors hover:bg-muted/40"
-          >
-            <Keyboard className="size-4" />
-            2. SWITCH INPUT METHOD
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Media Deck Grid */}
+      {/* Drag-and-Drop Sortable Vault Media Deck */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="font-display text-sm font-bold tracking-wide text-foreground">
-              Pinned Media Deck ({gifs.length})
+            <h3 className="font-display text-sm font-bold tracking-wide text-foreground flex items-center gap-2">
+              Keyboard Vault Deck ({gifs.length})
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                Drag to Reorder
+              </span>
             </h3>
             <p className="text-xs text-muted-foreground">
-              These items are loaded directly inside the ZenoDeck Android keyboard.
+              Directly loaded inside Android IME. Pin favorites to freeze them at the front of the keyboard drawer.
             </p>
           </div>
 
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-primary/50">
-            <Upload className="size-3.5 text-primary" />
-            <span>{isUploading ? "Uploading..." : "Add GIF File"}</span>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors self-start sm:self-auto">
+            <Upload className="size-3.5" />
+            <span>{isUploading ? "Uploading..." : "Add Media Files"}</span>
             <input
               type="file"
-              accept="image/gif"
+              accept="image/gif,image/webp"
               multiple
               onChange={(e) => void handleFileUpload(e)}
               className="hidden"
@@ -555,77 +792,36 @@ export function KeyboardDeckManager() {
         </div>
 
         {gifs.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 p-12 text-center">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 p-12 text-center bg-card/20">
             <Keyboard className="size-10 text-muted-foreground/40 mb-3" />
-            <h4 className="font-display text-sm font-bold text-foreground">Your Deck is Empty</h4>
+            <h4 className="font-display text-sm font-bold text-foreground">Vault Deck is Empty</h4>
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-              Forge GIFs using the GIF Maker, upload an existing .gif file, or sync from your cloud deck.
+              Add GIFs or Stickers using the button above, or click Sync Cloud Deck to load your reactions.
             </p>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {gifs.map((item) => (
-            <motion.div
-              key={item.filename}
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="group relative overflow-hidden rounded-xl border border-border/50 bg-card/30 p-2 transition-all hover:border-primary/40 hover:bg-card/60"
-            >
-              <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/40 flex items-center justify-center">
-                <img
-                  src={resolveImageSrc(item.path)}
-                  alt={item.filename}
-                  className="size-full object-contain"
-                  onError={(e) => {
-                    // Fallback to placeholder if web scheme resolution differs
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
+        {/* DnD Context with Sortable Grid */}
+        <DndContext
+          id={dndId}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={gifs.map((g) => g.filename)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {gifs.map((item) => (
+                <SortableDeckItem
+                  key={item.filename}
+                  item={item}
+                  resolveImageSrc={resolveImageSrc}
+                  onDelete={handleDelete}
+                  onTogglePin={handleTogglePin}
                 />
-              </div>
-
-              <div className="mt-2 flex items-center justify-between gap-1">
-                <span className="truncate font-mono text-[11px] text-foreground" title={item.filename}>
-                  {item.filename.replace(/\.gif$/i, "")}
-                </span>
-                <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                  {formatBytes(item.size)}
-                </span>
-              </div>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button
-                    aria-label={`Delete ${item.filename} from keyboard deck`}
-                    title="Delete from deck"
-                    className="absolute right-3 top-3 grid size-7 place-items-center rounded-lg bg-black/70 text-muted-foreground opacity-0 backdrop-blur-sm transition-all hover:bg-destructive hover:text-white group-hover:opacity-100 cursor-pointer"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Remove GIF from Keyboard Deck?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to remove &ldquo;{item.filename}&rdquo; from your keyboard storage?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => void handleDelete(item.filename)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Remove GIF
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </motion.div>
-          ))}
-        </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
     </div>
   );
