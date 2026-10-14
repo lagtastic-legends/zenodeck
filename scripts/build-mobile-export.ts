@@ -43,31 +43,31 @@ const STATIC_STUB_CONTENT = `import { NextResponse } from "next/server";
 
 export const dynamic = "force-static";
 
-export function GET() {
+export function GET(_req?: any) {
   return NextResponse.json({ status: "static-export" });
 }
 
-export function POST() {
+export function POST(_req?: any) {
   return NextResponse.json({ status: "static-export" });
 }
 
-export function PUT() {
+export function PUT(_req?: any) {
   return NextResponse.json({ status: "static-export" });
 }
 
-export function DELETE() {
+export function DELETE(_req?: any) {
   return NextResponse.json({ status: "static-export" });
 }
 
-export function PATCH() {
+export function PATCH(_req?: any) {
   return NextResponse.json({ status: "static-export" });
 }
 
-export function HEAD() {
+export function HEAD(_req?: any) {
   return new NextResponse(null, { status: 200 });
 }
 
-export function OPTIONS() {
+export function OPTIONS(_req?: any) {
   return new NextResponse(null, { status: 204 });
 }
 `;

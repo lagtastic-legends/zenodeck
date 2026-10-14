@@ -18,6 +18,7 @@ interface AiState {
   removeLastMessage: () => void;
   setLoading: (isLoading: boolean) => void;
   clearChat: () => void;
+  sendMessage: (prompt: string, signal?: AbortSignal) => Promise<void>;
 }
 
 export const useAiStore = create<AiState>()(
@@ -79,6 +80,124 @@ export const useAiStore = create<AiState>()(
           }
         ]
       }),
+      sendMessage: async (prompt: string, signal?: AbortSignal) => {
+        const cleanPrompt = prompt.trim();
+        if (!cleanPrompt) return;
+
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: `msg-${Date.now()}-user`,
+              role: 'user',
+              content: cleanPrompt,
+              timestamp: Date.now(),
+            },
+          ],
+          isLoading: true,
+          isStreaming: false,
+        }));
+
+        try {
+          const { streamAiResponse, generateAiResponse } = await import('../lib/gemini');
+          const currentMessages = useAiStore
+            .getState()
+            .messages.filter(
+              (m) => m && typeof m.content === 'string' && m.content.trim().length > 0
+            );
+
+          let fullContent = '';
+          let isFirstChunk = true;
+          let streamFailed = false;
+
+          try {
+            const stream = streamAiResponse(currentMessages, signal);
+            for await (const chunk of stream) {
+              if (signal?.aborted) break;
+              if (chunk.includes('[Connection failed:')) {
+                streamFailed = true;
+                break;
+              }
+
+              if (isFirstChunk) {
+                set({ isLoading: false, isStreaming: true });
+                isFirstChunk = false;
+                fullContent = chunk;
+                set((state) => ({
+                  messages: [
+                    ...state.messages,
+                    {
+                      id: `msg-${Date.now()}-model`,
+                      role: 'model',
+                      content: fullContent,
+                      timestamp: Date.now(),
+                    },
+                  ],
+                }));
+              } else {
+                fullContent += chunk;
+                set((state) => {
+                  const msgs = [...state.messages];
+                  if (msgs.length > 0) {
+                    msgs[msgs.length - 1] = {
+                      ...msgs[msgs.length - 1],
+                      content: fullContent,
+                    };
+                  }
+                  return { messages: msgs };
+                });
+              }
+            }
+          } catch {
+            streamFailed = true;
+          }
+
+          if ((isFirstChunk || streamFailed) && !signal?.aborted) {
+            set({ isLoading: true, isStreaming: false });
+            const fallbackText = await generateAiResponse(currentMessages);
+            set({ isLoading: false, isStreaming: false });
+            if (isFirstChunk) {
+              set((state) => ({
+                messages: [
+                  ...state.messages,
+                  {
+                    id: `msg-${Date.now()}-model`,
+                    role: 'model',
+                    content: fallbackText,
+                    timestamp: Date.now(),
+                  },
+                ],
+              }));
+            } else {
+              set((state) => {
+                const msgs = [...state.messages];
+                if (msgs.length > 0) {
+                  msgs[msgs.length - 1] = {
+                    ...msgs[msgs.length - 1],
+                    content: fallbackText,
+                  };
+                }
+                return { messages: msgs };
+              });
+            }
+          } else {
+            set({ isStreaming: false, isLoading: false });
+          }
+        } catch (err: any) {
+          set({ isLoading: false, isStreaming: false });
+          set((state) => ({
+            messages: [
+              ...state.messages,
+              {
+                id: `msg-${Date.now()}-err`,
+                role: 'model',
+                content: `Connection failed: ${err?.message || 'Unable to connect to AI server'}`,
+                timestamp: Date.now(),
+              },
+            ],
+          }));
+        }
+      },
     }),
     {
       name: 'zeno-ai-storage',

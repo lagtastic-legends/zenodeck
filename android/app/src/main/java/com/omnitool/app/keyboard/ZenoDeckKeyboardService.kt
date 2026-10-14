@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.omnitool.app.MainActivity
 import com.omnitool.app.R
+import com.omnitool.app.media.ZenoHeadlessMediaEngine
 import java.io.File
 import java.io.FileOutputStream
 
@@ -83,12 +84,16 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var layoutEmptyDeck: View? = null
     private var gifAdapter: GifDeckAdapter? = null
 
+    private var layoutClipboardPill: View? = null
+
     // Target host editor state
     private var currentEditorInfo: EditorInfo? = null
     private var isRichContentSupportedByHost: Boolean = false
 
     // Registered commit listener
     private var commitContentListener: OnCommitContentListener? = null
+
+    private val clipboardManager by lazy { getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
 
     // Shared storage GIF cache
     private val deckGifs = mutableListOf<File>()
@@ -157,6 +162,21 @@ class ZenoDeckKeyboardService : InputMethodService() {
         val btnOpenApp = root.findViewById<Button>(R.id.btn_open_app)
         val btnInjectGif = root.findViewById<Button>(R.id.btn_inject_gif)
         val btnCopyFallback = root.findViewById<Button>(R.id.btn_copy_fallback)
+        // Spacebar action (50% ergonomic width button)
+        val btnSpacebar = root.findViewById<Button>(R.id.btn_spacebar)
+        btnSpacebar?.setOnClickListener {
+            currentInputConnection?.commitText(" ", 1)
+        }
+
+        // Setup Clipboard Listener Pill Actions (Direct Headless Native Processing)
+        layoutClipboardPill = root.findViewById(R.id.layout_clipboard_pill)
+        val btnClipCompress = root.findViewById<Button>(R.id.btn_clip_compress)
+        val btnClipToGif = root.findViewById<Button>(R.id.btn_clip_to_gif)
+        val btnClipToSticker = root.findViewById<Button>(R.id.btn_clip_to_sticker)
+
+        btnClipCompress?.setOnClickListener { processClipboardMedia("compress") }
+        btnClipToGif?.setOnClickListener { processClipboardMedia("to_gif") }
+        btnClipToSticker?.setOnClickListener { processClipboardMedia("to_sticker") }
 
         // Setup RecyclerView Adapter and LayoutManager (3 columns for compact vertical grid)
         gifAdapter = GifDeckAdapter(
@@ -233,11 +253,37 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
         updateHostCapabilitiesDisplay(targetPackage, isRichContentSupportedByHost, supportedMimes.isEmpty())
         updateCommitResultDisplay("Ready for media injection", isSuccess = null)
+
+        // Inspect clipboard for copied images or URLs to surface 1-tap clipboard pill
+        val layoutClipboardPill = keyboardRootView?.findViewById<View>(R.id.layout_clipboard_pill)
+        val tvClipboardPreview = keyboardRootView?.findViewById<TextView>(R.id.tv_clipboard_preview)
+
+        try {
+            val clipData = clipboardManager.primaryClip
+            if (clipData != null && clipData.itemCount > 0) {
+                val item = clipData.getItemAt(0)
+                val uri = item.uri
+                val text = item.text?.toString()
+
+                if (uri != null || (text != null && (text.startsWith("http://") || text.startsWith("https://")))) {
+                    val label = if (uri != null) "📋 Copied image in clipboard" else "🔗 Copied media URL"
+                    tvClipboardPreview?.text = label
+                    layoutClipboardPill?.visibility = View.VISIBLE
+                } else {
+                    layoutClipboardPill?.visibility = View.GONE
+                }
+            } else {
+                layoutClipboardPill?.visibility = View.GONE
+            }
+        } catch (e: Exception) {
+            layoutClipboardPill?.visibility = View.GONE
+        }
     }
 
     /**
      * Reads all GIFs from the shared storage directory (/data/user/0/.../files/zenodeck_gifs)
      * and refreshes the keyboard RecyclerView grid.
+     * Excludes .thumb.webp companion files from grid entries.
      */
     fun refreshDeckFiles(): List<File> {
         val deckDir = File(filesDir, DECK_DIRECTORY_NAME)
@@ -246,7 +292,10 @@ class ZenoDeckKeyboardService : InputMethodService() {
         }
 
         val files = deckDir.listFiles { file ->
-            file.isFile && file.name.endsWith(".gif", ignoreCase = true) && !file.name.startsWith(".")
+            file.isFile &&
+            file.name.endsWith(".gif", ignoreCase = true) &&
+            !file.name.endsWith(".thumb.webp", ignoreCase = true) &&
+            !file.name.startsWith(".")
         } ?: emptyArray()
 
         deckGifs.clear()
@@ -452,6 +501,60 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 null -> setTextColor(0xFF9CA3AF.toInt()) // Gray
             }
         }
+    }
+
+    private fun processClipboardMedia(action: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clipData = clipboard?.primaryClip
+
+        var clipUri: Uri? = null
+        var clipText: String? = null
+
+        if (clipData != null && clipData.itemCount > 0) {
+            val item = clipData.getItemAt(0)
+            clipUri = item.uri
+            clipText = item.text?.toString()
+        }
+
+        updateCommitResultDisplay("⚡ Processing $action headlessly…", isSuccess = null)
+
+        ZenoHeadlessMediaEngine.getInstance(applicationContext).processClipboardActionAsync(
+            action = action,
+            clipUri = clipUri,
+            clipText = clipText
+        ) { result ->
+            if (result.isSuccess) {
+                val outputFile = result.getOrNull()
+                if (outputFile != null && outputFile.exists()) {
+                    refreshDeckFiles()
+                    vibrateTactileClick()
+                    // Finish composing text before committing rich media content
+                    currentInputConnection?.finishComposingText()
+                    commitGif(outputFile, description = "ZenoTap $action")
+                    updateCommitResultDisplay("✓ Injected $action into active chat", isSuccess = true)
+                    layoutClipboardPill?.visibility = View.GONE
+                } else {
+                    updateCommitResultDisplay("✗ Failed: output file not found", isSuccess = false)
+                }
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Processing failed"
+                Log.e(TAG, "Headless media processing failed: $err")
+                updateCommitResultDisplay("✗ $err", isSuccess = false)
+            }
+        }
+    }
+
+    private fun vibrateTactileClick() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(25, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                vibrator?.vibrate(25)
+            }
+        } catch (ignored: Exception) {}
     }
 
     private fun switchToNextOrPicker() {

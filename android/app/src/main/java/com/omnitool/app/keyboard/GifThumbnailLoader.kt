@@ -81,9 +81,13 @@ object GifThumbnailLoader {
     private fun decodeThumbnail(file: File): Bitmap? {
         if (!file.exists() || !file.canRead()) return null
 
+        // Priority 1: Ultra-lightweight <15KB WebP companion preview
+        val thumbCompanion = File(file.parentFile, "${file.name}.thumb.webp")
+        val targetFile = if (thumbCompanion.exists() && thumbCompanion.canRead()) thumbCompanion else file
+
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val source = ImageDecoder.createSource(file)
+                val source = ImageDecoder.createSource(targetFile)
                 ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     val origWidth = info.size.width
                     val origHeight = info.size.height

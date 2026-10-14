@@ -1,0 +1,42 @@
+# ==============================================================================
+# ZENODECK & ZENOTAP ARCHITECTURAL LAWS & RUNTIME SPECIFICATIONS
+# ==============================================================================
+# Permanent repository rules for all AI coding agents, developers, and tools.
+# Every modification to ZenoDeck (com.omnitool.app) must strictly obey these laws.
+# ==============================================================================
+
+## 1. 4-TIER MEDIA ROUTER ARCHITECTURE
+All audio, video, GIF, and document operations must route through the hierarchical 4-tier pipeline:
+- **Tier 1 — Native Browser / Web Audio / Canvas (Zero Overhead):**
+  Use for real-time waveform visualization, spatial 8D binaural panning, simple image cropping, and format conversion where browser native APIs suffice. Never spin up WASM or background processes for tasks native streams can handle.
+- **Tier 2 — Web Workers & OPFS Storage (Off-Main-Thread):**
+  Use for heavy parsing, chunked file hashing, subtitle parsing, and stateful caching. Keeps the 120Hz/60Hz UI thread silky smooth.
+- **Tier 3 — Multi-threaded WebAssembly (FFmpeg / ONNX / SIMD):**
+  Requires `SharedArrayBuffer` with cross-origin isolation (`COOP: same-origin`, `COEP: credentialless`). Used for studio DSP effects, stem separation, complex transcoding, and AI background segmentation.
+- **Tier 4 — Native Android Hardware Acceleration (Media3 / MediaCodec):**
+  When running on Android (Capacitor), delegate high-bitrate video compression and hardware encoding to `ZenoMedia3Plugin` and `ZenoHeadlessMediaEngine`.
+
+## 2. OPFS STORAGE & CONTAINER METADATA LAWS
+- **Zero Double-Buffering:** Stream directly to/from Origin Private File System (`navigator.storage.getDirectory()`) via `FileSystemSyncAccessHandle`.
+- **Container Header Safety (CRITICAL):**
+  - **MP3:** Valid to prepend raw binary ID3v2.3 tags (`0x49 0x44 0x33`).
+  - **M4A / AAC:** MUST preserve the `ftyp` box at byte offset 4. NEVER prepend raw ID3 bytes to M4A. Pass metadata via FFmpeg `-metadata` or MP4 `ilst` atoms.
+  - **Ogg / Opus:** MUST preserve the `OggS` capture pattern at byte offset 0. Pass metadata via Vorbis comments.
+  - **WAV:** Embed metadata only within valid RIFF `id3 ` or `INFO` chunks.
+
+## 3. OKLCH & TERRACOTTA DESIGN SYSTEM (60-30-10 RULE)
+- **60% Dominant Base:** Deep charcoal/zinc canvas and dark surface tones (`--color-surface`, `oklch(0.14 0.01 260)`).
+- **30% Secondary Structure:** Elevated panels, glassmorphism cards, and subtle slate borders (`--color-surface-raised`, `oklch(0.20 0.02 260)`).
+- **10% Intentional Accent:** Terracotta brand color (`--color-terracotta`, `oklch(0.68 0.16 38.5)`) reserved strictly for primary interactive states, progress indicators, active recording indicators, and key hero buttons.
+- **Tactile Sensory Coupling:** All user-facing button presses and toggle state transitions must be paired with sensory feedback via `useSensoryFeedback` (Web Audio acoustic pulse + Capacitor Haptics).
+
+## 4. ZENOTAP IME RUNTIME & MEMORY LAWS (ANDROID)
+- **Strict RAM Ceilings:** The `ZenoDeckKeyboardService` (`InputMethodService`) process must NEVER exceed **30 MB RSS memory**. Exceeding this threshold will trigger Android's Low Memory Killer (LMK) during active messaging in WhatsApp, Telegram, or Discord.
+- **Companion Thumbnails (`.thumb.webp`):** The IME grid must NEVER decode full 10MB+ GIFs into memory. Every GIF must have a companion `.thumb.webp` file constrained to **< 15 KB** and **≤ 120px**.
+- **Headless Media Processing:** In-keyboard clipboard actions ("Compress", "To GIF", "Sticker") must execute via `ZenoHeadlessMediaEngine` on `Dispatchers.IO` without waking `MainActivity` or initializing WebView JS.
+- **Rich Content Insertion:** Insert rich media via Android's `InputConnectionCompat.commitContent` API with appropriate `FLAG_GRANT_READ_URI_PERMISSION`. When host apps do not support `image/gif`, gracefully fallback to system clipboard with clear user notification.
+
+## 5. BUILD & TYPE INTEGRITY
+- **Zero TypeScript Errors:** Production builds must maintain `typescript: { ignoreBuildErrors: false }` in `next.config.ts`.
+- **Static Export Purity:** Mobile export (`MOBILE_EXPORT=1`) outputs to `out/` and syncs cleanly with Capacitor (`npx cap sync android`). Server route handlers must be stashed or stubs applied during export.
+- **Android Gradle Verification:** All Java and Kotlin code must compile with 0 errors via `./gradlew compileDebugKotlin` and package cleanly with `./gradlew assembleDebug`.

@@ -445,6 +445,17 @@ export const TOOL_REGISTRY: ToolMeta[] = [
     accent: "fuchsia",
     requiresEngine: false,
   },
+  {
+    id: "macro-studio",
+    name: "ZenoMacros Studio",
+    description: "Chain multi-tool media operations into a unified single-pass filtergraph.",
+    category: "studio",
+    icon: SlidersVertical,
+    phase: 5,
+    status: "online",
+    accent: "cyan",
+    requiresEngine: true,
+  },
 
   /* ---------------- PHASE 6 — Capacitor / Android -------------------- */
   {

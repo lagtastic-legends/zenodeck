@@ -175,6 +175,28 @@ export async function tagMp3Buffer(
   metadata: ID3Metadata
 ): Promise<Uint8Array> {
   try {
+    // Container Header Guard: Never prepend raw ID3 header to MP4/M4A (ftyp) or Ogg/Opus (OggS)
+    if (mp3Data.length >= 8) {
+      if (
+        mp3Data[4] === 0x66 &&
+        mp3Data[5] === 0x74 &&
+        mp3Data[6] === 0x79 &&
+        mp3Data[7] === 0x70
+      ) {
+        console.warn("tagMp3Buffer: Target is MP4/M4A container (ftyp). Skipping raw ID3 prepending to preserve container integrity.");
+        return mp3Data;
+      }
+      if (
+        mp3Data[0] === 0x4f &&
+        mp3Data[1] === 0x67 &&
+        mp3Data[2] === 0x67 &&
+        mp3Data[3] === 0x53
+      ) {
+        console.warn("tagMp3Buffer: Target is Ogg/Opus container (OggS). Skipping raw ID3 prepending to preserve container integrity.");
+        return mp3Data;
+      }
+    }
+
     const frames: Uint8Array[] = [];
 
     // 1. Title (TIT2)

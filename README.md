@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.13.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.13.0" />
+    <img src="https://img.shields.io/badge/Release-v3.14.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.14.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.14.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.13.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.14.0/zenodeck-v3.14.0-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.14.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -57,20 +57,47 @@ Unlike traditional cloud converters and SaaS editing tools that upload private d
 
 ## 🚀 Download & Installation Matrix
 
-Every release is automatically compiled, signed, and published for all target architectures via GitHub Actions:
+Every release is automatically compiled, signed, and published for all target architectures:
 
 | Platform / Binary | Download Link | Architecture & Description |
 | :--- | :--- | :--- |
-| Platform / Binary | Download Link | Architecture & Description |
-| :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.13.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.13.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.13.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.13.0/zenodeck-v3.13.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.14.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.14.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.14.0/zenodeck-v3.14.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.14.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.14.0/zenodeck-v3.14.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.14.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.14.0/zenodeck-v3.14.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. |
 | **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.13.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.13.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.14.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.14.0) | Full release notes, raw SHA256 checksums, and source tarballs. |
+
+---
+
+## 🌟 What's New in v3.14.0
+
+- **⚡ Android SharedArrayBuffer & Multi-Threaded WASM Acceleration**:
+  - Overrode `BridgeWebViewClient` in `MainActivity.java` with COOP (`same-origin`), COEP (`credentialless`), and CORP (`cross-origin`) injection for local APK assets (`https://localhost`), unlocking full SIMD multi-threading for `FFmpeg.wasm` and `onnxruntime-web`.
+  - Upgraded `public/sw.js` with declarative COOP/COEP isolation for static PWA web deployments.
+  - Deployed real-time hardware telemetry badge in `SystemStatusHud.tsx` exposing cross-origin isolation and multi-threading states.
+- **📱 Headless Native Media Engine for ZenoTap IME (`ZenoHeadlessMediaEngine.kt`)**:
+  - Standalone Kotlin coroutine singleton operating headlessly on `Dispatchers.IO` without waking `MainActivity` or WebView JavaScript.
+  - Hardware MediaCodec & Jetpack Media3 video transcoding and compression pipelines.
+  - 1-tap 512x512 WebP lossy sticker normalizer (<500 KB) for instant WhatsApp & Telegram messaging insertion.
+  - Strict IME memory protection (<30 MB RAM) via companion thumbnail generator (<15 KB `.thumb.webp`) eliminating LMK evictions.
+  - In-keyboard clipboard pill actions: `"Compress"`, `"To GIF"`, and `"Sticker"`.
+- **🔀 4-Tier Unified Media Engine Router (`engine-router.ts`)**:
+  - Hierarchical routing across Tier 1 (Native Web Audio/Canvas), Tier 2 (Web Workers & OPFS Storage), Tier 3 (Multi-Threaded WASM), and Tier 4 (Native Android Hardware).
+- **🌐 Multi-Provider AI Gateway (`api-gateway.ts`)**:
+  - Automated client/server fallback across Google Gemini, Cloudflare Workers AI, Groq, OpenRouter, and Ollama.
+- **🎧 Container-Safe Metadata Tagging & Studio 8D Audio Export (`spatial-engine.ts`)**:
+  - Container Header Guard protecting `.m4a`/`.aac` (`ftyp` at byte 4) and `.opus` (`OggS` at byte 0) from ID3 prepending, utilizing native FFmpeg `-metadata` muxing.
+  - Studio-grade compressed 8D spatial audio export (MP3, M4A, Opus, WAV) with calibrated orbit speed and swing intensity.
+  - Origin Private File System (OPFS) persistent model weight caching (`model-cache.ts`).
+- **⚡ ZenoMacros Batch Automation Engine (`zeno-macros.ts` & UI)**:
+  - Declarative multi-action workflows for automated batch media processing.
+- **🎨 OffscreenCanvas WebGL2 GLSL Shaders (`useOffscreenShader.ts`)**:
+  - High-performance GPU shader rendering off the main UI thread.
+- **📜 Permanent Architectural Constitution (`.antigravityrules`)**:
+  - Codified repository-wide standards for media routing, OPFS caching, 60-30-10 palette ratio, and IME RAM limits.
 
 ---
 
@@ -97,7 +124,7 @@ Every release is automatically compiled, signed, and published for all target ar
   - ZenoTap Pairing Ease Suite: **5/5 passing (100%)**.
   - TypeScript strict compilation: **0 Errors**.
 
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md) and [RELEASE_NOTES_v3.13.0.md](RELEASE_NOTES_v3.13.0.md)).*
+*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md), [RELEASE_NOTES_v3.14.0.md](RELEASE_NOTES_v3.14.0.md), and [RELEASE_NOTES_v3.13.0.md](RELEASE_NOTES_v3.13.0.md)).*
 
 ---
 

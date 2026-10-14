@@ -59,6 +59,7 @@ const QrStudio = lazy(() => import("@/components/tools/qr-studio").then((m) => (
 const KeyboardDeckTool = lazy(() => import("@/components/tools/keyboard-deck-manager").then((m) => ({ default: m.KeyboardDeckManager })));
 const UnifiedAudioStudio = lazy(() => import("@/components/audio/UnifiedAudioStudio").then((m) => ({ default: m.UnifiedAudioStudio })));
 const AudioEffectsPanel = lazy(() => import("@/components/audio/AudioEffectsPanel").then((m) => ({ default: m.AudioEffectsPanel })));
+const MacroStudioView = lazy(() => import("@/components/macros/MacroStudioView").then((m) => ({ default: m.MacroStudioView })));
 
 const AudioDspTool = () => <UnifiedAudioStudio initialToolId="spatial-8d" />;
 const VocalRemoverTool = () => <UnifiedAudioStudio initialToolId="vocal-remover" />;
@@ -138,6 +139,7 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "audio-effects": AudioEffectsPanel,
   "fx-rack": FXRackStudioTool,
   "stem-separator": StemSeparatorStudioTool,
+  "macro-studio": MacroStudioView,
 };
 
 

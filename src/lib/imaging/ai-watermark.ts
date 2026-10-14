@@ -669,3 +669,26 @@ export function createRegionThumbnail(
   ctx.drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
   return thumbCanvas.toDataURL("image/jpeg", 0.92);
 }
+
+/* ============================================================================
+ * GENERATIVE INPAINTING MODEL WEIGHT CACHING (OPFS / ONNX)
+ * ============================================================================ */
+
+import {
+  getOrFetchCachedModel,
+  hasCachedModel,
+  type CachedModelResult,
+  type ModelFetchProgress,
+} from "@/lib/storage/opfs-manager";
+
+export async function loadWatermarkEraserModel(
+  modelId = "zeno_inpaint_lama_v1",
+  url = "https://huggingface.co/Smart-Inpaint/lama-onnx/resolve/main/lama.onnx",
+  onProgress?: (progress: ModelFetchProgress) => void
+): Promise<CachedModelResult> {
+  return await getOrFetchCachedModel(modelId, url, onProgress);
+}
+
+export async function isWatermarkModelCached(modelId = "zeno_inpaint_lama_v1"): Promise<boolean> {
+  return await hasCachedModel(modelId);
+}

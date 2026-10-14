@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { getKeyboardDeckGifs, saveGifToKeyboardDeck } from "@/lib/zenodeck-bridge";
+import { zenoApiFetch, resolveApiUrl } from "@/lib/api-gateway";
 
 /**
  * ZenoTap Client SDK
@@ -217,23 +218,7 @@ export function getZenoTapApiUrl(path: string): string {
   const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   cleanPath = search ? `${normalizedPathname}?${search}` : normalizedPathname;
 
-  if (typeof window !== "undefined") {
-    // In native mobile APK (Capacitor Android / iOS), route to remote API fallback
-    if (Capacitor.isNativePlatform()) {
-      const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-      return `${fallback.replace(/\/+$/, "")}${cleanPath}`;
-    }
-
-    // In web browser environment
-    const origin = window.location.origin;
-    if (origin && !origin.startsWith("file:")) {
-      return `${origin}${cleanPath}`;
-    }
-  }
-
-  // SSR / Node fallback
-  const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-  return `${fallback.replace(/\/+$/, "")}${cleanPath}`;
+  return resolveApiUrl(cleanPath);
 }
 
 function getStoredUserId(): string {
@@ -256,8 +241,7 @@ export const zenoTapClient = {
    */
   async requestUploadTicket(): Promise<UploadTicketResponse> {
     const userId = getStoredUserId();
-    const url = getZenoTapApiUrl("/api/zenotap/v1/deck/upload-ticket");
-    const res = await fetch(url, {
+    const res = await zenoApiFetch("/api/zenotap/v1/deck/upload-ticket", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -290,8 +274,7 @@ export const zenoTapClient = {
 
     // 3. Post to upload route
     const userId = getStoredUserId();
-    const url = getZenoTapApiUrl("/api/zenotap/v1/deck/upload");
-    const res = await fetch(url, {
+    const res = await zenoApiFetch("/api/zenotap/v1/deck/upload", {
       method: "POST",
       headers: {
         "x-zenotap-user-id": userId,
@@ -313,8 +296,7 @@ export const zenoTapClient = {
    */
   async fetchCloudDeck(): Promise<CloudDeckItem[]> {
     const userId = getStoredUserId();
-    const url = getZenoTapApiUrl("/api/zenotap/v1/deck");
-    const res = await fetch(url, {
+    const res = await zenoApiFetch("/api/zenotap/v1/deck", {
       headers: {
         "x-zenotap-user-id": userId,
       },
@@ -333,8 +315,7 @@ export const zenoTapClient = {
    */
   async deleteCloudGif(id: string): Promise<boolean> {
     const userId = getStoredUserId();
-    const url = getZenoTapApiUrl(`/api/zenotap/v1/deck?id=${encodeURIComponent(id)}`);
-    const res = await fetch(url, {
+    const res = await zenoApiFetch(`/api/zenotap/v1/deck?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: {
         "x-zenotap-user-id": userId,
@@ -349,8 +330,7 @@ export const zenoTapClient = {
    */
   async createDevicePairCode(): Promise<PairCodeResponse> {
     const userId = getStoredUserId();
-    const url = getZenoTapApiUrl("/api/zenotap/v1/device/pair");
-    const res = await fetch(url, {
+    const res = await zenoApiFetch("/api/zenotap/v1/device/pair", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -370,8 +350,7 @@ export const zenoTapClient = {
    */
   async confirmPairCode(pairCode: string, deviceName?: string): Promise<PairDeviceResponse> {
     const name = deviceName || (Capacitor.isNativePlatform() ? "Android Keyboard" : "ZenoDeck Companion");
-    const url = getZenoTapApiUrl("/api/zenotap/v1/device/pair");
-    const res = await fetch(url, {
+    const res = await zenoApiFetch("/api/zenotap/v1/device/pair", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -393,10 +372,9 @@ export const zenoTapClient = {
    * Polls pairing status by linkId or pairCode (used by desktop session).
    */
   async checkPairCodeStatus(linkIdOrCode: string): Promise<PairStatusResponse> {
-    const url = getZenoTapApiUrl(
+    const res = await zenoApiFetch(
       `/api/zenotap/v1/device/pair?linkId=${encodeURIComponent(linkIdOrCode)}&pairCode=${encodeURIComponent(linkIdOrCode)}`
     );
-    const res = await fetch(url);
     if (!res.ok) {
       return { success: false, confirmed: false, expired: true };
     }
@@ -412,8 +390,7 @@ export const zenoTapClient = {
       throw new Error("No sync token found for this device");
     }
 
-    const url = getZenoTapApiUrl("/api/zenotap/v1/sync");
-    const res = await fetch(url, {
+    const res = await zenoApiFetch("/api/zenotap/v1/sync", {
       headers: {
         Authorization: `Bearer ${syncToken}`,
       },
@@ -486,7 +463,7 @@ export const zenoTapClient = {
       }
 
       try {
-        const res = await fetch(item.downloadUrl);
+        const res = await zenoApiFetch(item.downloadUrl);
         if (!res.ok) {
           throw new Error(`Failed to download ${item.filename} (status ${res.status})`);
         }

@@ -4,12 +4,18 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.webkit.RenderProcessGoneDetail;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import androidx.core.splashscreen.SplashScreen;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 import com.getcapacitor.WebViewListener;
 import com.omnitool.app.keyboard.ZenoDeckKeyboardBridgePlugin;
+import com.omnitool.app.media.ZenoMedia3Plugin;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "ZenoDeckNative";
@@ -19,9 +25,32 @@ public class MainActivity extends BridgeActivity {
         SplashScreen.installSplashScreen(this);
         registerPlugin(OmniRecorderPlugin.class);
         registerPlugin(ZenoDeckKeyboardBridgePlugin.class);
+        registerPlugin(ZenoMedia3Plugin.class);
         super.onCreate(savedInstanceState);
         
         if (bridge != null) {
+            // Set custom BridgeWebViewClient to inject COOP/COEP isolation headers
+            // into local assets for SharedArrayBuffer & multithreaded WASM support.
+            bridge.setWebViewClient(new BridgeWebViewClient(bridge) {
+                @Override
+                public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                    WebResourceResponse response = super.shouldInterceptRequest(view, request);
+                    if (response != null) {
+                        Map<String, String> headers = response.getResponseHeaders();
+                        if (headers == null) {
+                            headers = new HashMap<>();
+                        } else {
+                            headers = new HashMap<>(headers);
+                        }
+                        headers.put("Cross-Origin-Opener-Policy", "same-origin");
+                        headers.put("Cross-Origin-Embedder-Policy", "credentialless");
+                        headers.put("Cross-Origin-Resource-Policy", "cross-origin");
+                        response.setResponseHeaders(headers);
+                    }
+                    return response;
+                }
+            });
+
             // Register stability listener to prevent OS from terminating the app
             // if Chromium's rendering process crashes or runs out of memory.
             bridge.addWebViewListener(new WebViewListener() {
@@ -76,4 +105,3 @@ public class MainActivity extends BridgeActivity {
         }
     }
 }
-

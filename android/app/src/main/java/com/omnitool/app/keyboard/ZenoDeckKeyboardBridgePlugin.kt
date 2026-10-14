@@ -49,6 +49,7 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
     @PluginMethod
     fun saveGif(call: PluginCall) {
         val base64Data = call.getString("base64")
+        val thumbnailBase64 = call.getString("thumbnailBase64")
         var filename = call.getString("filename") ?: "zenodeck_${System.currentTimeMillis()}.gif"
         if (!filename.endsWith(".gif", ignoreCase = true)) {
             filename = "$filename.gif"
@@ -77,6 +78,32 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
             FileOutputStream(tempFile).use { it.write(bytes) }
 
             if (tempFile.renameTo(targetFile)) {
+                // Generate or save lightweight <15KB WebP preview thumbnail for IME memory protection
+                val thumbFile = File(deckDir, "$filename.thumb.webp")
+                if (!thumbnailBase64.isNullOrEmpty()) {
+                    val cleanThumb = if (thumbnailBase64.contains(",")) {
+                        thumbnailBase64.substringAfter(",")
+                    } else {
+                        thumbnailBase64
+                    }
+                    val thumbBytes = Base64.decode(cleanThumb, Base64.DEFAULT)
+                    FileOutputStream(thumbFile).use { it.write(thumbBytes) }
+                } else {
+                    try {
+                        val options = android.graphics.BitmapFactory.Options().apply {
+                            inSampleSize = 2
+                        }
+                        val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+                        if (bitmap != null) {
+                            com.omnitool.app.media.ZenoHeadlessMediaEngine.getInstance(context)
+                                .generateCompanionThumbnail(bitmap, thumbFile)
+                            bitmap.recycle()
+                        }
+                    } catch (thumbErr: Exception) {
+                        Log.w(TAG, "Automatic thumbnail extraction failed: ${thumbErr.message}")
+                    }
+                }
+
                 // Broadcast update so active keyboard refreshes immediately
                 val intent = Intent(ACTION_DECK_UPDATED).apply {
                     setPackage(context.packageName)
@@ -90,6 +117,7 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
                     put("filename", filename)
                     put("path", targetFile.absolutePath)
                     put("size", targetFile.length())
+                    put("thumbnailPath", if (thumbFile.exists()) thumbFile.absolutePath else null)
                 }
                 call.resolve(ret)
             } else {
@@ -104,22 +132,29 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
 
     /**
      * Returns an array of all GIFs currently present in the shared deck directory.
+     * Excludes thumbnail companions (.thumb.webp) to present clean media entries.
      */
     @PluginMethod
     fun getDeckGifs(call: PluginCall) {
         try {
             val deckDir = getDeckDirectory()
             val files = deckDir.listFiles { file ->
-                file.isFile && file.name.endsWith(".gif", ignoreCase = true) && !file.name.startsWith(".")
+                file.isFile &&
+                file.name.endsWith(".gif", ignoreCase = true) &&
+                !file.name.endsWith(".thumb.webp", ignoreCase = true) &&
+                !file.name.startsWith(".")
             } ?: emptyArray()
 
             val array = JSArray()
             files.sortedByDescending { it.lastModified() }.forEach { file ->
+                val thumbFile = File(deckDir, "${file.name}.thumb.webp")
                 val item = JSObject().apply {
                     put("filename", file.name)
                     put("path", file.absolutePath)
                     put("size", file.length())
                     put("modified", file.lastModified())
+                    put("thumbnailPath", if (thumbFile.exists()) thumbFile.absolutePath else null)
+                    put("hasThumbnail", thumbFile.exists())
                 }
                 array.put(item)
             }

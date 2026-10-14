@@ -10,6 +10,7 @@ import { nativeSave } from "@/lib/native-save";
 import { getOrInitTurboEngine } from "@/lib/youtube/turbo-downloader";
 import { getYouTubeApiUrl } from "@/lib/youtube/innertube";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
+import { zenoApiFetch, resolveApiUrl } from "@/lib/api-gateway";
 
 export interface MediaDownloadProgress {
   phase: "downloading" | "muxing" | "saving" | "complete";
@@ -30,14 +31,14 @@ export async function fetchStreamWithProgress(
   onProgress?: (receivedBytes: number, totalBytes?: number) => void,
   abortSignal?: AbortSignal
 ): Promise<Uint8Array> {
-  const directUrl = url.startsWith("http") ? url : getYouTubeApiUrl(url);
+  const directUrl = url.startsWith("http") ? url : resolveApiUrl(url);
 
   let lastStatus = 0;
   let serverErrMsg: string | null = null;
 
   // 1. Primary: Streaming fetch reader for progress tracking and CORS endpoints
   try {
-    const res = await fetch(directUrl, { signal: abortSignal });
+    const res = await zenoApiFetch(directUrl, { signal: abortSignal });
     lastStatus = res.status;
     if (res.ok && res.body) {
       const contentLength = res.headers.get("content-length");
@@ -81,10 +82,10 @@ export async function fetchStreamWithProgress(
     !directUrl.includes("/api/media/download")
   ) {
     try {
-      const proxyUrl = getYouTubeApiUrl(
+      const proxyUrl = resolveApiUrl(
         `/api/youtube/stream?url=${encodeURIComponent(directUrl)}`
       );
-      const res = await fetch(proxyUrl, { signal: abortSignal });
+      const res = await zenoApiFetch(proxyUrl, { signal: abortSignal });
       lastStatus = res.status;
       if (res.ok && res.body) {
         const contentLength = res.headers.get("content-length");
@@ -325,7 +326,7 @@ export async function downloadUniversalMedia(
       message: "Downloading high-speed stream via yt-dlp engine…",
       percent: 40,
     });
-    const fallbackUrl = getYouTubeApiUrl(
+    const fallbackUrl = resolveApiUrl(
       `/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(
         option.badge || option.resolution || "best"
       )}${option.ext ? `&format=${encodeURIComponent(option.ext)}` : ""}`

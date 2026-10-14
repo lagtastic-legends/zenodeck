@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { zenoApiFetch, resolveApiUrl } from "@/lib/api-gateway";
 
 export type MessageRole = "user" | "model";
 
@@ -11,26 +12,7 @@ export interface ChatMessage {
 
 const getAiEndpoint = (params = ""): string => {
   const query = params ? (params.startsWith("?") ? params : `?${params}`) : "";
-  const isNative = typeof window !== "undefined" && Capacitor.isNativePlatform?.() === true;
-
-  // On native Android APK (where origin is localhost without local server), call production deployment
-  if (isNative) {
-    const remote = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-    return `${remote.replace(/\/+$/, "")}/api/ai/${query}`;
-  }
-
-  // In browser environments
-  if (typeof window !== "undefined" && window.location?.origin) {
-    // If not local dev port 3000 and origin is localhost/capacitor, route to remote host
-    if (window.location.hostname === "localhost" && window.location.port !== "3000") {
-      const remote = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-      return `${remote.replace(/\/+$/, "")}/api/ai/${query}`;
-    }
-    return `/api/ai/${query}`;
-  }
-
-  const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://omni-tool-two.vercel.app";
-  return `${fallback.replace(/\/+$/, "")}/api/ai/${query}`;
+  return resolveApiUrl(`/api/ai${query}`);
 };
 
 export const generateAiResponse = async (messages: ChatMessage[]) => {
@@ -40,7 +22,7 @@ export const generateAiResponse = async (messages: ChatMessage[]) => {
       parts: [{ text: msg.content }]
     }));
 
-    const response = await fetch(getAiEndpoint(), {
+    const response = await zenoApiFetch(getAiEndpoint(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -74,7 +56,7 @@ export const streamAiResponse = async function* (messages: ChatMessage[], signal
       parts: [{ text: msg.content }]
     }));
 
-    const response = await fetch(getAiEndpoint("?stream=true"), {
+    const response = await zenoApiFetch(getAiEndpoint("?stream=true"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

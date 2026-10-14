@@ -5,6 +5,34 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.14.0] — 2026-10-14
+
+### Added & Enhanced
+- **⚡ Android SharedArrayBuffer & Multi-Threaded WASM Acceleration**:
+  - Overrode `BridgeWebViewClient` in `MainActivity.java` with COOP (`same-origin`), COEP (`credentialless`), and CORP (`cross-origin`) injection into local APK assets (`https://localhost`), unlocking full SIMD multi-threading for `FFmpeg.wasm` and `onnxruntime-web`.
+  - Upgraded `public/sw.js` with declarative COOP/COEP isolation for static PWA web deployments.
+  - Deployed real-time hardware telemetry badge in `SystemStatusHud.tsx` exposing cross-origin isolation and multi-threading states.
+- **📱 Headless Native Media Engine for ZenoTap IME (`ZenoHeadlessMediaEngine.kt`)**:
+  - Direct context-isolated media processing engine operating headlessly on `Dispatchers.IO` without waking `MainActivity` or WebView JavaScript.
+  - MediaCodec & Jetpack Media3 hardware video compression and transcoding pipelines.
+  - 1-tap 512x512 WebP lossy sticker normalizer (<500 KB) for instant WhatsApp & Telegram messaging insertion.
+  - Strict IME memory protection (<30 MB RAM) via companion thumbnail generator (<15 KB `.thumb.webp`) eliminating LMK evictions.
+  - In-keyboard clipboard pill actions: `"Compress"`, `"To GIF"`, and `"Sticker"`.
+- **🔀 4-Tier Unified Media Engine Router (`engine-router.ts`)**:
+  - Hierarchical routing across Tier 1 (Native Web Audio/Canvas), Tier 2 (Web Workers & OPFS Storage), Tier 3 (Multi-Threaded WASM), and Tier 4 (Native Android Hardware).
+- **🌐 Multi-Provider AI Gateway (`api-gateway.ts`)**:
+  - Automated client/server fallback across Google Gemini, Cloudflare Workers AI, Groq, OpenRouter, and Ollama.
+- **🎧 Container-Safe Metadata Tagging & Studio 8D Audio Export (`spatial-engine.ts`)**:
+  - Container Header Guard protecting `.m4a`/`.aac` (`ftyp` at byte 4) and `.opus` (`OggS` at byte 0) from ID3 prepending, utilizing native FFmpeg `-metadata` muxing.
+  - Studio-grade compressed 8D spatial audio export (MP3, M4A, Opus, WAV) with calibrated orbit speed and swing intensity.
+  - Origin Private File System (OPFS) persistent model weight caching (`model-cache.ts`).
+- **⚡ ZenoMacros Batch Automation Engine (`zeno-macros.ts` & UI)**:
+  - Declarative multi-action workflows for automated batch media processing.
+- **🎨 OffscreenCanvas WebGL2 GLSL Shaders (`useOffscreenShader.ts`)**:
+  - High-performance GPU shader rendering off the main UI thread.
+- **📜 Permanent Architectural Constitution (`.antigravityrules`)**:
+  - Codified repository-wide standards for media routing, OPFS caching, 60-30-10 palette ratio, and IME RAM limits.
+
 ## [3.13.0] — 2026-10-12
 
 ### Added & Enhanced

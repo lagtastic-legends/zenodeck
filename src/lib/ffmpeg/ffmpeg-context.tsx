@@ -99,11 +99,24 @@ const DEFAULT_CAPABILITIES: EngineCapabilities = {
   wasm: false,
 };
 
-let cachedClientCapabilities: EngineCapabilities | null = null;
+let capabilityListeners: Array<() => void> = [];
+
+export function notifyCapabilitiesChanged() {
+  capabilityListeners.forEach((fn) => fn());
+}
+
+function subscribeCapabilities(listener: () => void) {
+  capabilityListeners.push(listener);
+  return () => {
+    capabilityListeners = capabilityListeners.filter((fn) => fn !== listener);
+  };
+}
+
+let lastSnapshot: EngineCapabilities = DEFAULT_CAPABILITIES;
 
 const getEngineCapabilities = (): EngineCapabilities => {
-  if (!cachedClientCapabilities && typeof window !== "undefined") {
-    cachedClientCapabilities = {
+  if (typeof window !== "undefined") {
+    const next: EngineCapabilities = {
       crossOriginIsolated: window.crossOriginIsolated === true,
       sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
       webWorker: typeof Worker !== "undefined",
@@ -111,8 +124,19 @@ const getEngineCapabilities = (): EngineCapabilities => {
       indexedDB: typeof indexedDB !== "undefined",
       wasm: typeof WebAssembly !== "undefined",
     };
+    if (
+      lastSnapshot.crossOriginIsolated !== next.crossOriginIsolated ||
+      lastSnapshot.sharedArrayBuffer !== next.sharedArrayBuffer ||
+      lastSnapshot.webWorker !== next.webWorker ||
+      lastSnapshot.mediaRecorder !== next.mediaRecorder ||
+      lastSnapshot.indexedDB !== next.indexedDB ||
+      lastSnapshot.wasm !== next.wasm
+    ) {
+      lastSnapshot = next;
+    }
+    return lastSnapshot;
   }
-  return cachedClientCapabilities || DEFAULT_CAPABILITIES;
+  return DEFAULT_CAPABILITIES;
 };
 
 export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
@@ -126,10 +150,22 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
   const [engine, setEngine] = useState<FFmpeg | null>(null);
   const engineRef = useRef<FFmpeg | null>(null);
   const capabilities = useSyncExternalStore(
-    () => () => {},
+    subscribeCapabilities,
     getEngineCapabilities,
     () => DEFAULT_CAPABILITIES
   );
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      const handleControllerChange = () => {
+        notifyCapabilitiesChanged();
+      };
+      navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+      return () => {
+        navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+      };
+    }
+  }, []);
 
   /** Guards against double-boot (button spam / StrictMode double-effects). */
   const bootingRef = useRef(false);
@@ -188,6 +224,16 @@ export function FFmpegEngineProvider({ children }: { children: ReactNode }) {
         "system",
         "info",
         `Spawning module worker → ${ENGINE_ASSETS.worker}`,
+      );
+
+      const isMultiThreaded =
+        typeof window !== "undefined" &&
+        window.crossOriginIsolated === true &&
+        typeof SharedArrayBuffer !== "undefined";
+      appendLog(
+        "system",
+        "info",
+        `Execution Mode: ${isMultiThreaded ? "Multi-Threaded (SharedArrayBuffer unlocked)" : "Single-Threaded (COOP/COEP isolation pending)"}`,
       );
 
       /* Resolve core JS module (local bundle first, then jsDelivr/unpkg mirrors) */

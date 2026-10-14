@@ -8,30 +8,37 @@
 
 import { motion } from "framer-motion";
 import {
+  Cpu,
   Database,
   Hexagon,
   Layers,
   Mic,
   ShieldCheck,
   SquareCode,
+  Zap,
 } from "lucide-react";
 import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 
 export function SystemStatusHUD() {
   const { capabilities } = useFFmpegEngine();
 
+  const isMultithreaded =
+    capabilities.crossOriginIsolated && capabilities.sharedArrayBuffer;
+  const hardwareCores =
+    typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 4 : 4;
+
   const items = [
     {
       icon: ShieldCheck,
       name: "Cross-Origin Isolation",
       ok: capabilities.crossOriginIsolated,
-      hint: "COOP + COEP headers via next.config.ts",
+      hint: "COOP + COEP headers via next.config.ts / Capacitor Bridge",
     },
     {
       icon: Layers,
       name: "SharedArrayBuffer",
       ok: capabilities.sharedArrayBuffer,
-      hint: "Unlocks MT WASM cores",
+      hint: "Unlocks multi-threaded WASM cores",
     },
     {
       icon: SquareCode,
@@ -61,16 +68,33 @@ export function SystemStatusHUD() {
 
   return (
     <section aria-labelledby="hud-heading" className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h3
-          id="hud-heading"
-          className="font-display text-sm font-bold uppercase tracking-[0.28em] text-foreground/90"
-        >
-          System Integrity
-        </h3>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          runtime probes
-        </span>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3
+            id="hud-heading"
+            className="font-display text-sm font-bold uppercase tracking-[0.28em] text-foreground/90"
+          >
+            System Integrity
+          </h3>
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            runtime probes & hardware isolation
+          </span>
+        </div>
+
+        {/* Real-time Hardware Telemetry Badge */}
+        <div className="flex items-center gap-2">
+          {isMultithreaded ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-neon/40 bg-neon/10 px-3 py-1 font-mono text-[10px] font-semibold tracking-wider text-neon shadow-glow shadow-neon/10">
+              <Zap className="size-3 fill-current animate-pulse text-neon" />
+              <span>SAB MULTITHREADING ACTIVE ({hardwareCores} CORES)</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 font-mono text-[10px] font-semibold tracking-wider text-amber-400">
+              <Cpu className="size-3 text-amber-400" />
+              <span>SINGLE-THREADED FALLBACK</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
