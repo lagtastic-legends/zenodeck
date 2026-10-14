@@ -97,9 +97,19 @@ export function TopBar() {
               <img src="/logo.jpg" alt="ZenoDeck" className="w-full h-full object-cover" />
             </motion.div>
           <div className="flex flex-col leading-none truncate">
-            <span className="font-display text-xs sm:text-sm font-bold tracking-[0.2em] sm:tracking-[0.32em] text-foreground">
-              ZENODECK
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-display text-xs sm:text-sm font-bold tracking-[0.2em] sm:tracking-[0.32em] text-foreground">
+                ZENODECK
+              </span>
+              <button
+                type="button"
+                onClick={() => useUpdateStore.getState().openWhatsNew()}
+                className="font-mono text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/25 px-1.5 py-0.5 rounded-full border border-primary/30 transition-all cursor-pointer shadow-[0_0_6px_rgba(139,92,246,0.2)]"
+                title="View What's New in v3.15.0"
+              >
+                v3.15.0
+              </button>
+            </div>
             <span className="mt-0.5 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:block">
               client-side media suite
             </span>

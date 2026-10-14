@@ -10,13 +10,16 @@ import { AppShell } from "@/components/shell/app-shell";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { FFmpegEngineProvider } from "@/lib/ffmpeg/ffmpeg-context";
 import { VaultProvider } from "@/lib/vault/vault-context";
+import { SensoryProvider } from "@/components/sensory/SensoryProvider";
 
 export default function Home() {
   return (
     <AuthProvider>
       <FFmpegEngineProvider>
         <VaultProvider>
-          <AppShell />
+          <SensoryProvider>
+            <AppShell />
+          </SensoryProvider>
         </VaultProvider>
       </FFmpegEngineProvider>
     </AuthProvider>

@@ -13,11 +13,14 @@ interface UpdateStoreState {
   updateInfo: AppUpdateInfo | null;
   isChecking: boolean;
   lastChecked: number | null;
+  isWhatsNewOpen: boolean;
   setAutoUpdateEnabled: (enabled: boolean) => void;
   toggleAutoUpdate: () => void;
   setUpdateInfo: (info: AppUpdateInfo | null) => void;
   checkUpdates: (force?: boolean) => Promise<AppUpdateInfo>;
   removeUpdate: () => void;
+  setWhatsNewOpen: (open: boolean) => void;
+  openWhatsNew: () => void;
 }
 
 export const useUpdateStore = create<UpdateStoreState>()(
@@ -27,6 +30,7 @@ export const useUpdateStore = create<UpdateStoreState>()(
       updateInfo: null,
       isChecking: false,
       lastChecked: null,
+      isWhatsNewOpen: false,
 
       setAutoUpdateEnabled: (enabled: boolean) => {
         set({ autoUpdateEnabled: enabled });
@@ -38,6 +42,14 @@ export const useUpdateStore = create<UpdateStoreState>()(
 
       setUpdateInfo: (info) => {
         set({ updateInfo: info });
+      },
+
+      setWhatsNewOpen: (open: boolean) => {
+        set({ isWhatsNewOpen: open });
+      },
+
+      openWhatsNew: () => {
+        set({ isWhatsNewOpen: true });
       },
 
       checkUpdates: async (force = false) => {

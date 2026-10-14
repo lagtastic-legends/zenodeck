@@ -24,6 +24,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { BackConfirmDialog } from "@/components/navigation/back-confirm-dialog";
 import { SaveResultModal } from "@/components/dialogs/save-result-modal";
+import { WhatsNewModal } from "@/components/shell/whats-new-modal";
 import { PermissionGate } from "@/components/shell/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
 import { DesktopSidebar } from "@/components/shell/desktop-sidebar";
@@ -373,6 +374,7 @@ export function AppShell() {
       {!isLoginScreen && <StickyMobileCta />}
       <BackConfirmDialog />
       <SaveResultModal />
+      <WhatsNewModal />
       {!isLoginScreen && <PermissionGate />}
 
       {/* Mobile Footer outside workstation columns */}

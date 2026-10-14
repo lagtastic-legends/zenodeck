@@ -9,6 +9,7 @@ import {
   isNewerVersion,
 } from "@/config/version";
 import { universalFetch } from "@/lib/youtube/innertube";
+import { notifyAppUpdateAvailable } from "@/lib/notifications";
 
 export interface AppReleaseAsset {
   name: string;
@@ -114,6 +115,10 @@ export async function checkForUpdates(forceRefresh = false): Promise<AppUpdateIn
       apkSize,
     };
 
+    if (updateAvailable) {
+      void notifyAppUpdateAvailable(cleanTag, apkSize);
+    }
+
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(
@@ -202,3 +207,15 @@ export function dismissUpdateNotification(): void {
     localStorage.setItem("zenodeck_update_dismissed_at", Date.now().toString());
   } catch {}
 }
+
+// Background auto-check on native app foreground resume
+if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  try {
+    App.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) {
+        void checkForUpdates(true);
+      }
+    });
+  } catch {}
+}
+

@@ -357,7 +357,17 @@ export function SensoryProvider({
 export function useSensoryContext(): SensoryContextValue {
   const context = useContext(SensoryContext);
   if (!context) {
-    throw new Error("useSensoryContext must be used within a <SensoryProvider />");
+    return {
+      isAudioReady: false,
+      isMuted: false,
+      masterVolume: 0.75,
+      preloadSound: async () => null,
+      preloadManifest: async () => {},
+      playSound: () => {},
+      setMasterVolume: () => {},
+      setMuted: () => {},
+      unlockAudio: async () => null,
+    };
   }
   return context;
 }

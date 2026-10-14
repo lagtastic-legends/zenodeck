@@ -185,3 +185,101 @@ export async function updateDownloadNotification(
   // preventing unwanted system alerts and device vibrations.
   return;
 }
+
+const UPDATE_CHANNEL_ID = "zenodeck_updates";
+let updateChannelCreated = false;
+let notificationActionListenerRegistered = false;
+
+/**
+ * Initializes the Android notification channel for OTA App Updates.
+ */
+export async function ensureUpdateNotificationChannel() {
+  if (updateChannelCreated || !Capacitor.isNativePlatform()) return;
+  try {
+    await LocalNotifications.createChannel({
+      id: UPDATE_CHANNEL_ID,
+      name: "App Updates",
+      description: "Alerts when a new version of ZenoDeck is released",
+      importance: 5, // High priority (heads-up notification)
+      visibility: 1, // Public
+      sound: "default",
+      vibration: true,
+      lights: true,
+      lightColor: "#8B5CF6",
+    });
+    updateChannelCreated = true;
+
+    if (!notificationActionListenerRegistered) {
+      await LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+        if (action.notification?.extra?.action === "open_update_modal") {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("zenodeck:open-update-modal"));
+          }
+        }
+      });
+      notificationActionListenerRegistered = true;
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
+/**
+ * Dispatches a high-priority notification alerting the user that a new version of ZenoDeck is ready.
+ */
+export async function notifyAppUpdateAvailable(
+  latestVersion: string,
+  sizeBytes?: number
+): Promise<void> {
+  if (typeof window === "undefined") return;
+
+  const lastNotified = localStorage.getItem("zenodeck_last_notified_version");
+  if (lastNotified === latestVersion) return;
+
+  const sizeMB = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(1) : "12.0";
+  const title = `🚀 ZenoDeck v${latestVersion} is Available!`;
+  const body = `New features & performance upgrades ready (${sizeMB} MB). Tap to update.`;
+
+  // 1. Android APK Native Local Notification
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await ensureUpdateNotificationChannel();
+      const notifId = 88888;
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: notifId,
+            title,
+            body,
+            channelId: UPDATE_CHANNEL_ID,
+            schedule: { at: new Date(Date.now() + 250) },
+            extra: { action: "open_update_modal", version: latestVersion },
+            smallIcon: "ic_stat_name",
+            iconColor: "#8B5CF6",
+          },
+        ],
+      });
+      localStorage.setItem("zenodeck_last_notified_version", latestVersion);
+      return;
+    } catch (e) {
+      console.warn("Could not dispatch native update notification:", e);
+    }
+  }
+
+  // 2. Web Notification API
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      const notif = new Notification(title, {
+        body,
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+        tag: "zenodeck-ota-update",
+      });
+      notif.onclick = () => {
+        window.focus();
+        window.dispatchEvent(new CustomEvent("zenodeck:open-update-modal"));
+      };
+      localStorage.setItem("zenodeck_last_notified_version", latestVersion);
+    } catch {}
+  }
+}

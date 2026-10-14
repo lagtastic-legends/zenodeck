@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.15.1-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.15.1" />
+    <img src="https://img.shields.io/badge/Release-v3.15.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.15.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.1/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.1/zenodeck-v3.15.1-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.15.1-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.15.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -61,18 +61,18 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description | Size & Checksum |
 | :--- | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.1/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. | **11.99 MB** · `6A7837B6...` |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.15.1-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.1/zenodeck-v3.15.1-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). | **11.99 MB** · `6A7837B6...` |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.15.1-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.1/zenodeck-v3.15.1-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. | **11.99 MB** · `6A7837B6...` |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.15.1-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.1/zenodeck-v3.15.1-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. | **11.99 MB** · `6A7837B6...` |
-| **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. | **11.99 MB** |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. | **11.98 MB** · `6A7837B6...` |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.15.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). | **11.98 MB** · `6A7837B6...` |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.15.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. | **11.98 MB** · `6A7837B6...` |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.15.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. | **11.98 MB** · `6A7837B6...` |
+| **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. | **11.98 MB** |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. | **0.09 MB** |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. | PWA |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.15.1)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.15.1) | Full release notes, raw SHA256 checksums, and source tarballs. | Hub |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.15.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.15.0) | Full release notes, raw SHA256 checksums, and source tarballs. | Hub |
 
 ---
 
-## 🌟 What's New in v3.15.1
+## 🌟 What's New in v3.15.0
 
 - **⌨️ ZenoTap Native Keyboard Hardware Aesthetics & Keycap Engine**:
   - **Tactile Keycaps**: Precision 1dp top specular highlight border, 8dp rounded corners, recessed bottom bezel depth shadow, and glowing pressed state.
@@ -82,6 +82,11 @@ Every release is automatically compiled, signed, and published for all target ar
   - **Morphing Utility Ribbon**: Mode switcher pills (`[⌨️ Keys]`, `[⚡ Vault]`) + Live host app MIME compatibility dot (`GIF • WebP Ready`) + animated smart clipboard action pills (`[⚡ Compress]`, `[🎞️ To GIF]`, `[✨ Sticker]`).
   - **Glassmorphic Vault Cards**: 12dp glassmorphic framing, format badges (`GIF` / `STICKER`), file-size micro-labels, category strip filtering (`All`, `GIFs`, `Stickers`, `Pinned`), and long-press pinning/deletion.
   - **Cross-Boundary Live Theme Sync**: Dynamic theme switching between `"obsidian"` (OKLCH dark cyber-violet/cyan) and `"terracotta"` (60/30/10 `#FAF5EE` / `#342A24` / `#C2652A`).
+- **🎉 Post-Update "What's New" Celebration Modal (`whats-new-modal.tsx`)**:
+  - Version-diff auto trigger (`zenodeck_last_seen_version`), 2×2 Bento showcase grid, sensory completion fanfare (`triggerSuccess()`), and direct 1-tap navigation to ZenoTap Studio.
+  - Manual replay capability triggered by clicking version badges in top bar or footer.
+- **🚀 3-Layer OTA Update Notification Pipeline (`updater.ts`, `notifications.ts`)**:
+  - Background GitHub release polling, Capacitor foreground resume listener (`appStateChange`), native Android local notification on high-importance channel `zenodeck_updates`, and in-app update status pills.
 - **🎛️ In-App ZenoTap Studio & Live Keyboard Simulator**:
   - **1:1 Live Keyboard Simulator**: Interactive software deck preview in Next.js 16 featuring live key taps, mode switching, category filtering, and typing into an integrated sandbox.
   - **Interactive Onboarding Sandbox**: 4-step progressive setup checklist with real-time status indicators.
@@ -90,8 +95,8 @@ Every release is automatically compiled, signed, and published for all target ar
   - **YouTube CDN Range Chunking**: Automatically injects `&range=start-end` query parameters to prevent Google Video 403 socket drops on >64MB streams.
   - **Android Native Disk-to-Disk `MediaMuxer`**: Zero-RAM sample muxing in `ZenoHeadlessMediaEngine.kt` merging 4K video and audio directly on flash storage (<5MB RAM, ~1.5s execution, 0% frame decode).
   - **Public Gallery Indexing & WebView Playback**: Direct save to `Movies/ZenoDeck`, immediate `MediaScannerConnection` indexing into Google Photos, and `Capacitor.convertFileSrc()` for instant in-app playback.
-- **📦 Slimmed 11.99 MB Release APK**:
-  - Full ProGuard/R8 shrinking reducing the signed release APK to **11.99 MB**, far below the strict 25 MB limit.
+- **📦 Slimmed 11.98 MB Release APK**:
+  - Full ProGuard/R8 shrinking reducing the signed release APK to **11.98 MB**, far below the strict 25 MB limit.
 
 ---
 
@@ -147,7 +152,7 @@ Every release is automatically compiled, signed, and published for all target ar
   - ZenoTap Pairing Ease Suite: **5/5 passing (100%)**.
   - TypeScript strict compilation: **0 Errors**.
 
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md), [RELEASE_NOTES_v3.15.1.md](RELEASE_NOTES_v3.15.1.md), [RELEASE_NOTES_v3.14.0.md](RELEASE_NOTES_v3.14.0.md), and [RELEASE_NOTES_v3.13.0.md](RELEASE_NOTES_v3.13.0.md)).*
+*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md), [RELEASE_NOTES_v3.15.0.md](RELEASE_NOTES_v3.15.0.md), [RELEASE_NOTES_v3.14.0.md](RELEASE_NOTES_v3.14.0.md), and [RELEASE_NOTES_v3.13.0.md](RELEASE_NOTES_v3.13.0.md)).*
 
 ---
 

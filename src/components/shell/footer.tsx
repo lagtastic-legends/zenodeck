@@ -56,6 +56,18 @@ export function AppFooter() {
           <nav aria-label="Legal and Help" className="flex flex-wrap items-center gap-3 sm:gap-4 font-mono text-[11px]">
             <button
               type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("zenodeck:open-whats-new"));
+                }
+              }}
+              className="flex items-center gap-1 text-primary hover:underline transition-colors cursor-pointer"
+            >
+              <span>v3.15.0 · What's New</span>
+            </button>
+            <span className="text-border">·</span>
+            <button
+              type="button"
               onClick={() => setDownloadModalOpen(true)}
               className="flex items-center gap-1 text-primary hover:underline transition-colors cursor-pointer"
             >
@@ -69,7 +81,7 @@ export function AppFooter() {
               className="flex items-center gap-1 text-emerald-400 hover:underline transition-colors"
             >
               <Download className="size-3" />
-              <span>APK (24.5MB)</span>
+              <span>APK (11.98MB)</span>
             </a>
             <span className="text-border">·</span>
             <Link
