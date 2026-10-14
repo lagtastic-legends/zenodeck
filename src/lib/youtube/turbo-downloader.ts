@@ -36,6 +36,10 @@ import {
   canStreamCopy,
   buildAudioExtractionArgs,
 } from "../media/perf-utils";
+import {
+  isNativeAndroidPlatform,
+  executeNativeAndroidMux,
+} from "../media/native-media-muxer";
 
 let sharedTurboEngine: FFmpeg | null = null;
 
@@ -111,6 +115,7 @@ export interface TurboDownloadResult {
   mimeType: string;
   is4K: boolean;
   is60fps: boolean;
+  savedNativePath?: string;
 }
 
 /**
@@ -125,6 +130,32 @@ function getProxiedStreamUrl(directUrl: string): string {
     return directUrl;
   }
   return getYouTubeApiUrl(`/api/youtube/stream?url=${encodeURIComponent(directUrl)}`);
+}
+
+/**
+ * Injects YouTube CDN native &range= query parameter into candidate URLs.
+ * Bypasses googlevideo 403 Forbidden resets when downloading >64MB adaptive streams.
+ */
+export function injectYouTubeRangeParam(url: string, rangeHeader?: string): string {
+  if (!rangeHeader) return url;
+  const match = rangeHeader.match(/bytes=(\d+)-(\d+)?/);
+  if (!match) return url;
+  const start = match[1];
+  const end = match[2] || "";
+  const rangeVal = end ? `${start}-${end}` : `${start}-`;
+
+  if (url.includes("googlevideo.com") || url.includes("youtube.com") || url.includes("sparams=")) {
+    try {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set("range", rangeVal);
+      return urlObj.toString();
+    } catch {
+      const stripped = url.replace(/([?&])range=[^&]*/g, "");
+      const separator = stripped.includes("?") ? "&" : "?";
+      return `${stripped}${separator}range=${rangeVal}`;
+    }
+  }
+  return url;
 }
 
 /**
@@ -145,7 +176,9 @@ async function fetchChunkUniversal({
 }): Promise<Uint8Array> {
   if (signal?.aborted) throw new Error("Download aborted");
 
-  const isIos = candidateUrl.includes("c=IOS") || candidateUrl.includes("sparams=");
+  const effectiveCandidateUrl = injectYouTubeRangeParam(candidateUrl, rangeHeader);
+
+  const isIos = effectiveCandidateUrl.includes("c=IOS") || effectiveCandidateUrl.includes("sparams=");
   const defaultUa = isIos
     ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
     : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
@@ -158,17 +191,17 @@ async function fetchChunkUniversal({
   }
 
   const isProbe = rangeHeader === "bytes=0-0";
-  const nativeTimeoutMs = isProbe ? 2500 : 7000;
+  const nativeTimeoutMs = isProbe ? 2500 : 14000;
 
   // 1. Native mobile (Capacitor Android / iOS) with hard timeout & abort race
   if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
     try {
       const nativePromise = CapacitorHttp.request({
-        url: candidateUrl,
+        url: effectiveCandidateUrl,
         method: "GET",
         headers,
         responseType: "arraybuffer",
-        connectTimeout: 3000,
+        connectTimeout: 4000,
         readTimeout: nativeTimeoutMs,
       } as any);
 
@@ -212,8 +245,8 @@ async function fetchChunkUniversal({
   }
 
   // 2. Stream proxy fallback (Web browser or native proxy endpoint)
-  const targetUrl = getProxiedStreamUrl(candidateUrl);
-  const proxyTimeoutMs = isProbe ? 3000 : 8000;
+  const targetUrl = getProxiedStreamUrl(effectiveCandidateUrl);
+  const proxyTimeoutMs = isProbe ? 3000 : 16000;
   const proxyController = new AbortController();
   const proxyTimer = setTimeout(() => proxyController.abort(), proxyTimeoutMs);
 
@@ -372,14 +405,14 @@ async function downloadStreamResilient({
       let chunkSuccess = false;
       let lastErr: Error | null = null;
 
-      // Retry up to 3 times per chunk with candidate edge node failover
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // Retry up to 4 times per chunk with candidate edge node failover and backoff
+      for (let attempt = 0; attempt < 4; attempt++) {
         if (signal?.aborted) throw new Error("Download aborted");
         const candIdx = (activeCandidateIndex + attempt) % candidateUrls.length;
         const candidate = candidateUrls[candIdx];
 
         const chunkController = new AbortController();
-        const timeoutTimer = setTimeout(() => chunkController.abort(), 6000);
+        const timeoutTimer = setTimeout(() => chunkController.abort(), 12000);
         const onParentAbort = () => chunkController.abort();
         signal?.addEventListener("abort", onParentAbort);
 
@@ -410,14 +443,14 @@ async function downloadStreamResilient({
           if (candidateUrls.length > 1) {
             activeCandidateIndex = (activeCandidateIndex + 1) % candidateUrls.length;
           }
-          if (attempt < 2 && !signal?.aborted) {
-            await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+          if (attempt < 3 && !signal?.aborted) {
+            await new Promise((r) => setTimeout(r, 200 * Math.pow(1.5, attempt)));
           }
         }
       }
 
       if (!chunkSuccess) {
-        throw lastErr || new Error(`Chunk ${chunkIndex + 1}/${numChunks} failed after 3 attempts`);
+        throw lastErr || new Error(`Chunk ${chunkIndex + 1}/${numChunks} failed after 4 attempts`);
       }
     }
   };
@@ -787,7 +820,8 @@ export async function downloadYouTubeStream({
     const mime = ext === "webm" ? "video/webm" : "video/mp4";
     const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: mime });
     const url = URL.createObjectURL(blob);
-    const filename = `${sanitizedTitle} [${option.id}].${ext}`;
+    const resTag = option.badge || option.resolutionLabel || option.id || "HD";
+    const filename = `${sanitizedTitle} [${resTag}].${ext}`;
 
     onProgress({
       phase: "complete",
@@ -843,6 +877,56 @@ export async function downloadYouTubeStream({
   const aExt = isAudioOpus ? "webm" : isAudioAac ? "m4a" : (option.audioFormat?.container || "m4a");
   const vInput = `stream_v.${vExt}`;
   const aInput = `stream_a.${aExt}`;
+
+  const resTag = option.badge || option.resolutionLabel || option.id || "HD";
+  const outputExt = isVideoWebM ? "webm" : "mp4";
+  const finalFilename = `${sanitizedTitle} [${resTag}].${outputExt}`;
+  const targetMime = isVideoWebM ? "video/webm" : "video/mp4";
+
+  // Fast-Path Native Android MediaMuxer:
+  // Operates disk-to-disk sample streaming (<5MB RAM). Bypasses Wasm MEMFS OOM [ff] Aborted() entirely!
+  if (isNativeAndroidPlatform()) {
+    try {
+      updateProgress("muxing", "Muxing 4K video & audio via Android hardware MediaMuxer…", 0.5);
+      const nativeMuxResult = await executeNativeAndroidMux({
+        videoBytes,
+        audioBytes,
+        outputFilename: finalFilename,
+        mimeType: targetMime,
+        onProgress: (msg) => updateProgress("muxing", msg, 0.7),
+      });
+
+      const outBlob = new Blob([], { type: targetMime });
+
+      onProgress({
+        phase: "complete",
+        progress: 100,
+        speedMbps: currentSpeedMbps,
+        downloadedBytes: nativeMuxResult.fileSizeBytes,
+        totalBytes: nativeMuxResult.fileSizeBytes,
+        activeThreads: 0,
+        etaSeconds: 0,
+        statusMessage: `Ready! ${option.label || option.badge} packaged directly to Movies/ZenoDeck via hardware MediaMuxer.`,
+      });
+
+      const webViewUrl = Capacitor.isNativePlatform()
+        ? Capacitor.convertFileSrc(nativeMuxResult.outputPath)
+        : `file://${nativeMuxResult.outputPath}`;
+
+      return {
+        blob: outBlob,
+        url: webViewUrl,
+        filename: finalFilename,
+        fileSizeBytes: nativeMuxResult.fileSizeBytes,
+        mimeType: targetMime,
+        is4K,
+        is60fps,
+        savedNativePath: nativeMuxResult.outputPath,
+      };
+    } catch (nativeMuxErr: any) {
+      console.warn("Native MediaMuxer encountered fallback, attempting WebAssembly pipeline:", nativeMuxErr?.message);
+    }
+  }
 
   interface MuxPlan {
     outputName: string;
@@ -1008,17 +1092,22 @@ export async function downloadYouTubeStream({
       }
 
       if (successfulPlan) {
-        const finalVideoData = (await activeEngine.readFile(successfulPlan.outputName)) as Uint8Array;
-
+        // Free MEMFS input files before reading output to prevent 32-bit Wasm heap exhaustion
         try {
           await activeEngine.deleteFile(vInput);
           await activeEngine.deleteFile(aInput);
+        } catch {}
+
+        const finalVideoData = (await activeEngine.readFile(successfulPlan.outputName)) as Uint8Array;
+
+        try {
           await activeEngine.deleteFile(successfulPlan.outputName);
         } catch {}
 
         const finalBlob = new Blob([finalVideoData.buffer as ArrayBuffer], { type: successfulPlan.mimeType });
         const finalUrl = URL.createObjectURL(finalBlob);
-        const finalFilename = `${sanitizedTitle} [${option.id}].${successfulPlan.outputExt}`;
+        const resTag = option.badge || option.resolutionLabel || option.id || "HD";
+        const finalFilename = `${sanitizedTitle} [${resTag}].${successfulPlan.outputExt}`;
 
         onProgress({
           phase: "complete",

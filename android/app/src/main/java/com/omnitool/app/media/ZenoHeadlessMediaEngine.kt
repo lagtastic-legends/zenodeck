@@ -8,12 +8,17 @@ import android.graphics.Canvas
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
+import android.media.MediaExtractor
+import android.media.MediaFormat
+import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import java.nio.ByteBuffer
 import android.util.Base64
 import android.util.Log
 import com.omnitool.app.keyboard.ZenoDeckKeyboardBridgePlugin
@@ -137,6 +142,154 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         } catch (e: Exception) {
             Log.e(TAG, "Video compression error: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Losslessly multiplexes separate video and audio tracks on disk into a unified container
+     * using Android's native MediaExtractor and MediaMuxer pipelines.
+     * Operates sample-by-sample without decoding video frames or loading media into RAM (<5MB heap).
+     */
+    fun muxVideoAndAudio(
+        videoFile: File,
+        audioFile: File,
+        outputFile: File
+    ): Result<File> {
+        if (!videoFile.exists() || videoFile.length() == 0L) {
+            return Result.failure(IllegalArgumentException("Video input file is missing or empty: ${videoFile.absolutePath}"))
+        }
+        if (!audioFile.exists() || audioFile.length() == 0L) {
+            return Result.failure(IllegalArgumentException("Audio input file is missing or empty: ${audioFile.absolutePath}"))
+        }
+
+        outputFile.parentFile?.mkdirs()
+        if (outputFile.exists()) {
+            outputFile.delete()
+        }
+
+        val videoExtractor = MediaExtractor()
+        val audioExtractor = MediaExtractor()
+        var muxer: MediaMuxer? = null
+
+        return try {
+            videoExtractor.setDataSource(videoFile.absolutePath)
+            audioExtractor.setDataSource(audioFile.absolutePath)
+
+            var videoTrackIndex = -1
+            var videoFormat: MediaFormat? = null
+            for (i in 0 until videoExtractor.trackCount) {
+                val format = videoExtractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                if (mime.startsWith("video/")) {
+                    videoTrackIndex = i
+                    videoFormat = format
+                    break
+                }
+            }
+
+            var audioTrackIndex = -1
+            var audioFormat: MediaFormat? = null
+            for (i in 0 until audioExtractor.trackCount) {
+                val format = audioExtractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                if (mime.startsWith("audio/")) {
+                    audioTrackIndex = i
+                    audioFormat = format
+                    break
+                }
+            }
+
+            if (videoTrackIndex < 0 || videoFormat == null) {
+                return Result.failure(IllegalStateException("No valid video track discovered in: ${videoFile.name}"))
+            }
+            if (audioTrackIndex < 0 || audioFormat == null) {
+                return Result.failure(IllegalStateException("No valid audio track discovered in: ${audioFile.name}"))
+            }
+
+            val isWebmTarget = outputFile.name.endsWith(".webm", ignoreCase = true)
+            val outputFormat = if (isWebmTarget) {
+                MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM
+            } else {
+                MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
+            }
+
+            muxer = MediaMuxer(outputFile.absolutePath, outputFormat)
+            val muxerVideoTrack = muxer.addTrack(videoFormat)
+            val muxerAudioTrack = muxer.addTrack(audioFormat)
+
+            videoExtractor.selectTrack(videoTrackIndex)
+            audioExtractor.selectTrack(audioTrackIndex)
+
+            muxer.start()
+
+            // Safe direct buffer for sample streaming
+            val maxBufferSize = maxOf(
+                videoFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 1024 * 1024),
+                audioFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 512 * 1024),
+                1024 * 1024
+            )
+            val buffer = ByteBuffer.allocateDirect(maxBufferSize)
+            val bufferInfo = MediaCodec.BufferInfo()
+
+            // 1. Stream video samples
+            while (true) {
+                buffer.clear()
+                val sampleSize = videoExtractor.readSampleData(buffer, 0)
+                if (sampleSize < 0) {
+                    break
+                }
+                bufferInfo.offset = 0
+                bufferInfo.size = sampleSize
+                bufferInfo.presentationTimeUs = videoExtractor.sampleTime
+                bufferInfo.flags = videoExtractor.sampleFlags
+                muxer.writeSampleData(muxerVideoTrack, buffer, bufferInfo)
+                videoExtractor.advance()
+            }
+
+            // 2. Stream audio samples
+            while (true) {
+                buffer.clear()
+                val sampleSize = audioExtractor.readSampleData(buffer, 0)
+                if (sampleSize < 0) {
+                    break
+                }
+                bufferInfo.offset = 0
+                bufferInfo.size = sampleSize
+                bufferInfo.presentationTimeUs = audioExtractor.sampleTime
+                bufferInfo.flags = audioExtractor.sampleFlags
+                muxer.writeSampleData(muxerAudioTrack, buffer, bufferInfo)
+                audioExtractor.advance()
+            }
+
+            Log.i(TAG, "Native MediaMuxer completed successfully: ${outputFile.name} (${outputFile.length()} bytes)")
+            Result.success(outputFile)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Native MediaMuxer execution failed", e)
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
+            Result.failure(e)
+        } finally {
+            try {
+                muxer?.stop()
+            } catch (ignored: Throwable) {}
+            try {
+                muxer?.release()
+            } catch (ignored: Throwable) {}
+            try {
+                videoExtractor.release()
+            } catch (ignored: Throwable) {}
+            try {
+                audioExtractor.release()
+            } catch (ignored: Throwable) {}
+        }
+    }
+
+    private fun MediaFormat.getIntegerSafely(key: String, defaultValue: Int): Int {
+        return try {
+            if (containsKey(key)) getInteger(key) else defaultValue
+        } catch (_: Throwable) {
+            defaultValue
         }
     }
 

@@ -48,6 +48,7 @@ import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useUIAudio } from "@/hooks/useUIAudio";
 import { nativeSave } from "@/lib/native-save";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
 import {
   extractYouTubeId,
   formatBytes,
@@ -549,37 +550,8 @@ export function YouTubeDownloader() {
           abortControllerRef.current?.signal
         );
       } catch (streamErr: any) {
-        // If remote server stream failed, attempt secondary on-device fallback to unthrottled 360p stream
-        const fastOption = videoInfo.qualities.find((q) => q.videoFormat?.itag === 18 && q.videoFormat?.url);
-        if (fastOption && fastOption !== selectedQuality && !abortControllerRef.current?.signal.aborted) {
-          console.warn("Server fallback failed, falling back to direct unthrottled on-device stream:", streamErr?.message);
-          setProgress({
-            phase: "downloading",
-            progress: 15,
-            speedMbps: 0,
-            downloadedBytes: 0,
-            totalBytes: fastOption.approxSizeBytes || 0,
-            activeThreads: 1,
-            etaSeconds: 0,
-            statusMessage: "Resuming via unthrottled stream (360p MP4)…",
-          });
-          const fastResult = await downloadYouTubeStream({
-            option: fastOption,
-            videoTitle: videoInfo.title,
-            author: videoInfo.author,
-            thumbnailUrl: videoInfo.thumbnailUrl,
-            engine: activeEngine,
-            maxParallelWorkers: 3,
-            onProgress: (p) => setProgress(p),
-            signal: abortControllerRef.current?.signal,
-          });
-          currentResultUrlRef.current = fastResult.url;
-          setDownloadResult(fastResult);
-          await nativeSave(fastResult.blob, fastResult.filename);
-          void haptics.success();
-          playSuccess();
-          return;
-        }
+        // STRICT RESOLUTION LOCK: Banned silent 360p fallback!
+        // Never substitute itag 18 or lower resolutions when user requested 4K/2K/1080p.
         throw streamErr;
       }
 
@@ -589,7 +561,8 @@ export function YouTubeDownloader() {
 
       const blob = new Blob([streamBytes.buffer as ArrayBuffer], { type: mimeType });
       const safeTitle = (videoInfo.title || "video").replace(/[<>:"/\\|?*]/g, "_").trim().slice(0, 60);
-      const filename = `${safeTitle} [${selectedQuality.label}].${selectedQuality.container}`;
+      const resTag = selectedQuality.badge || selectedQuality.resolutionLabel || selectedQuality.label || "HD";
+      const filename = `${safeTitle} [${resTag}].${selectedQuality.container}`;
       const url = URL.createObjectURL(blob);
 
       const fbResult: TurboDownloadResult = {
@@ -637,16 +610,18 @@ export function YouTubeDownloader() {
       });
     };
 
-    // Watchdog: If direct chunk streaming hasn't received any bytes within 8s, switch to high-speed stream
+    // Watchdog: If direct chunk streaming hasn't received any bytes within 25s (extended for 4K/2K), switch to high-speed stream
+    const isUltraHd = selectedQuality.is4K || selectedQuality.resolutionLabel?.includes("2160") || selectedQuality.resolutionLabel?.includes("1440");
+    const watchdogTimeoutMs = isUltraHd ? 25000 : 15000;
     stallWatchdogTimer = setTimeout(() => {
       if (!didFallback) {
-        console.warn("Direct stream stalled at 0% — switching to high-speed server stream");
+        console.warn(`Direct stream stalled at 0% after ${watchdogTimeoutMs}ms — switching to high-speed server stream`);
         didFallback = true;
         abortControllerRef.current?.abort();
         abortControllerRef.current = new AbortController();
-        void triggerYtDlpStreamFallback("Direct stream stalled at 0%").catch((err) => {
+        void triggerYtDlpStreamFallback("Direct stream initial connection timeout").catch((err) => {
           if (err.name !== "AbortError" && err.message !== "Download aborted") {
-            setResolveError(err.message || "Download failed.");
+            setResolveError(err.message || "Download failed. Please check network connection.");
             void haptics.error();
             playError();
           }
@@ -654,7 +629,7 @@ export function YouTubeDownloader() {
           setIsDownloading(false);
         });
       }
-    }, 8000);
+    }, watchdogTimeoutMs);
 
     try {
       const result = await downloadYouTubeStream({
@@ -679,7 +654,22 @@ export function YouTubeDownloader() {
 
       currentResultUrlRef.current = result.url;
       setDownloadResult(result);
-      await nativeSave(result.blob, result.filename);
+
+      if (result.savedNativePath || result.url.startsWith("file://")) {
+        // Native Android MediaMuxer already muxed directly into Movies/ZenoDeck and indexed into MediaStore
+        const nativeUri = result.savedNativePath
+          ? (result.savedNativePath.startsWith("file://") ? result.savedNativePath : `file://${result.savedNativePath}`)
+          : result.url;
+        useSaveDialogStore.getState().showSuccess({
+          filename: result.filename,
+          directory: "Movies/ZenoDeck",
+          uri: nativeUri,
+          fileSize: result.fileSizeBytes,
+          blob: result.blob,
+        });
+      } else {
+        await nativeSave(result.blob, result.filename);
+      }
       void haptics.success();
       playSuccess();
 
@@ -693,7 +683,7 @@ export function YouTubeDownloader() {
           durationFormatted: videoInfo.durationFormatted,
           qualityBadge: selectedQuality.badge,
           format: selectedQuality.container,
-          fileSizeBytes: result.blob.size,
+          fileSizeBytes: result.fileSizeBytes || result.blob.size,
           isAudioOnly: selectedQuality.isAudioOnly,
           audioStreamUrl: selectedQuality.isAudioOnly ? selectedQuality.audioFormat?.url || result.url : undefined,
           localFileName: result.filename,
@@ -837,6 +827,19 @@ export function YouTubeDownloader() {
   const handleSaveToDevice = async () => {
     if (!downloadResult) return;
     void haptics.medium();
+    if (downloadResult.savedNativePath || downloadResult.url.startsWith("file://")) {
+      const nativeUri = downloadResult.savedNativePath
+        ? (downloadResult.savedNativePath.startsWith("file://") ? downloadResult.savedNativePath : `file://${downloadResult.savedNativePath}`)
+        : downloadResult.url;
+      useSaveDialogStore.getState().showSuccess({
+        filename: downloadResult.filename,
+        directory: "Movies/ZenoDeck",
+        uri: nativeUri,
+        fileSize: downloadResult.fileSizeBytes,
+        blob: downloadResult.blob,
+      });
+      return;
+    }
     await nativeSave(downloadResult.blob, downloadResult.filename);
   };
 

@@ -130,11 +130,9 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
       fetchHeaders["Referer"] = "https://www.pinterest.com/";
     }
 
-    if (rangeHeader) {
-      fetchHeaders["Range"] = rangeHeader;
-    } else if (isHead) {
-      // If client requests HEAD to check total size, use Range: bytes=0-0 so CDN responds instantly
-      fetchHeaders["Range"] = "bytes=0-0";
+    const activeRange = rangeHeader || (isHead ? "bytes=0-0" : null);
+    if (activeRange) {
+      fetchHeaders["Range"] = activeRange;
     }
 
     let upstreamRes: Response | null = null;
@@ -142,8 +140,24 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
 
     for (const urlToTry of candidateUrls) {
       try {
+        let finalUrl = urlToTry;
+        if (activeRange && (finalUrl.includes("googlevideo.com") || finalUrl.includes("youtube.com") || finalUrl.includes("sparams="))) {
+          const match = activeRange.match(/bytes=(\d+)-(\d+)?/);
+          if (match) {
+            const rangeParam = match[2] ? `${match[1]}-${match[2]}` : `${match[1]}-`;
+            try {
+              const u = new URL(finalUrl);
+              u.searchParams.set("range", rangeParam);
+              finalUrl = u.toString();
+            } catch {
+              const stripped = finalUrl.replace(/([?&])range=[^&]*/g, "");
+              finalUrl = `${stripped}${stripped.includes("?") ? "&" : "?"}range=${rangeParam}`;
+            }
+          }
+        }
+
         const controller = new AbortController();
-        const connectTimeoutMs = isHead ? 6000 : 15000;
+        const connectTimeoutMs = isHead ? 6000 : 18000;
         const connectTimer = setTimeout(() => controller.abort(), connectTimeoutMs);
 
         if (req.signal) {
@@ -157,7 +171,7 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
           );
         }
 
-        const res = await fetch(urlToTry, {
+        const res = await fetch(finalUrl, {
           method: "GET",
           headers: fetchHeaders,
           redirect: "follow",
