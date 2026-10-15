@@ -13,6 +13,7 @@ import {
 import { getVisibleTools } from "@/lib/tools/registry";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { useSearchStore } from "@/lib/search/search-store";
+import { cn } from "@/lib/utils";
 
 const ACCENT_MAP: Record<string, string> = {
   emerald: "bg-emerald-500/10 text-emerald-500",
@@ -26,7 +27,13 @@ const ACCENT_MAP: Record<string, string> = {
   indigo: "bg-indigo-500/10 text-indigo-500",
 };
 
-export function SearchPalette({ hideTrigger = false }: { hideTrigger?: boolean }) {
+export function SearchPalette({
+  hideTrigger = false,
+  triggerClassName,
+}: {
+  hideTrigger?: boolean;
+  triggerClassName?: string;
+}) {
   const { isOpen, setOpen, toggle } = useSearchStore();
   const navigate = useNavStore((s) => s.navigate);
   const [isHovered, setIsHovered] = useState(false);
@@ -64,7 +71,10 @@ export function SearchPalette({ hideTrigger = false }: { hideTrigger?: boolean }
           onClick={() => setOpen(true)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className="group flex min-h-11 min-w-11 sm:min-h-8 sm:min-w-0 items-center justify-center gap-2 rounded-full border border-border/70 bg-card/60 px-2.5 sm:px-3 py-1.5 text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-foreground hover:bg-card/90"
+          className={cn(
+            "group flex min-h-11 min-w-11 sm:min-h-8 sm:min-w-0 items-center justify-center gap-2 rounded-full border border-border/70 bg-card/60 px-2.5 sm:px-3 py-1.5 text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-foreground hover:bg-card/90",
+            triggerClassName
+          )}
           title="Search Tools (Cmd+K)"
           aria-label="Search Tools"
         >

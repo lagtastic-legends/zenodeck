@@ -686,13 +686,20 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   };
 
   // Helper to find best format matching resolution and fps criteria
-  const findFormat = (minHeight: number, maxHeight: number, prefer60 = false) => {
-    const candidates = videoFormats.filter((f) => {
+  const findFormat = (minHeight: number, maxHeight: number, prefer60 = false, preferMp4 = false) => {
+    let candidates = videoFormats.filter((f) => {
       const h = f.height || (f.qualityLabel ? parseInt(f.qualityLabel) : 0);
       return h >= minHeight && h <= maxHeight;
     });
 
     if (candidates.length === 0) return null;
+
+    if (preferMp4) {
+      const mp4s = candidates.filter((f) => !isWebMFormat(f));
+      if (mp4s.length > 0) {
+        candidates = mp4s;
+      }
+    }
 
     if (prefer60) {
       const fps60 = candidates.filter((f) => (f.fps || 0) >= 50);
@@ -751,7 +758,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   }
 
   // 3. 1080p 60fps / 1080p FHD
-  const fmt1080 = findFormat(950, 1080, true);
+  const fmt1080 = findFormat(950, 1080, true, true);
   if (fmt1080) {
     const is60 = (fmt1080.fps || 0) >= 50;
     const pairedAudio = getPairedAudio(fmt1080);
@@ -774,7 +781,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   }
 
   // 4. 720p HD
-  const fmt720 = findFormat(650, 720, true);
+  const fmt720 = findFormat(650, 720, true, true);
   if (fmt720) {
     const pairedAudio = getPairedAudio(fmt720);
     const vSize = fmt720.contentLength || 0;
@@ -796,7 +803,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   }
 
   // 5. 480p Standard Quality
-  const fmt480 = findFormat(400, 480);
+  const fmt480 = findFormat(400, 480, false, true);
   if (fmt480) {
     const pairedAudio = getPairedAudio(fmt480);
     const vSize = fmt480.contentLength || 0;
@@ -820,7 +827,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   // 6. 360p Standard Quality
   // If pre-muxed combined itag 18 is available, prioritize it directly (unthrottled ratebypass stream)
   const fmt18 = parsedFormats.find((f) => f.itag === 18 && f.url);
-  const fmt360 = fmt18 || findFormat(300, 399);
+  const fmt360 = fmt18 || findFormat(300, 399, false, true);
   if (fmt360) {
     const isCombined18 = fmt360.itag === 18;
     const pairedAudio = isCombined18 ? undefined : getPairedAudio(fmt360);

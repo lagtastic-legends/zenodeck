@@ -26,8 +26,8 @@ function assert(condition: boolean, msg: string) {
 async function runTests() {
   console.log("=== TopBar, CORS & Responsive Layouts Verification Suite ===\n");
 
-  // 1. TopBar 360px budget check
-  console.log("[Requirement 1: TopBar Mobile 360px Budget]");
+  // 1. TopBar exact mobile controls & 360px budget check
+  console.log("[Requirement 1: TopBar Mobile Exact Controls & 360px Budget]");
   const topBarPath = path.join(__dirname, "../src/components/shell/top-bar.tsx");
   const topBarCode = fs.readFileSync(topBarPath, "utf-8");
 
@@ -36,20 +36,20 @@ async function runTests() {
     "Version badge is hidden on mobile screens (< 768px)"
   );
   assert(
-    topBarCode.includes("hidden md:flex") && topBarCode.includes("meta.label"),
-    "Standalone engine status pill is hidden on mobile screens (< 768px)"
+    topBarCode.includes('h-[28px] min-w-[28px] items-center') && topBarCode.includes("meta.label"),
+    "Engine status pill is visible on mobile at 28px height"
   );
   assert(
-    topBarCode.includes("absolute bottom-0.5 right-0.5 size-2 rounded-full") && topBarCode.includes("md:hidden"),
-    "Compact mobile engine status indicator dot is embedded onto logo"
+    topBarCode.includes('w-[38px] h-[38px]') && topBarCode.includes("<AudioToggle"),
+    "Audio toggle button is visible on mobile with 38px touch target"
   );
   assert(
-    topBarCode.includes("hidden lg:grid") && topBarCode.includes("ShieldCheck"),
-    "Permissions shield button is hidden on mobile and tablet (< 1024px)"
+    topBarCode.includes('w-[36px] h-[36px]') && topBarCode.includes("ShieldCheck"),
+    "Privacy shield button is visible on mobile with 36px touch target"
   );
   assert(
-    topBarCode.includes("hidden sm:block") && topBarCode.includes("<AudioToggle"),
-    "Audio toggle is hidden on compact screens (< 640px)"
+    topBarCode.includes('triggerClassName="hidden md:flex"'),
+    "Top-bar search palette is hidden on mobile screens (moved to bottom dock)"
   );
 
   // 2. FloatingToolbar suppression check
@@ -90,8 +90,8 @@ async function runTests() {
     "turbo-downloader.ts never falls back to browser fetch or WebAssembly on native Android"
   );
 
-  // 4. Kotlin engine Range resume, timeouts & target directories
-  console.log("\n[Requirement 4: Kotlin Engine Range Resume & Target Directories]");
+  // 4. Kotlin engine Bounded 2MB Chunking, timeouts & target directories
+  console.log("\n[Requirement 4: Kotlin Engine Bounded 2MB Chunking & WebM Hardware Muxer]");
   const kotlinEnginePath = path.join(
     __dirname,
     "../android/app/src/main/java/com/omnitool/app/media/ZenoHeadlessMediaEngine.kt"
@@ -99,12 +99,16 @@ async function runTests() {
   const kotlinCode = fs.readFileSync(kotlinEnginePath, "utf-8");
 
   assert(
-    kotlinCode.includes('setRequestProperty("Range", "bytes=$bytesDownloaded-")'),
-    "ZenoHeadlessMediaEngine.kt supports Range resume for large video downloads"
+    kotlinCode.includes("val CHUNK_SIZE = 2L * 1024L * 1024L") && kotlinCode.includes("injectRangeQueryParam"),
+    "ZenoHeadlessMediaEngine.kt implements bounded 2MB chunk streaming with &range= parameter"
   );
   assert(
     kotlinCode.includes("connectTimeout = 20000") && kotlinCode.includes("readTimeout = 30000"),
     "ZenoHeadlessMediaEngine.kt sets robust 20s/30s network timeouts"
+  );
+  assert(
+    kotlinCode.includes("MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM") && kotlinCode.includes("hasVp9OrOpus"),
+    "ZenoHeadlessMediaEngine.kt selects MUXER_OUTPUT_WEBM for VP9 and Opus tracks"
   );
   assert(
     kotlinCode.includes("DIRECTORY_MUSIC") && kotlinCode.includes("isAudioOnlyTarget"),
@@ -123,15 +127,19 @@ async function runTests() {
     "next.config.ts provides universal CORS headers for /api/:path*"
   );
 
-  // 6. Section layout & single-line badges
-  console.log("\n[Requirement 6: Section Layouts & Single-Line Badges]");
+  // 6. Section layout & single-line badges & deduplicated downloader header
+  console.log("\n[Requirement 6: Downloader Header Deduplication & Tab Visibility]");
   assert(
     ytDownloaderCode.includes("overflow-x-auto no-scrollbar max-w-full pb-1"),
     "youtube-downloader.tsx platform badges use single-line horizontal scroll strip"
   );
   assert(
-    ytDownloaderCode.includes("grid grid-cols-3 gap-1.5 p-1 rounded-xl"),
-    "youtube-downloader.tsx view switcher uses full-width 3-column equal grid on mobile"
+    !ytDownloaderCode.includes('<h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">'),
+    "Redundant second <h1> heading in youtube-downloader.tsx is eliminated"
+  );
+  assert(
+    ytDownloaderCode.includes("grid grid-cols-3 gap-1 p-1 rounded-xl border border-border/60 bg-card/40"),
+    "youtube-downloader.tsx view switcher uses clean grid tab bar with zero truncation"
   );
 
   console.log("\n==================================================");

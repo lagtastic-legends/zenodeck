@@ -27,6 +27,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -210,14 +211,30 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 return Result.failure(IllegalStateException("No valid audio track discovered in: ${audioFile.name}"))
             }
 
-            val isWebmTarget = outputFile.name.endsWith(".webm", ignoreCase = true)
+            val videoMime = videoFormat.getString(MediaFormat.KEY_MIME) ?: ""
+            val audioMime = audioFormat.getString(MediaFormat.KEY_MIME) ?: ""
+            val hasVp9OrOpus = videoMime.contains("vp9", ignoreCase = true) ||
+                    videoMime.contains("vp8", ignoreCase = true) ||
+                    audioMime.contains("opus", ignoreCase = true)
+
+            val isWebmTarget = outputFile.name.endsWith(".webm", ignoreCase = true) || hasVp9OrOpus
+            val targetOutputFile = if (hasVp9OrOpus && outputFile.name.endsWith(".mp4", ignoreCase = true)) {
+                File(outputFile.parentFile, outputFile.nameWithoutExtension + ".webm")
+            } else {
+                outputFile
+            }
+
+            if (targetOutputFile.exists()) {
+                targetOutputFile.delete()
+            }
+
             val outputFormat = if (isWebmTarget) {
                 MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM
             } else {
                 MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
             }
 
-            muxer = MediaMuxer(outputFile.absolutePath, outputFormat)
+            muxer = MediaMuxer(targetOutputFile.absolutePath, outputFormat)
             val muxerVideoTrack = muxer.addTrack(videoFormat)
             val muxerAudioTrack = muxer.addTrack(audioFormat)
 
@@ -265,8 +282,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 audioExtractor.advance()
             }
 
-            Log.i(TAG, "Native MediaMuxer completed successfully: ${outputFile.name} (${outputFile.length()} bytes)")
-            Result.success(outputFile)
+            Log.i(TAG, "Native MediaMuxer completed successfully: ${targetOutputFile.name} (${targetOutputFile.length()} bytes)")
+            Result.success(targetOutputFile)
         } catch (e: Throwable) {
             Log.e(TAG, "Native MediaMuxer execution failed", e)
             if (outputFile.exists()) {
@@ -517,7 +534,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
     }
 
     /**
-     * Downloads an HTTP/HTTPS stream directly to a local disk file using native HttpURLConnection.
+     * Downloads an HTTP/HTTPS stream directly to a local disk file using native HttpURLConnection
+     * in bounded 2MB chunks with YouTube &range= URL parameter and Range header.
      * Operates without WebView or Chromium restrictions: preserves exact User-Agent,
      * bypasses CORS, follows redirects, uses 64KB buffers directly to FileOutputStream,
      * and streams with <1MB heap usage.
@@ -530,152 +548,235 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
     ): Result<File> {
         destinationFile.parentFile?.mkdirs()
-        if (destinationFile.exists()) {
-            destinationFile.delete()
-        }
-
-        var currentUrl = streamUrl
-        var redirects = 0
-        val maxRedirects = 5
-        var connection: HttpURLConnection? = null
 
         val fallbackUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
         val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else fallbackUa
 
+        // Helper: Inject &range= query parameter into candidate stream URLs
+        fun injectRangeQueryParam(url: String, startByte: Long, endByte: Long?): String {
+            val rangeVal = if (endByte != null) "$startByte-$endByte" else "$startByte-"
+            return try {
+                val uri = Uri.parse(url)
+                val builder = uri.buildUpon()
+                builder.clearQuery()
+                for (paramName in uri.queryParameterNames) {
+                    if (paramName != "range") {
+                        for (value in uri.getQueryParameters(paramName)) {
+                            builder.appendQueryParameter(paramName, value)
+                        }
+                    }
+                }
+                builder.appendQueryParameter("range", rangeVal)
+                builder.build().toString()
+            } catch (_: Throwable) {
+                val stripped = url.replace(Regex("([?&])range=[^&]*"), "")
+                val separator = if (stripped.contains("?")) "&" else "?"
+                "$stripped${separator}range=$rangeVal"
+            }
+        }
+
+        // Helper: Open connection with manual redirect following
+        fun openConnectionWithRedirects(
+            initialUrl: String,
+            rangeHeader: String?
+        ): Pair<HttpURLConnection, String> {
+            var currentUrl = initialUrl
+            var redirects = 0
+            val maxRedirects = 6
+
+            while (redirects < maxRedirects) {
+                val urlObj = URL(currentUrl)
+                val conn = (urlObj.openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 20000
+                    readTimeout = 30000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", effectiveUa)
+                    setRequestProperty("Accept", "*/*")
+                    setRequestProperty("Accept-Encoding", "identity")
+                    setRequestProperty("Connection", "keep-alive")
+                    if (!rangeHeader.isNullOrEmpty()) {
+                        setRequestProperty("Range", rangeHeader)
+                    }
+                }
+
+                val responseCode = conn.responseCode
+                if (responseCode in 300..399) {
+                    val location = conn.getHeaderField("Location")
+                    conn.disconnect()
+                    if (location.isNullOrEmpty()) {
+                        throw IOException("HTTP redirect $responseCode without Location header")
+                    }
+                    currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
+                        location
+                    } else {
+                        URL(urlObj, location).toString()
+                    }
+                    redirects++
+                    continue
+                }
+
+                return Pair(conn, currentUrl)
+            }
+            throw IOException("Too many HTTP redirects ($redirects) from $initialUrl")
+        }
+
+        // 1. Determine total file size:
+        // First check for &clen= or ?clen= parameter in stream URL
         var totalBytes = -1L
+        val clenMatch = Regex("[?&]clen=(\\d+)").find(streamUrl)
+        if (clenMatch != null) {
+            totalBytes = clenMatch.groupValues[1].toLongOrNull() ?: -1L
+        }
+
+        // If clen wasn't found in URL, probe with a 2-byte Range request (0-1)
+        if (totalBytes <= 0L) {
+            try {
+                val probeUrl = injectRangeQueryParam(streamUrl, 0, 1)
+                val (probeConn, _) = openConnectionWithRedirects(probeUrl, "bytes=0-1")
+                try {
+                    val contentRange = probeConn.getHeaderField("Content-Range")
+                    if (!contentRange.isNullOrEmpty()) {
+                        val slashIdx = contentRange.lastIndexOf('/')
+                        if (slashIdx >= 0) {
+                            val totalStr = contentRange.substring(slashIdx + 1).trim()
+                            totalBytes = totalStr.toLongOrNull() ?: -1L
+                        }
+                    }
+                    if (totalBytes <= 0L) {
+                        val clHeader = probeConn.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L
+                        if (probeConn.responseCode == 200 && clHeader > 2L) {
+                            totalBytes = clHeader
+                        }
+                    }
+                } finally {
+                    probeConn.disconnect()
+                }
+            } catch (probeErr: Throwable) {
+                Log.w(TAG, "Probing total stream size failed: ${probeErr.message}")
+            }
+        }
+
+        // Bounded 2MB Chunk Loop
+        val CHUNK_SIZE = 2L * 1024L * 1024L // 2MB bounded chunks
         var bytesDownloaded = if (destinationFile.exists()) destinationFile.length() else 0L
 
-        var retryCount = 0
-        val maxRetries = 5
+        // If file already exists and is fully downloaded:
+        if (totalBytes > 0 && bytesDownloaded >= totalBytes) {
+            onProgress(bytesDownloaded, totalBytes)
+            return Result.success(destinationFile)
+        }
 
-        while (retryCount < maxRetries) {
+        val buffer = ByteArray(65536) // 64KB read buffer
+        var lastProgressUpdate = 0L
+
+        // Initial progress callback
+        onProgress(bytesDownloaded, totalBytes)
+
+        while (true) {
             if (isCancelled()) {
                 if (destinationFile.exists()) destinationFile.delete()
                 return Result.failure(Exception("Download cancelled"))
             }
 
-            var currentUrl = streamUrl
-            var redirects = 0
-            val maxRedirects = 5
-            var connection: HttpURLConnection? = null
+            if (totalBytes > 0 && bytesDownloaded >= totalBytes) {
+                break
+            }
 
-            try {
-                while (redirects < maxRedirects) {
-                    if (isCancelled()) {
-                        return Result.failure(Exception("Download cancelled"))
-                    }
-                    val urlObj = URL(currentUrl)
-                    connection = (urlObj.openConnection() as HttpURLConnection).apply {
-                        instanceFollowRedirects = false
-                        connectTimeout = 20000
-                        readTimeout = 30000
-                        requestMethod = "GET"
-                        setRequestProperty("User-Agent", effectiveUa)
-                        setRequestProperty("Accept", "*/*")
-                        setRequestProperty("Accept-Encoding", "identity")
-                        setRequestProperty("Connection", "keep-alive")
-                        if (bytesDownloaded > 0) {
-                            setRequestProperty("Range", "bytes=$bytesDownloaded-")
-                        }
-                    }
+            val chunkStart = bytesDownloaded
+            val chunkEnd = if (totalBytes > 0) {
+                minOf(chunkStart + CHUNK_SIZE - 1, totalBytes - 1)
+            } else {
+                chunkStart + CHUNK_SIZE - 1
+            }
 
-                    val responseCode = connection.responseCode
-                    if (responseCode in 300..399) {
-                        val location = connection.getHeaderField("Location")
-                        connection.disconnect()
-                        if (location.isNullOrEmpty()) {
-                            return Result.failure(Exception("HTTP redirect $responseCode without Location header"))
-                        }
-                        currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
-                            location
-                        } else {
-                            URL(urlObj, location).toString()
-                        }
-                        redirects++
-                        continue
-                    }
+            val chunkRangeHeader = "bytes=$chunkStart-$chunkEnd"
+            val targetUrl = injectRangeQueryParam(streamUrl, chunkStart, chunkEnd)
 
-                    if (responseCode == 416) {
-                        // Range already fully satisfied
-                        return Result.success(destinationFile)
-                    }
+            var chunkSuccess = false
+            var chunkAttempt = 0
+            val maxChunkRetries = 5
 
-                    if (responseCode !in 200..299) {
-                        connection.disconnect()
-                        return Result.failure(Exception("HTTP error $responseCode: ${connection.responseMessage} from $currentUrl"))
-                    }
-
-                    // Successful response
-                    break
-                }
-
-                val conn = connection ?: return Result.failure(Exception("Failed to open HTTP connection"))
-                val contentLengthHeader = conn.getHeaderField("Content-Length")
-                val streamLength = contentLengthHeader?.toLongOrNull() ?: -1L
-                if (totalBytes <= 0 && streamLength > 0) {
-                    totalBytes = if (conn.responseCode == 206) bytesDownloaded + streamLength else streamLength
-                }
-
-                val append = bytesDownloaded > 0 && conn.responseCode == 206
-                if (!append) {
-                    bytesDownloaded = 0L
-                }
-
-                conn.inputStream.use { input ->
-                    FileOutputStream(destinationFile, append).use { output ->
-                        val buffer = ByteArray(65536) // 64KB buffer
-                        var lastProgressUpdate = 0L
-
-                        while (true) {
-                            if (isCancelled()) {
-                                destinationFile.delete()
-                                return Result.failure(Exception("Download cancelled"))
-                            }
-                            val read = input.read(buffer)
-                            if (read == -1) break
-                            output.write(buffer, 0, read)
-                            bytesDownloaded += read
-
-                            val now = System.currentTimeMillis()
-                            if (now - lastProgressUpdate >= 100 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
-                                lastProgressUpdate = now
-                                onProgress(bytesDownloaded, totalBytes)
-                            }
-                        }
-                        output.flush()
-                    }
-                }
-
-                if (totalBytes <= 0 || bytesDownloaded >= totalBytes) {
-                    Log.i(TAG, "Direct-to-disk download complete: ${destinationFile.name} (${destinationFile.length()} bytes)")
-                    return Result.success(destinationFile)
-                }
-
-                retryCount++
-                Thread.sleep(500)
-            } catch (e: Exception) {
+            while (!chunkSuccess && chunkAttempt < maxChunkRetries) {
                 if (isCancelled()) {
                     if (destinationFile.exists()) destinationFile.delete()
                     return Result.failure(Exception("Download cancelled"))
                 }
-                Log.w(TAG, "Direct-to-disk chunk error on retry $retryCount: ${e.message}")
-                retryCount++
-                if (retryCount >= maxRetries) {
-                    if (destinationFile.exists()) destinationFile.delete()
-                    return Result.failure(e)
-                }
-                Thread.sleep(800L * retryCount)
-            } finally {
+
+                chunkAttempt++
+                var connection: HttpURLConnection? = null
+
                 try {
-                    connection?.disconnect()
-                } catch (_: Throwable) {}
+                    val (conn, _) = openConnectionWithRedirects(targetUrl, chunkRangeHeader)
+                    connection = conn
+
+                    val responseCode = conn.responseCode
+                    if (responseCode == 416) {
+                        // Range Not Satisfiable: Stream has reached EOF
+                        chunkSuccess = true
+                        break
+                    }
+
+                    if (responseCode !in 200..299) {
+                        throw IOException("HTTP $responseCode: ${conn.responseMessage} for chunk $chunkRangeHeader")
+                    }
+
+                    conn.inputStream.use { input ->
+                        FileOutputStream(destinationFile, true).use { output ->
+                            while (true) {
+                                if (isCancelled()) {
+                                    destinationFile.delete()
+                                    return Result.failure(Exception("Download cancelled"))
+                                }
+                                val read = input.read(buffer)
+                                if (read == -1) break
+                                output.write(buffer, 0, read)
+                                bytesDownloaded += read
+
+                                val now = System.currentTimeMillis()
+                                if (now - lastProgressUpdate >= 120 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
+                                    lastProgressUpdate = now
+                                    onProgress(bytesDownloaded, totalBytes)
+                                }
+                            }
+                            output.flush()
+                        }
+                    }
+
+                    chunkSuccess = true
+                } catch (chunkErr: Exception) {
+                    Log.w(TAG, "Chunk download error ($chunkRangeHeader, attempt $chunkAttempt/$maxChunkRetries): ${chunkErr.message}")
+                    if (chunkAttempt >= maxChunkRetries) {
+                        if (destinationFile.exists()) destinationFile.delete()
+                        return Result.failure(chunkErr)
+                    }
+                    // Rewind to actual bytes written on disk before retry
+                    bytesDownloaded = destinationFile.length()
+                    try {
+                        Thread.sleep(300L * chunkAttempt)
+                    } catch (_: InterruptedException) {
+                        return Result.failure(Exception("Download interrupted"))
+                    }
+                } finally {
+                    try {
+                        connection?.disconnect()
+                    } catch (_: Throwable) {}
+                }
+            }
+
+            // If totalBytes was not known beforehand, and this chunk produced no bytes or was 416, we're done
+            if (totalBytes <= 0 && (!chunkSuccess || bytesDownloaded == chunkStart)) {
+                break
             }
         }
 
+        onProgress(bytesDownloaded, if (totalBytes > 0) totalBytes else bytesDownloaded)
+
         return if (destinationFile.exists() && destinationFile.length() > 0) {
+            Log.i(TAG, "Direct-to-disk download complete: ${destinationFile.name} (${destinationFile.length()} bytes)")
             Result.success(destinationFile)
         } else {
-            Result.failure(Exception("Download failed after $maxRetries retry attempts"))
+            Result.failure(Exception("Download failed: destination file is empty or missing"))
         }
     }
 
@@ -727,6 +828,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             }
         }
         val destinationFile = File(targetDir, outputFileName)
+        var finalFile: File? = null
 
         var totalDownloaded = 0L
         val startTime = System.currentTimeMillis()
@@ -797,6 +899,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 if (muxResult.isFailure) {
                     return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed"))
                 }
+                finalFile = muxResult.getOrNull() ?: destinationFile
             } else {
                 // Pre-muxed stream (itag 18) or audio-only: move directly to destination
                 progressCallback(95, totalDownloaded, totalDownloaded, calculateSpeed(), "finalizing")
@@ -812,14 +915,18 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     }
                     vTempFile.delete()
                 }
+                finalFile = destinationFile
             }
 
+            val targetFile = finalFile ?: destinationFile
+            val isFinalWebm = targetFile.name.endsWith(".webm", ignoreCase = true)
+
             // Index into MediaStore / Google Photos
-            val mimeType = if (isWebmTarget) {
+            val mimeType = if (isFinalWebm) {
                 "video/webm"
-            } else if (outputFileName.endsWith(".m4a", ignoreCase = true)) {
+            } else if (targetFile.name.endsWith(".m4a", ignoreCase = true)) {
                 "audio/mp4"
-            } else if (outputFileName.endsWith(".mp3", ignoreCase = true)) {
+            } else if (targetFile.name.endsWith(".mp3", ignoreCase = true)) {
                 "audio/mpeg"
             } else {
                 "video/mp4"
@@ -827,17 +934,18 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
             MediaScannerConnection.scanFile(
                 context,
-                arrayOf(destinationFile.absolutePath),
+                arrayOf(targetFile.absolutePath),
                 arrayOf(mimeType)
             ) { path, uri ->
                 Log.i(TAG, "ZenoDeck MediaStore scanned: $path -> $uri")
             }
 
-            progressCallback(100, destinationFile.length(), destinationFile.length(), calculateSpeed(), "complete")
-            return Result.success(destinationFile)
+            progressCallback(100, targetFile.length(), targetFile.length(), calculateSpeed(), "complete")
+            return Result.success(targetFile)
         } catch (e: Exception) {
             Log.e(TAG, "downloadAndMuxYouTubeStreams failed: ${e.message}", e)
             if (destinationFile.exists()) destinationFile.delete()
+            finalFile?.let { if (it.exists() && it != destinationFile) it.delete() }
             return Result.failure(e)
         } finally {
             // Clean up temp files

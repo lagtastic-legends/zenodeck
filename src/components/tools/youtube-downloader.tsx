@@ -1108,76 +1108,65 @@ export function YouTubeDownloader() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5 px-3 sm:px-6 py-4">
-      {/* Tool Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 scroll-smooth">
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
-              <Youtube className="size-2.5" />
-              <span>YouTube 4K</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400">
-              <span>TikTok No-WM</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-pink-400">
-              <span>Instagram Reels</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-sky-400">
-              <span>X / Twitter</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-orange-400">
-              <span>Reddit Mux</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-400">
-              <span>Facebook</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-teal-400">
-              <span>Vimeo</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-purple-400">
-              <span>Twitch</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-emerald-400">
-              <span>yt-dlp Core</span>
-            </span>
-          </div>
-          <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Universal Media Downloader
-          </h1>
-          <p className="font-mono text-xs text-muted-foreground">
-            High-speed video & audio downloads · YouTube 4K, Watermark-Free TikTok, Reels, Twitter, Reddit, Facebook, Vimeo & 1,700+ sites
-          </p>
-
+      {/* Platform Strip & 4K Sample Trigger */}
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 scroll-smooth flex-1 min-w-0">
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
+            <Youtube className="size-2.5" />
+            <span>YouTube 4K</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400">
+            <span>TikTok No-WM</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-pink-400">
+            <span>Instagram Reels</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-sky-400">
+            <span>X / Twitter</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-orange-400">
+            <span>Reddit Mux</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-400">
+            <span>Facebook</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-teal-400">
+            <span>Vimeo</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-purple-400">
+            <span>Twitch</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+            <span>yt-dlp Core</span>
+          </span>
         </div>
 
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-          <button
-            type="button"
-            onClick={handleLoadSample}
-            disabled={isResolving || isDownloading}
-            className="rounded-lg border border-border/70 bg-card/60 px-3 py-1.5 font-mono text-[11px] text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all cursor-pointer"
-          >
-            Load 4K Sample
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleLoadSample}
+          disabled={isResolving || isDownloading}
+          className="shrink-0 rounded-lg border border-border/70 bg-card/60 px-2.5 sm:px-3 py-1 font-mono text-[10px] sm:text-[11px] text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all cursor-pointer whitespace-nowrap"
+        >
+          Load 4K Sample
+        </button>
       </div>
 
       {/* View Switcher: Downloader | Subtitles | Download Vault */}
-      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl border border-border/60 bg-card/40 w-full sm:w-auto sm:inline-grid">
+      <div className="grid grid-cols-3 gap-1 p-1 rounded-xl border border-border/60 bg-card/40 w-full sm:w-auto sm:inline-grid">
         <button
           type="button"
           onClick={() => {
             setActiveViewTab("downloader");
             void haptics.light();
           }}
-          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 rounded-lg font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "downloader"
               ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Film className="size-3.5" />
-          <span className="truncate">Downloader</span>
+          <Film className="hidden xs:inline sm:inline size-3.5 shrink-0" />
+          <span className="whitespace-nowrap">Downloader</span>
         </button>
 
         <button
@@ -1186,16 +1175,16 @@ export function YouTubeDownloader() {
             setActiveViewTab("subtitles");
             void haptics.light();
           }}
-          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 rounded-lg font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "subtitles"
               ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Subtitles className="size-3.5" />
-          <span className="truncate">Subtitles</span>
+          <Subtitles className="hidden xs:inline sm:inline size-3.5 shrink-0" />
+          <span className="whitespace-nowrap">Subtitles</span>
           {videoInfo?.subtitles && videoInfo.subtitles.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-red-500/30 text-[10px] text-red-300 font-bold">
+            <span className="px-1 py-0.2 rounded-full bg-red-500/30 text-[9px] text-red-300 font-bold shrink-0">
               {videoInfo.subtitles.length}
             </span>
           )}
@@ -1207,16 +1196,16 @@ export function YouTubeDownloader() {
             setActiveViewTab("vault");
             void haptics.light();
           }}
-          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 rounded-lg font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "vault"
               ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <History className="size-3.5" />
-          <span className="truncate">Vault</span>
+          <History className="hidden xs:inline sm:inline size-3.5 shrink-0" />
+          <span className="whitespace-nowrap">Vault</span>
           {historyStore.items.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-[10px] text-amber-300 font-bold">
+            <span className="px-1 py-0.2 rounded-full bg-amber-500/30 text-[9px] text-amber-300 font-bold shrink-0">
               {historyStore.items.length}
             </span>
           )}

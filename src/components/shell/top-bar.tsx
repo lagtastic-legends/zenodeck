@@ -89,38 +89,53 @@ export function TopBar() {
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-1.5 sm:gap-3 px-2 sm:px-6">
         {/* Brand */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
-            <motion.div
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 18 }}
-              className="relative grid size-8 sm:size-10 place-items-center rounded-xl border border-primary/40 overflow-hidden glow-box-violet shrink-0"
-            >
-              <img src="/logo.jpg" alt="ZenoDeck" className="w-full h-full object-cover" />
-              {/* Compact mobile engine indicator */}
-              <span
-                className={`absolute bottom-0.5 right-0.5 size-2 rounded-full border border-background ${meta.dotClass} md:hidden ${
-                  state === "ready" ? "shadow-[0_0_6px_oklch(0.75_0.18_162/0.9)]" : ""
-                }`}
-                title={`Engine Status: ${meta.label}`}
-              />
-            </motion.div>
-          <div className="flex flex-col leading-none truncate">
-            <div className="flex items-center gap-1.5">
-              <span className="font-display text-xs sm:text-sm font-bold tracking-[0.2em] sm:tracking-[0.32em] text-foreground">
-                ZENODECK
-              </span>
-              <button
-                type="button"
-                onClick={() => useUpdateStore.getState().openWhatsNew()}
-                className="hidden md:inline-flex font-mono text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/25 px-1.5 py-0.5 rounded-full border border-primary/30 transition-all cursor-pointer shadow-[0_0_6px_rgba(139,92,246,0.2)]"
-                title={`View What's New in v${APP_VERSION}`}
-              >
-                v{APP_VERSION}
-              </button>
-            </div>
-            <span className="mt-0.5 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:block">
-              client-side media suite
+          <motion.div
+            initial={{ rotate: -90, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 18 }}
+            className="relative grid size-9 sm:size-10 place-items-center rounded-xl border border-primary/40 overflow-hidden glow-box-violet shrink-0"
+          >
+            <img src="/logo.jpg" alt="ZenoDeck" className="w-full h-full object-cover" />
+          </motion.div>
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="font-display text-sm sm:text-base font-bold tracking-[0.2em] sm:tracking-[0.32em] text-foreground">
+              ZENODECK
             </span>
+            {/* Green Engine Status Pill (28px height, visible on mobile) */}
+            <div
+              className="inline-flex h-[28px] min-w-[28px] items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-2 shrink-0 shadow-xs"
+              role="status"
+              aria-live="polite"
+              title={`Engine Status: ${meta.label}`}
+            >
+              <motion.span
+                animate={
+                  state === "loading" ? { scale: [1, 1.45, 1], opacity: [1, 0.6, 1] } : {}
+                }
+                transition={
+                  state === "loading"
+                    ? { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
+                    : undefined
+                }
+                className={`size-2 rounded-full ${meta.dotClass} ${
+                  state === "ready"
+                    ? "shadow-[0_0_8px_oklch(0.75_0.18_162/0.9)]"
+                    : ""
+                }`}
+              />
+              <span className="hidden sm:inline font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                {meta.label}
+              </span>
+            </div>
+            {/* Version Badge (Desktop only) */}
+            <button
+              type="button"
+              onClick={() => useUpdateStore.getState().openWhatsNew()}
+              className="hidden md:inline-flex font-mono text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/25 px-1.5 py-0.5 rounded-full border border-primary/30 transition-all cursor-pointer shadow-[0_0_6px_rgba(139,92,246,0.2)]"
+              title={`View What's New in v${APP_VERSION}`}
+            >
+              v{APP_VERSION}
+            </button>
           </div>
         </div>
 
@@ -139,41 +154,32 @@ export function TopBar() {
             </div>
           ) : null}
 
-          <div
-            className="hidden md:flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 p-1.5 sm:px-3 sm:py-1.5"
-            role="status"
-            aria-live="polite"
-            title={`Engine Status: ${meta.label}`}
-          >
-            <motion.span
-              animate={
-                state === "loading" ? { scale: [1, 1.45, 1], opacity: [1, 0.6, 1] } : {}
-              }
-              transition={
-                state === "loading"
-                  ? { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
-                  : undefined
-              }
-              className={`size-1.5 rounded-full ${meta.dotClass} ${
-                state === "ready"
-                  ? "shadow-[0_0_10px_oklch(0.75_0.18_162/0.9)]"
-                  : ""
-              }`}
-            />
-            <span
-              className="hidden sm:inline font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
-            >
-              {meta.label}
-            </span>
-          </div>
-
           <ThemeToggle />
-          <div className="hidden sm:block">
-            <AudioToggle />
-          </div>
-          <SearchPalette />
 
-          {/* Auto-Update Quick Access / Status Toggle Button (Replacing old AI button) */}
+          {/* Audio Toggle (38px, visible on mobile) */}
+          <div className="flex shrink-0">
+            <AudioToggle className="w-[38px] h-[38px] p-0 justify-center shrink-0" />
+          </div>
+
+          {/* Search Palette (Hidden on mobile < 768px, available in bottom dock) */}
+          <SearchPalette triggerClassName="hidden md:flex" />
+
+          {/* Privacy Shield Button (36px, visible on mobile) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("omni:show-permissions"));
+              }
+            }}
+            className="grid w-[36px] h-[36px] place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
+            title="Manage Device Permissions"
+            aria-label="Manage Device Permissions"
+          >
+            <ShieldCheck className="size-4 text-primary/80" />
+          </button>
+
+          {/* Auto-Update Quick Access / Status Toggle Button */}
           {storeUpdateInfo?.updateAvailable ? (
             <button
               type="button"
@@ -210,7 +216,7 @@ export function TopBar() {
             </button>
           )}
 
-          {!isNative ? (
+          {!isNative && (
             <button
               type="button"
               onClick={() => setDownloadModalOpen(true)}
@@ -219,20 +225,6 @@ export function TopBar() {
             >
               <Download className="size-3 shrink-0" />
               <span className="hidden sm:inline">Get App</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("omni:show-permissions"));
-                }
-              }}
-              className="hidden lg:grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
-              title="Manage Device Permissions"
-              aria-label="Manage Device Permissions"
-            >
-              <ShieldCheck className="size-3.5 text-primary/80" />
             </button>
           )}
 
