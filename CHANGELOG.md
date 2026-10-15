@@ -5,6 +5,23 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.16.0] — 2026-10-15
+
+### Added & Enhanced
+- **🖥️ Desktop Workstation Top Bar Unification (`workstation-ribbon.tsx`)**:
+  - Removed duplicate `<ThemeToggle />` and `<AudioToggle />` controls from the desktop workstation ribbon, unifying header control in `TopBar`.
+  - Streamlined ribbon height from `48px` (`h-12`) down to a sleek `36px` (`h-9`) sub-strip dedicated to workspace navigation and layout presets.
+- **⚡ 4K 60FPS Downloader 10% Freeze Elimination (`turbo-downloader.ts`, `api-gateway.ts`)**:
+  - Fixed User-Agent selection: mapped `c=ANDROID` directly to Android mobile YouTube client UA and `c=IOS` to iOS UA, eliminating Google Video CDN 403 Forbidden resets on Android-signed streams.
+  - Enabled binary stream arraybuffer handling (`responseType: "arraybuffer"`) in `CapacitorHttp` with safe `ArrayBuffer` conversion.
+  - Added a strict 15-second hard timeout controller on stream fallback in `youtube-downloader.tsx` with clean state reset and error alerts.
+  - Enforced strict resolution lock (zero silent quality downgrades, user-selected 4K/2K resolution strictly preserved).
+- **📱 Multi-Architecture Android APK Matrix (`app-download-modal.tsx`)**:
+  - Added an interactive 4-column matrix detailing Universal, ARM64-v8a, ARMeabi-v7a, and x86_64 binaries (`11.99 MB` each, Target SDK 36 verified).
+  - Corrected APK size display to `11.99 MB` (R8-shrunk).
+- **🎛️ Tool Grid Standby vs Online Status Indicators (`tool-grid.tsx`)**:
+  - Added interactive tooltips explaining WASM engine on-demand boot vs instant WebAudio DSP execution.
+
 ## [3.15.0] — 2026-10-14
 
 ### Added & Enhanced

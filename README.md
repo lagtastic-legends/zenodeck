@@ -10,16 +10,16 @@
 
 <p align="center">
   <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v3.15.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.15.0" />
+    <img src="https://img.shields.io/badge/Release-v3.16.0-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v3.16.0" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.16.0/zenodeck.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v3.15.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.16.0/zenodeck-v3.16.0-arm64-v8a.apk">
+    <img src="https://img.shields.io/badge/ARM64%20APK-v3.16.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
     <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
@@ -61,14 +61,32 @@ Every release is automatically compiled, signed, and published for all target ar
 
 | Platform / Binary | Download Link | Architecture & Description | Size & Checksum |
 | :--- | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. | **11.98 MB** · `6A7837B6...` |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.15.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). | **11.98 MB** · `6A7837B6...` |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.15.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. | **11.98 MB** · `6A7837B6...` |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v3.15.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. | **11.98 MB** · `6A7837B6...` |
-| **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. | **11.98 MB** |
+| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.16.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. | **11.99 MB** · `98A56136...` |
+| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v3.16.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.16.0/zenodeck-v3.16.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). | **11.99 MB** · `98A56136...` |
+| **📱 Android ARMv7a APK** | [**Download zenodeck-v3.16.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.16.0/zenodeck-v3.16.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. | **11.99 MB** · `98A56136...` |
+| **💻 Android x86_64 APK** | [**Download zenodeck-v3.16.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v3.16.0/zenodeck-v3.16.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. | **11.99 MB** · `98A56136...` |
+| **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. | **11.99 MB** |
 | **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. | **0.09 MB** |
 | **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. | PWA |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.15.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.15.0) | Full release notes, raw SHA256 checksums, and source tarballs. | Hub |
+| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v3.16.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v3.16.0) | Full release notes, raw SHA256 checksums, and source tarballs. | Hub |
+
+---
+
+## 🌟 What's New in v3.16.0
+
+- **🖥️ Desktop Workstation Top Bar Unification (`workstation-ribbon.tsx`)**:
+  - Removed duplicate `<ThemeToggle />` and `<AudioToggle />` controls, consolidating visual hierarchy into a unified primary header.
+  - Streamlined workstation ribbon into a sleek 36px (`h-9`) sub-strip dedicated exclusively to workspace breadcrumbs and view layout presets.
+- **⚡ 4K 60FPS Downloader 10% Freeze Elimination (`turbo-downloader.ts`, `api-gateway.ts`)**:
+  - Corrected YouTube User-Agent selection: mapped `c=ANDROID` directly to the Android mobile YouTube client UA, preventing CDN 403 Forbidden resets on Android streams.
+  - Enabled native binary arraybuffer handling (`responseType: "arraybuffer"`) in `CapacitorHttp` with safe `ArrayBuffer` conversion.
+  - Implemented an explicit 15-second hard timeout controller on stream fallback with clean state reset and retry prompts.
+  - Enforced strict resolution lock (zero silent quality downgrades, preserving 4K/2K streams and `[4K 60FPS].mp4` tags).
+- **📱 Multi-Architecture Android APK Matrix (`app-download-modal.tsx`)**:
+  - Added an interactive 4-column matrix detailing Universal, ARM64-v8a, ARMeabi-v7a, and x86_64 binaries (`11.99 MB` each, Target SDK 36 verified).
+  - Updated app download modal with direct APK downloads, chipset compatibility details, and security audit badges.
+- **🎛️ Tool Grid Standby vs Online Status Indicators (`tool-grid.tsx`)**:
+  - Added informative tooltips explaining WASM engine on-demand boot vs instant WebAudio DSP execution.
 
 ---
 

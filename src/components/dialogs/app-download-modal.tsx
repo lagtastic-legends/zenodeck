@@ -220,7 +220,7 @@ export function AppDownloadModal() {
                             </p>
                           </div>
                           <a
-                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck.apk"
+                            href={`https://github.com/lagtastic-legends/zenodeck/releases/download/v${APP_VERSION}/zenodeck.apk`}
                             download="zenodeck.apk"
                             onClick={() => haptics.light()}
                             className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
@@ -244,8 +244,8 @@ export function AppDownloadModal() {
                             </p>
                           </div>
                           <a
-                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-arm64-v8a.apk"
-                            download="zenodeck-v3.15.0-arm64-v8a.apk"
+                            href={`https://github.com/lagtastic-legends/zenodeck/releases/download/v${APP_VERSION}/zenodeck-v${APP_VERSION}-arm64-v8a.apk`}
+                            download={`zenodeck-v${APP_VERSION}-arm64-v8a.apk`}
                             onClick={() => haptics.light()}
                             className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
                           >
@@ -268,8 +268,8 @@ export function AppDownloadModal() {
                             </p>
                           </div>
                           <a
-                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-armeabi-v7a.apk"
-                            download="zenodeck-v3.15.0-armeabi-v7a.apk"
+                            href={`https://github.com/lagtastic-legends/zenodeck/releases/download/v${APP_VERSION}/zenodeck-v${APP_VERSION}-armeabi-v7a.apk`}
+                            download={`zenodeck-v${APP_VERSION}-armeabi-v7a.apk`}
                             onClick={() => haptics.light()}
                             className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
                           >
@@ -292,8 +292,8 @@ export function AppDownloadModal() {
                             </p>
                           </div>
                           <a
-                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-x86_64.apk"
-                            download="zenodeck-v3.15.0-x86_64.apk"
+                            href={`https://github.com/lagtastic-legends/zenodeck/releases/download/v${APP_VERSION}/zenodeck-v${APP_VERSION}-x86_64.apk`}
+                            download={`zenodeck-v${APP_VERSION}-x86_64.apk`}
                             onClick={() => haptics.light()}
                             className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
                           >
