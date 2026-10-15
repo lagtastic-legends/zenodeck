@@ -25,6 +25,23 @@ export interface ZenoMedia3PluginInterface {
     filePath: string;
     mimeType?: string;
   }): Promise<{ success: boolean; path: string; uri: string }>;
+  downloadAndMuxYouTube(options: {
+    videoUrl: string;
+    audioUrl?: string;
+    userAgent?: string;
+    outputFileName: string;
+    approxSizeBytes?: number;
+  }): Promise<{ success: boolean; outputPath: string; fileSizeBytes: number; filename: string }>;
+  addListener(
+    eventName: "downloadProgress",
+    listenerFunc: (data: {
+      percent: number;
+      bytesDownloaded: number;
+      totalBytes: number;
+      speedMbps: number;
+      phase: string;
+    }) => void
+  ): Promise<any>;
 }
 
 export const ZenoMedia3 = registerPlugin<ZenoMedia3PluginInterface>("ZenoMedia3Plugin");
@@ -166,4 +183,84 @@ export async function executeNativeAndroidMux({
     filename: outputFilename,
     mimeType,
   };
+}
+
+/**
+ * Direct-to-disk native stream downloader and hardware MediaMuxer on Android.
+ * Runs completely on native Kotlin Dispatchers.IO with HttpURLConnection and MediaMuxer.
+ * Bypasses Chromium WebView fetch(), avoids CORS/403, preserves exact User-Agent,
+ * and eliminates memory strain.
+ */
+export async function executeNativeYouTubeDownload({
+  videoUrl,
+  audioUrl,
+  userAgent,
+  outputFilename,
+  approxSizeBytes,
+  onProgress,
+  signal,
+}: {
+  videoUrl: string;
+  audioUrl?: string;
+  userAgent?: string;
+  outputFilename: string;
+  approxSizeBytes?: number;
+  onProgress?: (data: {
+    percent: number;
+    bytesDownloaded: number;
+    totalBytes: number;
+    speedMbps: number;
+    phase: string;
+  }) => void;
+  signal?: AbortSignal;
+}): Promise<{
+  outputPath: string;
+  fileSizeBytes: number;
+  filename: string;
+  mimeType: string;
+}> {
+  let progressHandle: any = null;
+  if (onProgress) {
+    try {
+      progressHandle = await ZenoMedia3.addListener("downloadProgress", (data) => {
+        if (!signal?.aborted) {
+          onProgress(data);
+        }
+      });
+    } catch (e) {
+      console.warn("Could not register downloadProgress listener:", e);
+    }
+  }
+
+  const isWebm = outputFilename.endsWith(".webm");
+  const isM4a = outputFilename.endsWith(".m4a");
+  const isMp3 = outputFilename.endsWith(".mp3");
+  const mimeType = isWebm ? "video/webm" : isM4a ? "audio/mp4" : isMp3 ? "audio/mpeg" : "video/mp4";
+
+  try {
+    const res = await ZenoMedia3.downloadAndMuxYouTube({
+      videoUrl,
+      audioUrl: audioUrl || undefined,
+      userAgent: userAgent || undefined,
+      outputFileName: outputFilename,
+      approxSizeBytes: approxSizeBytes || 0,
+    });
+
+    if (!res.success) {
+      throw new Error("Native YouTube download/muxing failed.");
+    }
+
+    return {
+      outputPath: res.outputPath,
+      fileSizeBytes: res.fileSizeBytes,
+      filename: res.filename || outputFilename,
+      mimeType,
+    };
+  } finally {
+    if (progressHandle && typeof progressHandle.remove === "function") {
+      try {
+        await progressHandle.remove();
+      } catch {}
+    }
+  }
 }

@@ -605,6 +605,16 @@ export function YouTubeDownloader() {
     let stallWatchdogTimer: any = null;
 
     const triggerYtDlpStreamFallback = async (reason?: string) => {
+      // ON NATIVE ANDROID: Banish remote Vercel /api/youtube/download fallback!
+      // Vercel serverless has no yt-dlp binary and datacenter IPs are blocked by YouTube.
+      // Remote download URLs from googlevideo are IP-bound to the user's phone.
+      if (Capacitor.isNativePlatform()) {
+        console.warn("Direct turbo streaming encountered an issue on Android:", reason);
+        throw new Error(
+          `Local stream download interrupted (${reason || "stream timeout"}). Please tap "Start Turbo Download" to retry directly with Android hardware engine.`
+        );
+      }
+
       console.warn("Direct turbo streaming stalled or failed, activating stream fallback:", reason);
       setProgress({
         phase: "downloading",
@@ -718,26 +728,28 @@ export function YouTubeDownloader() {
       });
     };
 
-    // Watchdog: If direct chunk streaming hasn't received any bytes within 25s (extended for 4K/2K), switch to high-speed stream
+    // Watchdog: If direct chunk streaming hasn't received any bytes within 25s (extended for 4K/2K), switch to high-speed stream (Web only)
     const isUltraHd = selectedQuality.is4K || selectedQuality.resolutionLabel?.includes("2160") || selectedQuality.resolutionLabel?.includes("1440");
     const watchdogTimeoutMs = isUltraHd ? 25000 : 15000;
-    stallWatchdogTimer = setTimeout(() => {
-      if (!didFallback) {
-        console.warn(`Direct stream stalled at 0% after ${watchdogTimeoutMs}ms — switching to high-speed server stream`);
-        didFallback = true;
-        abortControllerRef.current?.abort();
-        abortControllerRef.current = new AbortController();
-        void triggerYtDlpStreamFallback("Direct stream initial connection timeout").catch((err) => {
-          if (err.name !== "AbortError" && err.message !== "Download aborted") {
-            setResolveError(err.message || "Download failed. Please check network connection.");
-            void haptics.error();
-            playError();
-          }
-        }).finally(() => {
-          setIsDownloading(false);
-        });
-      }
-    }, watchdogTimeoutMs);
+    if (!Capacitor.isNativePlatform()) {
+      stallWatchdogTimer = setTimeout(() => {
+        if (!didFallback) {
+          console.warn(`Direct stream stalled at 0% after ${watchdogTimeoutMs}ms — switching to high-speed server stream`);
+          didFallback = true;
+          abortControllerRef.current?.abort();
+          abortControllerRef.current = new AbortController();
+          void triggerYtDlpStreamFallback("Direct stream initial connection timeout").catch((err) => {
+            if (err.name !== "AbortError" && err.message !== "Download aborted") {
+              setResolveError(err.message || "Download failed. Please check network connection.");
+              void haptics.error();
+              playError();
+            }
+          }).finally(() => {
+            setIsDownloading(false);
+          });
+        }
+      }, watchdogTimeoutMs);
+    }
 
     try {
       const result = await downloadYouTubeStream({
@@ -804,6 +816,18 @@ export function YouTubeDownloader() {
       if (didFallback) return;
 
       if (err.name === "AbortError" || err.message === "Download aborted") {
+        return;
+      }
+
+      if (Capacitor.isNativePlatform()) {
+        console.error("Native Android download encountered error:", err);
+        setResolveError(
+          err.message?.includes("CORS") || err.message?.includes("502")
+            ? "YouTube download interrupted. Please check connection and try again."
+            : err.message || "Download failed. Please check network connection."
+        );
+        void haptics.error();
+        playError();
         return;
       }
 

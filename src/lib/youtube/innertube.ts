@@ -84,6 +84,7 @@ export interface YouTubeFormatMeta {
   audioQuality?: string;
   audioSampleRate?: string;
   approxDurationMs?: number;
+  userAgent?: string;
 }
 
 export interface YouTubeQualityOption {
@@ -118,6 +119,7 @@ export interface YouTubeQualityOption {
   approxSizeBytes: number;
   videoFormat?: YouTubeFormatMeta;
   audioFormat?: YouTubeFormatMeta;
+  userAgent?: string;
 }
 
 export interface YouTubeVideoInfo {
@@ -254,6 +256,10 @@ export function buildCandidateUrls(targetUrl: string): string[] {
   return candidateUrls;
 }
 
+const ANDROID_VR_CLIENT_VERSION = "1.56.21";
+const ANDROID_VR_USER_AGENT =
+  "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
+
 const IOS_CLIENT_VERSION = "20.10.4";
 const IOS_USER_AGENT = `com.google.ios.youtube/${IOS_CLIENT_VERSION} (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)`;
 
@@ -304,19 +310,25 @@ export async function getVisitorData(): Promise<string | undefined> {
 
 const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
   {
-    name: "IOS_NO_GL",
+    name: "ANDROID_VR",
     headers: {
       "Content-Type": "application/json",
-      "User-Agent": IOS_USER_AGENT,
-      "X-YouTube-Client-Name": "5",
-      "X-YouTube-Client-Version": IOS_CLIENT_VERSION,
+      "User-Agent": ANDROID_VR_USER_AGENT,
+      "X-YouTube-Client-Name": "28",
+      "X-YouTube-Client-Version": ANDROID_VR_CLIENT_VERSION,
     },
     context: {
       client: {
-        clientName: "IOS",
-        clientVersion: IOS_CLIENT_VERSION,
-        deviceModel: "iPhone16,2",
+        clientName: "ANDROID_VR",
+        clientVersion: ANDROID_VR_CLIENT_VERSION,
+        deviceMake: "Oculus",
+        deviceModel: "Quest 3",
+        androidSdkVersion: 32,
+        osName: "Android",
+        osVersion: "12L",
         hl: "en",
+        gl: "US",
+        userAgent: ANDROID_VR_USER_AGENT,
       },
     },
   },
@@ -339,17 +351,17 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
     },
   },
   {
-    name: "IOS_SECONDARY",
+    name: "IOS_NO_GL",
     headers: {
       "Content-Type": "application/json",
-      "User-Agent": `com.google.ios.youtube/20.15.2 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)`,
+      "User-Agent": IOS_USER_AGENT,
       "X-YouTube-Client-Name": "5",
-      "X-YouTube-Client-Version": "20.15.2",
+      "X-YouTube-Client-Version": IOS_CLIENT_VERSION,
     },
     context: {
       client: {
         clientName: "IOS",
-        clientVersion: "20.15.2",
+        clientVersion: IOS_CLIENT_VERSION,
         deviceModel: "iPhone16,2",
         hl: "en",
       },
@@ -407,7 +419,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   const visitorData = await getVisitorData();
 
   // Concurrently query Android official client to obtain unthrottled itag 18 (pre-muxed 360p with ratebypass=yes)
-  const androidPromise = (async () => {
+  const androidPromise = (async (): Promise<{ data: any; userAgent: string } | null> => {
     try {
       const androidHeaders: Record<string, string> = {
         ...ANDROID_OFFICIAL_CONFIG.headers,
@@ -427,7 +439,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       if (res.ok) {
         const data = await res.json();
         if (data.playabilityStatus?.status === "OK") {
-          return data;
+          return {
+            data,
+            userAgent: ANDROID_OFFICIAL_CONFIG.headers["User-Agent"] || ANDROID_VR_USER_AGENT,
+          };
         }
       }
     } catch (e: any) {
@@ -436,7 +451,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     return null;
   })();
 
-  const iosPromise = (async () => {
+  const clientPromise = (async (): Promise<{ data: any; userAgent: string } | null> => {
     for (const clientConfig of INNERTUBE_CLIENTS) {
       try {
         const reqHeaders: Record<string, string> = {
@@ -497,7 +512,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         });
 
         if (status === "OK" && (data.streamingData?.formats || data.streamingData?.adaptiveFormats)) {
-          return data;
+          return {
+            data,
+            userAgent: clientConfig.headers["User-Agent"] || ANDROID_VR_USER_AGENT,
+          };
         }
       } catch (err: any) {
         diagnosticAttempts.push({
@@ -509,16 +527,20 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     return null;
   })();
 
-  const [androidData, iosData] = await Promise.all([androidPromise, iosPromise]);
+  const [androidResult, clientResult] = await Promise.all([androidPromise, clientPromise]);
+  const winningUserAgent = clientResult?.userAgent || androidResult?.userAgent || ANDROID_VR_USER_AGENT;
 
-  if (androidData) {
+  if (androidResult?.data) {
     androidFormats = [
-      ...(androidData.streamingData?.formats || []),
-      ...(androidData.streamingData?.adaptiveFormats || []),
-    ].filter((f: any) => f.url);
+      ...(androidResult.data.streamingData?.formats || []),
+      ...(androidResult.data.streamingData?.adaptiveFormats || []),
+    ].filter((f: any) => f.url).map((f: any) => ({
+      ...f,
+      userAgent: androidResult.userAgent,
+    }));
   }
 
-  playerResponse = iosData || androidData;
+  playerResponse = clientResult?.data || androidResult?.data;
 
   if (!playerResponse) {
     const isBotBlocked = diagnosticAttempts.some(
@@ -539,7 +561,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     );
   }
 
-  const details = playerResponse.videoDetails || androidData?.videoDetails || {};
+  const details = playerResponse.videoDetails || androidResult?.data?.videoDetails || {};
   const title = details.title || "YouTube Video";
   const author = details.author || details.channelTitle || "Unknown Artist";
   const durationSeconds = Number(details.lengthSeconds) || 0;
@@ -593,6 +615,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       audioQuality: f.audioQuality,
       audioSampleRate: f.audioSampleRate,
       approxDurationMs: f.approxDurationMs ? Number(f.approxDurationMs) : undefined,
+      userAgent: f.userAgent || winningUserAgent,
     });
   }
 
@@ -952,6 +975,19 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       audioFormat: bestAudio || effectiveAudio,
     });
   }
+
+  // Ensure all quality options and nested formats carry the winning User-Agent
+  qualities.forEach((q) => {
+    if (!q.userAgent) {
+      q.userAgent = winningUserAgent || ANDROID_VR_USER_AGENT;
+    }
+    if (q.videoFormat && !q.videoFormat.userAgent) {
+      q.videoFormat.userAgent = q.videoFormat.userAgent || winningUserAgent || ANDROID_VR_USER_AGENT;
+    }
+    if (q.audioFormat && !q.audioFormat.userAgent) {
+      q.audioFormat.userAgent = q.audioFormat.userAgent || winningUserAgent || ANDROID_VR_USER_AGENT;
+    }
+  });
 
   // Extract subtitle tracks if available in playerResponse
   const rawCaptionTracks =

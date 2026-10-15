@@ -25,7 +25,7 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-async function handleDownload(url: string, quality = "best", format?: string) {
+async function handleDownload(url: string, quality = "best", format?: string, clientIp?: string) {
   if (!isValidMediaInput(url)) {
     return NextResponse.json(
       { error: "Invalid media URL or video ID." },
@@ -89,7 +89,7 @@ async function handleDownload(url: string, quality = "best", format?: string) {
   try {
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be") || /^[0-9A-Za-z_-]{11}$/.test(url);
     if (isYouTube) {
-      const info = await resolveYouTubeVideo(url);
+      const info = await resolveYouTubeVideo(url, clientIp);
       const chosen =
         info.qualities.find(
           (q) =>
@@ -108,17 +108,12 @@ async function handleDownload(url: string, quality = "best", format?: string) {
           try {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 6000);
-            const isIos = cand.includes("c=IOS") || cand.includes("sparams=");
-            const isAndroid = cand.includes("c=ANDROID");
-            const ua = isIos
-              ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
-              : isAndroid
-              ? "com.google.android.youtube/21.26.364 (Linux; U; Android 14) gzip"
-              : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+            const defaultUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
+            const effectiveUa = chosen?.userAgent || chosen?.videoFormat?.userAgent || chosen?.audioFormat?.userAgent || defaultUa;
 
             const res = await fetch(cand, {
               headers: {
-                "User-Agent": ua,
+                "User-Agent": effectiveUa,
                 Accept: "*/*",
               },
               signal: controller.signal,
@@ -326,7 +321,13 @@ export async function GET(req: Request) {
       );
     }
 
-    return await handleDownload(url, quality, format);
+    const clientIp =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      undefined;
+
+    return await handleDownload(url, quality, format, clientIp);
   } catch (err: any) {
     console.error("Media Download API error:", err);
     return NextResponse.json(
@@ -350,7 +351,13 @@ export async function POST(req: Request) {
       );
     }
 
-    return await handleDownload(url, quality, format);
+    const clientIp =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      undefined;
+
+    return await handleDownload(url, quality, format, clientIp);
   } catch (err: any) {
     console.error("Media Download API error:", err);
     return NextResponse.json(

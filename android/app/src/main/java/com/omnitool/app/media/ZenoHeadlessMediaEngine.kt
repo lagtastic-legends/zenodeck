@@ -16,6 +16,7 @@ import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import java.nio.ByteBuffer
@@ -27,6 +28,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import android.media.MediaScannerConnection
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -509,6 +513,276 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             mainHandler.post {
                 onComplete(result)
             }
+        }
+    }
+
+    /**
+     * Downloads an HTTP/HTTPS stream directly to a local disk file using native HttpURLConnection.
+     * Operates without WebView or Chromium restrictions: preserves exact User-Agent,
+     * bypasses CORS, follows redirects, uses 64KB buffers directly to FileOutputStream,
+     * and streams with <1MB heap usage.
+     */
+    fun downloadStreamDirectToFile(
+        streamUrl: String,
+        userAgent: String?,
+        destinationFile: File,
+        isCancelled: () -> Boolean = { false },
+        onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
+    ): Result<File> {
+        destinationFile.parentFile?.mkdirs()
+        if (destinationFile.exists()) {
+            destinationFile.delete()
+        }
+
+        var currentUrl = streamUrl
+        var redirects = 0
+        val maxRedirects = 5
+        var connection: HttpURLConnection? = null
+
+        val fallbackUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
+        val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else fallbackUa
+
+        try {
+            while (redirects < maxRedirects) {
+                if (isCancelled()) {
+                    return Result.failure(Exception("Download cancelled"))
+                }
+                val urlObj = URL(currentUrl)
+                connection = (urlObj.openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 15000
+                    readTimeout = 30000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", effectiveUa)
+                    setRequestProperty("Accept", "*/*")
+                    setRequestProperty("Accept-Encoding", "identity")
+                    setRequestProperty("Connection", "keep-alive")
+                }
+
+                val responseCode = connection.responseCode
+                if (responseCode in 300..399) {
+                    val location = connection.getHeaderField("Location")
+                    connection.disconnect()
+                    if (location.isNullOrEmpty()) {
+                        return Result.failure(Exception("HTTP redirect $responseCode without Location header"))
+                    }
+                    currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
+                        location
+                    } else {
+                        URL(urlObj, location).toString()
+                    }
+                    redirects++
+                    continue
+                }
+
+                if (responseCode !in 200..299) {
+                    connection.disconnect()
+                    return Result.failure(Exception("HTTP error $responseCode: ${connection.responseMessage} from $currentUrl"))
+                }
+
+                // Successful response
+                break
+            }
+
+            val conn = connection ?: return Result.failure(Exception("Failed to open HTTP connection"))
+            val contentLengthHeader = conn.getHeaderField("Content-Length")
+            val totalBytes = contentLengthHeader?.toLongOrNull() ?: -1L
+
+            conn.inputStream.use { input ->
+                FileOutputStream(destinationFile).use { output ->
+                    val buffer = ByteArray(65536) // 64KB buffer
+                    var bytesDownloaded = 0L
+                    var lastProgressUpdate = 0L
+
+                    while (true) {
+                        if (isCancelled()) {
+                            destinationFile.delete()
+                            return Result.failure(Exception("Download cancelled"))
+                        }
+                        val read = input.read(buffer)
+                        if (read == -1) break
+                        output.write(buffer, 0, read)
+                        bytesDownloaded += read
+
+                        val now = System.currentTimeMillis()
+                        if (now - lastProgressUpdate >= 100 || (totalBytes > 0 && bytesDownloaded == totalBytes)) {
+                            lastProgressUpdate = now
+                            onProgress(bytesDownloaded, totalBytes)
+                        }
+                    }
+                    output.flush()
+                }
+            }
+
+            Log.i(TAG, "Direct-to-disk download complete: ${destinationFile.name} (${destinationFile.length()} bytes)")
+            return Result.success(destinationFile)
+        } catch (e: Exception) {
+            Log.e(TAG, "Direct-to-disk download failed: ${e.message}", e)
+            if (destinationFile.exists()) {
+                destinationFile.delete()
+            }
+            return Result.failure(e)
+        } finally {
+            try {
+                connection?.disconnect()
+            } catch (_: Throwable) {}
+        }
+    }
+
+    /**
+     * Downloads video and optional audio streams directly to flash storage, muxes them using
+     * Android's native MediaMuxer into Movies/ZenoDeck (or Downloads/ZenoDeck), indexes the
+     * file into Google Photos / Gallery, and purges temporary cache files.
+     */
+    fun downloadAndMuxYouTubeStreams(
+        context: Context,
+        videoUrl: String,
+        audioUrl: String?,
+        userAgent: String?,
+        outputFileName: String,
+        approxSizeBytes: Long = 0L,
+        isCancelled: () -> Boolean = { false },
+        progressCallback: (percent: Int, bytesDownloaded: Long, totalBytes: Long, speedMbps: Double, phase: String) -> Unit
+    ): Result<File> {
+        val tempDir = File(context.cacheDir, "zeno_temp").apply { mkdirs() }
+        val tempId = System.currentTimeMillis()
+
+        val isWebmTarget = outputFileName.endsWith(".webm", ignoreCase = true)
+        val vExt = if (isWebmTarget) "webm" else "mp4"
+        val aExt = if (isWebmTarget) "webm" else "m4a"
+
+        val vTempFile = File(tempDir, "v_${tempId}.$vExt")
+        val aTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "a_${tempId}.$aExt") else null
+
+        // Determine destination directory: Movies/ZenoDeck or Downloads/ZenoDeck
+        val moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ZenoDeck")
+        if (!moviesDir.exists()) moviesDir.mkdirs()
+        val targetDir = if (moviesDir.exists() && moviesDir.canWrite()) {
+            moviesDir
+        } else {
+            val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
+            if (!downloadsDir.exists()) downloadsDir.mkdirs()
+            downloadsDir
+        }
+        val destinationFile = File(targetDir, outputFileName)
+
+        var totalDownloaded = 0L
+        val startTime = System.currentTimeMillis()
+        var lastCallbackTime = 0L
+
+        fun calculateSpeed(): Double {
+            val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
+            return if (elapsedSec > 0.1) (totalDownloaded / (1024.0 * 1024.0)) / elapsedSec else 0.0
+        }
+
+        try {
+            // Stage 1: Download Video Stream
+            progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
+            val videoResult = downloadStreamDirectToFile(
+                streamUrl = videoUrl,
+                userAgent = userAgent,
+                destinationFile = vTempFile,
+                isCancelled = isCancelled,
+                onProgress = { downloaded, total ->
+                    totalDownloaded = downloaded
+                    val now = System.currentTimeMillis()
+                    if (now - lastCallbackTime >= 150) {
+                        lastCallbackTime = now
+                        val pct = if (audioUrl.isNullOrEmpty()) {
+                            if (total > 0) ((downloaded * 95) / total).toInt() else 50
+                        } else {
+                            if (total > 0) ((downloaded * 70) / total).toInt() else 35
+                        }
+                        val tot = if (total > 0) total else approxSizeBytes
+                        progressCallback(minOf(95, maxOf(5, pct)), downloaded, tot, calculateSpeed(), "downloading_video")
+                    }
+                }
+            )
+
+            if (videoResult.isFailure) {
+                return Result.failure(videoResult.exceptionOrNull() ?: Exception("Video stream download failed"))
+            }
+
+            val videoTotalBytes = vTempFile.length()
+
+            // Stage 2: Download Audio Stream if separate
+            if (!audioUrl.isNullOrEmpty() && aTempFile != null) {
+                progressCallback(70, videoTotalBytes, approxSizeBytes, calculateSpeed(), "downloading_audio")
+                val audioResult = downloadStreamDirectToFile(
+                    streamUrl = audioUrl,
+                    userAgent = userAgent,
+                    destinationFile = aTempFile,
+                    isCancelled = isCancelled,
+                    onProgress = { downloaded, total ->
+                        totalDownloaded = videoTotalBytes + downloaded
+                        val now = System.currentTimeMillis()
+                        if (now - lastCallbackTime >= 150) {
+                            lastCallbackTime = now
+                            val pct = if (total > 0) (70 + ((downloaded * 20) / total)).toInt() else 80
+                            val tot = if (total > 0) videoTotalBytes + total else approxSizeBytes
+                            progressCallback(minOf(90, maxOf(70, pct)), totalDownloaded, tot, calculateSpeed(), "downloading_audio")
+                        }
+                    }
+                )
+
+                if (audioResult.isFailure) {
+                    return Result.failure(audioResult.exceptionOrNull() ?: Exception("Audio stream download failed"))
+                }
+
+                // Stage 3: Native Hardware MediaMuxer
+                progressCallback(92, totalDownloaded, totalDownloaded, calculateSpeed(), "muxing")
+                val muxResult = muxVideoAndAudio(vTempFile, aTempFile, destinationFile)
+                if (muxResult.isFailure) {
+                    return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed"))
+                }
+            } else {
+                // Pre-muxed stream (itag 18) or audio-only: move directly to destination
+                progressCallback(95, totalDownloaded, totalDownloaded, calculateSpeed(), "finalizing")
+                if (destinationFile.exists()) {
+                    destinationFile.delete()
+                }
+                val moved = vTempFile.renameTo(destinationFile)
+                if (!moved) {
+                    vTempFile.inputStream().use { input ->
+                        destinationFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    vTempFile.delete()
+                }
+            }
+
+            // Index into MediaStore / Google Photos
+            val mimeType = if (isWebmTarget) {
+                "video/webm"
+            } else if (outputFileName.endsWith(".m4a", ignoreCase = true)) {
+                "audio/mp4"
+            } else if (outputFileName.endsWith(".mp3", ignoreCase = true)) {
+                "audio/mpeg"
+            } else {
+                "video/mp4"
+            }
+
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(destinationFile.absolutePath),
+                arrayOf(mimeType)
+            ) { path, uri ->
+                Log.i(TAG, "ZenoDeck MediaStore scanned: $path -> $uri")
+            }
+
+            progressCallback(100, destinationFile.length(), destinationFile.length(), calculateSpeed(), "complete")
+            return Result.success(destinationFile)
+        } catch (e: Exception) {
+            Log.e(TAG, "downloadAndMuxYouTubeStreams failed: ${e.message}", e)
+            if (destinationFile.exists()) destinationFile.delete()
+            return Result.failure(e)
+        } finally {
+            // Clean up temp files
+            try {
+                if (vTempFile.exists()) vTempFile.delete()
+                if (aTempFile != null && aTempFile.exists()) aTempFile.delete()
+            } catch (_: Throwable) {}
         }
     }
 }

@@ -232,4 +232,63 @@ class ZenoMedia3Plugin : Plugin() {
         }
         call.resolve(result)
     }
+
+    /**
+     * Native direct-to-disk YouTube stream acquisition and lossless hardware MediaMuxer.
+     * Operates completely in native Android (outside Chromium WebView), bypassing CORS,
+     * header stripping, and memory constraints.
+     */
+    @PluginMethod
+    fun downloadAndMuxYouTube(call: PluginCall) {
+        val videoUrl = call.getString("videoUrl")
+        val audioUrl = call.getString("audioUrl")
+        val userAgent = call.getString("userAgent")
+        val outputFileName = call.getString("outputFileName") ?: "video_${System.currentTimeMillis()}.mp4"
+        val approxSizeBytes = call.getLong("approxSizeBytes") ?: 0L
+
+        if (videoUrl.isNullOrEmpty()) {
+            call.reject("videoUrl parameter is required.")
+            return
+        }
+
+        executor.execute {
+            try {
+                val result = mediaEngine.downloadAndMuxYouTubeStreams(
+                    context = context,
+                    videoUrl = videoUrl,
+                    audioUrl = audioUrl,
+                    userAgent = userAgent,
+                    outputFileName = outputFileName,
+                    approxSizeBytes = approxSizeBytes,
+                    progressCallback = { percent, bytesDownloaded, totalBytes, speedMbps, phase ->
+                        val data = JSObject().apply {
+                            put("percent", percent)
+                            put("bytesDownloaded", bytesDownloaded)
+                            put("totalBytes", totalBytes)
+                            put("speedMbps", speedMbps)
+                            put("phase", phase)
+                        }
+                        notifyListeners("downloadProgress", data)
+                    }
+                )
+
+                if (result.isSuccess) {
+                    val file = result.getOrThrow()
+                    val ret = JSObject().apply {
+                        put("success", true)
+                        put("outputPath", file.absolutePath)
+                        put("fileSizeBytes", file.length())
+                        put("filename", file.name)
+                    }
+                    call.resolve(ret)
+                } else {
+                    val err = result.exceptionOrNull()?.message ?: "Native stream acquisition failed"
+                    call.reject("Native download/mux error: $err")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in downloadAndMuxYouTube", e)
+                call.reject("Native download exception: ${e.message}")
+            }
+        }
+    }
 }

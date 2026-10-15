@@ -39,6 +39,7 @@ import {
 import {
   isNativeAndroidPlatform,
   executeNativeAndroidMux,
+  executeNativeYouTubeDownload,
 } from "../media/native-media-muxer";
 
 let sharedTurboEngine: FFmpeg | null = null;
@@ -705,6 +706,130 @@ export async function downloadYouTubeStream({
     .substring(0, 60);
 
   // -------------------------------------------------------------
+  // Fast-Path: Native Android Direct-to-Disk Stream Fetcher + MediaMuxer
+  // Operates completely on native Kotlin Dispatchers.IO with HttpURLConnection.
+  // Bypasses Chromium WebView fetch(), avoids CORS/403, preserves exact User-Agent,
+  // and eliminates memory strain entirely.
+  // -------------------------------------------------------------
+  const isClipped = Boolean(clipRange?.startTime || clipRange?.endTime);
+  if (isNativeAndroidPlatform() && !isClipped) {
+    const videoUrl = option.videoFormat?.url || (isAudioOnly ? option.audioFormat?.url : undefined);
+    const audioUrl = !isAudioOnly && option.audioFormat ? option.audioFormat.url : undefined;
+    const userAgent = option.userAgent || option.videoFormat?.userAgent || option.audioFormat?.userAgent;
+
+    if (videoUrl) {
+      try {
+        const resTag = option.badge || option.resolutionLabel || option.id || (isAudioOnly ? "Audio" : "HD");
+        const isWebm = (option.container === "webm") || (option.videoFormat?.container === "webm");
+        const defaultExt = isAudioOnly
+          ? (option.container === "mp3" ? "mp3" : option.container === "m4a" ? "m4a" : "mp3")
+          : (isWebm ? "webm" : "mp4");
+        const outputFilename = `${sanitizedTitle} [${resTag}].${defaultExt}`;
+
+        onProgress({
+          phase: "downloading",
+          progress: 5,
+          speedMbps: 0,
+          downloadedBytes: 0,
+          totalBytes: totalEstBytes,
+          activeThreads: 1,
+          etaSeconds: 0,
+          statusMessage: "Downloading direct-to-disk via Native Android Engine…",
+          stage: {
+            current: 1,
+            total: 3,
+            name: isAudioOnly ? "audio" : "video",
+            videoProgress: 5,
+            audioProgress: 0,
+            muxProgress: 0,
+            videoSpeedMbps: 0,
+            audioSpeedMbps: 0,
+          },
+        });
+
+        const nativeRes = await executeNativeYouTubeDownload({
+          videoUrl,
+          audioUrl,
+          userAgent,
+          outputFilename,
+          approxSizeBytes: option.approxSizeBytes,
+          signal,
+          onProgress: (prog) => {
+            const isMux = prog.phase === "muxing" || prog.phase === "finalizing";
+            const phase: TurboPhase = isMux ? "muxing" : "downloading";
+            const stageCurrent: 1 | 2 | 3 = isMux ? 3 : prog.phase === "downloading_audio" ? 2 : 1;
+            const stageName: "video" | "audio" | "muxing" = isMux ? "muxing" : isAudioOnly || prog.phase === "downloading_audio" ? "audio" : "video";
+
+            onProgress({
+              phase,
+              progress: prog.percent,
+              speedMbps: Number(prog.speedMbps.toFixed(1)),
+              downloadedBytes: prog.bytesDownloaded,
+              totalBytes: prog.totalBytes > 0 ? prog.totalBytes : totalEstBytes,
+              activeThreads: 1,
+              etaSeconds: prog.speedMbps > 0 && prog.totalBytes > prog.bytesDownloaded
+                ? Math.round(((prog.totalBytes - prog.bytesDownloaded) / (1024 * 1024)) / prog.speedMbps)
+                : 0,
+              statusMessage: isMux
+                ? "Assembling video & audio with Android hardware MediaMuxer…"
+                : `Streaming direct-to-disk (${prog.percent}%)…`,
+              stage: {
+                current: stageCurrent,
+                total: 3,
+                name: stageName,
+                videoProgress: prog.phase === "downloading_video" ? prog.percent : 100,
+                audioProgress: prog.phase === "downloading_audio" ? prog.percent : (audioUrl ? 0 : 100),
+                muxProgress: isMux ? 85 : 0,
+                videoSpeedMbps: prog.phase === "downloading_video" ? Number(prog.speedMbps.toFixed(1)) : 0,
+                audioSpeedMbps: prog.phase === "downloading_audio" ? Number(prog.speedMbps.toFixed(1)) : 0,
+              },
+            });
+          },
+        });
+
+        const webViewUrl = Capacitor.isNativePlatform()
+          ? Capacitor.convertFileSrc(nativeRes.outputPath)
+          : `file://${nativeRes.outputPath}`;
+
+        onProgress({
+          phase: "complete",
+          progress: 100,
+          speedMbps: 0,
+          downloadedBytes: nativeRes.fileSizeBytes,
+          totalBytes: nativeRes.fileSizeBytes,
+          activeThreads: 0,
+          etaSeconds: 0,
+          statusMessage: `Ready! ${option.label || option.badge} saved directly to Movies/ZenoDeck.`,
+          stage: {
+            current: 3,
+            total: 3,
+            name: "muxing",
+            videoProgress: 100,
+            audioProgress: 100,
+            muxProgress: 100,
+            videoSpeedMbps: 0,
+            audioSpeedMbps: 0,
+          },
+        });
+
+        return {
+          blob: new Blob([], { type: nativeRes.mimeType }),
+          url: webViewUrl,
+          filename: nativeRes.filename,
+          fileSizeBytes: nativeRes.fileSizeBytes,
+          mimeType: nativeRes.mimeType,
+          is4K,
+          is60fps,
+          savedNativePath: nativeRes.outputPath,
+        };
+      } catch (nativeErr: any) {
+        if (signal?.aborted) throw nativeErr;
+        console.warn("Native Android direct download failed, falling back to browser pipeline:", nativeErr?.message);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
   // Case A: Audio Only
   // -------------------------------------------------------------
   if (isAudioOnly) {
@@ -968,11 +1093,11 @@ export async function downloadYouTubeStream({
   if (clipRange?.endTime) {
     clipArgs.push("-to", String(clipRange.endTime));
   }
-  const isClipped = clipArgs.length > 0;
-  const clipSuffix = isClipped ? " [Clip]" : "";
+  const isClipActive = clipArgs.length > 0 || isClipped;
+  const clipSuffix = isClipActive ? " [Clip]" : "";
 
   // Fast-path: If video format was already pre-muxed (e.g. 720p MP4), save directly without FFmpeg (unless clipped)
-  if (!audioBytes && !isClipped) {
+  if (!audioBytes && !isClipActive) {
     const ext = option.videoFormat.container || "mp4";
     const mime = ext === "webm" ? "video/webm" : "video/mp4";
     const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: mime });

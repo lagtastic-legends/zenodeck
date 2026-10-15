@@ -3,6 +3,6 @@
  * Re-exports universalFetch from InnerTube core
  */
 
-import { universalFetch } from "@/lib/youtube/innertube";
+import { universalFetch, resolveYouTubeVideo } from "@/lib/youtube/innertube";
 
-export { universalFetch };
+export { universalFetch, resolveYouTubeVideo };
