@@ -69,6 +69,22 @@
 - **Layer 2 (Native Android Heads-Up Notifications):** Uses `@capacitor/local-notifications` on high-importance channel `zenodeck_updates` with custom icon and purple accent. Tapping opens the in-app update dialog directly.
 - **Layer 3 (In-App Update Pill & Progress HUD):** Displays a glowing `[⚡ Update vX.Y.Z]` pill in the top bar with 1-tap installation.
 
+### 8. 🎬 Universal Multi-Platform Media Acquisition Engine (`universal-resolver.ts`, `downloader.ts`)
+- **Reddit Split-Audio DASH Muxing:** Asynchronously probes Reddit audio streams (`DASH_AUDIO_128.mp4`, `DASH_audio.mp4`) and dual-stream muxes video + audio directly via Android hardware `MediaMuxer` (on native app) or WebAssembly FFmpeg copy (on web), preventing muted Reddit video downloads.
+- **HLS (`.m3u8`) Segment Fetcher & Remuxer:** Recursively parses master/media playlists, downloads `.ts` segments concurrently into OPFS, and losslessly remuxes into `.mp4` containers via FFmpeg stream copy.
+- **TikTok & Social Carousels:** Supports 1080p watermark-free TikTok videos + photo albums; parses multi-media posts for Instagram and Twitter/X.
+
+### 9. ✂️ Lossless Time-Range Clipper, 3-Stage Split Telemetry HUD & Pause/Resume
+- **Pre-Download Time-Range Clipper:** Fast trimming with presets (`0–30s`, `0–60s`, `30–60s`) and custom inputs, passing `-ss` and `-to` keyframe flags during remuxing for instantaneous lossless clipping.
+- **3-Stage Split Telemetry HUD:** Independent progress indicators for Video Track, Audio Track, and Muxing state with live speed calculations and `🛡️ RAM-Safe OPFS` active status badge.
+- **Non-Destructive Pause/Resume:** Pauses streaming chunks with in-memory or OPFS chunk preservation.
+- **1-Tap Deck Actions:** Quick post-download cards to send audio/video to ZenoTap custom keys (`[⌨️ Send to ZenoTap]`) or open in 8D audio studio (`[🎧 Open in 8D Studio]`).
+
+### 10. 📱 Android Native System Share Intent (`ACTION_SEND`)
+- **System Share Target:** Declares `android.intent.action.SEND` for `text/plain` in `AndroidManifest.xml`.
+- **Automatic Bridge Routing:** Intercepts shared text in `MainActivity.java`, extracts clean URLs via regex, and dispatches `zenodeck:shared-url` into the Capacitor WebView.
+- **Auto-Resolve:** Automatically switches active view to `youtube-downloader` and triggers media resolution without manual paste.
+
 ---
 
 ## 📦 Verified Release Artifacts & Checksums

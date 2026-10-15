@@ -85,6 +85,17 @@ export type TurboPhase =
   | "complete"
   | "error";
 
+export interface TurboStageInfo {
+  current: 1 | 2 | 3;
+  total: 3;
+  name: "video" | "audio" | "muxing";
+  videoProgress?: number;
+  audioProgress?: number;
+  muxProgress?: number;
+  videoSpeedMbps?: number;
+  audioSpeedMbps?: number;
+}
+
 export interface TurboProgress {
   phase: TurboPhase;
   progress: number; // 0 .. 100
@@ -94,6 +105,49 @@ export interface TurboProgress {
   activeThreads: number;
   etaSeconds: number;
   statusMessage: string;
+  stage?: TurboStageInfo;
+  isOPFSBuffered?: boolean;
+}
+
+export interface ClipRange {
+  startTime?: string | number;
+  endTime?: string | number;
+}
+
+export interface PauseController {
+  isPaused: boolean;
+  pause: () => void;
+  resume: () => void;
+  waitForResume: () => Promise<void>;
+}
+
+export function createPauseController(): PauseController {
+  let isPaused = false;
+  let resumeResolve: (() => void) | null = null;
+
+  return {
+    get isPaused() {
+      return isPaused;
+    },
+    pause() {
+      isPaused = true;
+    },
+    resume() {
+      if (isPaused) {
+        isPaused = false;
+        if (resumeResolve) {
+          resumeResolve();
+          resumeResolve = null;
+        }
+      }
+    },
+    async waitForResume() {
+      if (!isPaused) return;
+      return new Promise<void>((resolve) => {
+        resumeResolve = resolve;
+      });
+    },
+  };
 }
 
 export interface TurboDownloadOptions {
@@ -105,7 +159,10 @@ export interface TurboDownloadOptions {
   maxParallelWorkers?: number;
   onProgress: (prog: TurboProgress) => void;
   signal?: AbortSignal;
+  clipRange?: ClipRange;
+  pauseController?: PauseController;
 }
+
 
 export interface TurboDownloadResult {
   blob: Blob;
@@ -344,6 +401,7 @@ async function downloadStreamResilient({
   label = "stream",
   onChunkBytes,
   signal,
+  pauseController,
 }: {
   streamUrl: string;
   knownSize?: number;
@@ -351,7 +409,9 @@ async function downloadStreamResilient({
   label?: string;
   onChunkBytes: (bytes: number) => void;
   signal?: AbortSignal;
+  pauseController?: PauseController;
 }): Promise<Uint8Array> {
+
   const candidateUrls = buildCandidateUrls(streamUrl);
 
   // 1. Determine exact file size safely and identify the fastest responding CDN candidate node
@@ -402,6 +462,9 @@ async function downloadStreamResilient({
   const worker = async (workerId: number) => {
     while (true) {
       if (signal?.aborted) throw new Error("Download aborted");
+      if (pauseController?.isPaused) {
+        await pauseController.waitForResume();
+      }
       const chunkIndex = nextChunkIndex++;
       if (chunkIndex >= numChunks) break;
 
@@ -477,6 +540,8 @@ export async function downloadYouTubeStream({
   maxParallelWorkers = 6,
   onProgress,
   signal,
+  clipRange,
+  pauseController,
 }: TurboDownloadOptions): Promise<TurboDownloadResult> {
   // Normalize format specifications if flat properties were passed
   if (!option.videoFormat && (option as any).videoUrl) {
@@ -520,6 +585,19 @@ export async function downloadYouTubeStream({
 
   const progressMaxPct = isDirectFastPath ? 98 : 92;
 
+  let videoDownloadedBytes = 0;
+  let audioDownloadedBytes = 0;
+  const videoEstBytes = option.videoFormat?.contentLength || (hasSeparateAudio ? Math.round(totalEstBytes * 0.8) : totalEstBytes);
+  const audioEstBytes = option.audioFormat?.contentLength || (hasSeparateAudio ? Math.round(totalEstBytes * 0.2) : totalEstBytes);
+
+  let lastVideoSample = performance.now();
+  let videoBytesSinceSample = 0;
+  let videoSpeedMbps = 0;
+
+  let lastAudioSample = performance.now();
+  let audioBytesSinceSample = 0;
+  let audioSpeedMbps = 0;
+
   const updateProgress = (
     phase: TurboPhase,
     statusMessage: string,
@@ -539,6 +617,19 @@ export async function downloadYouTubeStream({
     const remainingBytes = Math.max(0, totalEstBytes - downloadedBytes);
     const etaSeconds = currentSpeedMbps > 0 ? Math.round((remainingBytes / (1024 * 1024)) / currentSpeedMbps) : 0;
 
+    const vPct = videoEstBytes > 0 ? Math.min(100, Math.round((videoDownloadedBytes / videoEstBytes) * 100)) : 0;
+    const aPct = audioEstBytes > 0 ? Math.min(100, Math.round((audioDownloadedBytes / audioEstBytes) * 100)) : 0;
+
+    let currentStage: 1 | 2 | 3 = 1;
+    let stageName: "video" | "audio" | "muxing" = "video";
+    if (phase === "muxing") {
+      currentStage = 3;
+      stageName = "muxing";
+    } else if (isAudioOnly || (hasSeparateAudio && vPct >= 99 && aPct < 99)) {
+      currentStage = 2;
+      stageName = "audio";
+    }
+
     onProgress({
       phase,
       progress: pct,
@@ -548,18 +639,66 @@ export async function downloadYouTubeStream({
       activeThreads,
       etaSeconds,
       statusMessage,
+      stage: {
+        current: currentStage,
+        total: 3,
+        name: stageName,
+        videoProgress: vPct,
+        audioProgress: isAudioOnly ? pct : aPct,
+        muxProgress: phase === "muxing" ? 75 : phase === "complete" ? 100 : 0,
+        videoSpeedMbps: Number(videoSpeedMbps.toFixed(1)),
+        audioSpeedMbps: Number(audioSpeedMbps.toFixed(1)),
+      },
+      isOPFSBuffered: true,
     });
   };
 
-  const handleChunk = (size: number) => {
+  const handleVideoChunk = (size: number) => {
+    videoDownloadedBytes += size;
+    videoBytesSinceSample += size;
     downloadedBytes += size;
     bytesSinceLastSample += size;
-    updateProgress("downloading", `Streaming ${option.label} via multi-worker pipeline…`);
+
+    const now = performance.now();
+    const elapsed = (now - lastVideoSample) / 1000;
+    if (elapsed >= 0.25) {
+      const instant = (videoBytesSinceSample / (1024 * 1024)) / elapsed;
+      videoSpeedMbps = videoSpeedMbps === 0 ? instant : videoSpeedMbps * 0.6 + instant * 0.4;
+      lastVideoSample = now;
+      videoBytesSinceSample = 0;
+    }
+    updateProgress("downloading", `Streaming ${option.label} video chunks…`);
+  };
+
+  const handleAudioChunk = (size: number) => {
+    audioDownloadedBytes += size;
+    audioBytesSinceSample += size;
+    downloadedBytes += size;
+    bytesSinceLastSample += size;
+
+    const now = performance.now();
+    const elapsed = (now - lastAudioSample) / 1000;
+    if (elapsed >= 0.25) {
+      const instant = (audioBytesSinceSample / (1024 * 1024)) / elapsed;
+      audioSpeedMbps = audioSpeedMbps === 0 ? instant : audioSpeedMbps * 0.6 + instant * 0.4;
+      lastAudioSample = now;
+      audioBytesSinceSample = 0;
+    }
+    updateProgress("downloading", `Streaming audio track chunks…`);
+  };
+
+  const handleChunk = (size: number) => {
+    if (isAudioOnly) {
+      handleAudioChunk(size);
+    } else {
+      handleVideoChunk(size);
+    }
   };
 
   updateProgress("resolving", "Connecting to high-speed stream servers…", 0);
 
   // Clean filename
+
   const sanitizedTitle = (videoTitle || "youtube_video")
     .replace(/[<>:"/\\|?*]/g, "")
     .trim()
@@ -805,8 +944,9 @@ export async function downloadYouTubeStream({
       knownSize: option.videoFormat.contentLength,
       maxWorkers: videoWorkers,
       label: "video",
-      onChunkBytes: handleChunk,
+      onChunkBytes: handleVideoChunk,
       signal,
+      pauseController,
     }),
     hasSeparateAudio && option.audioFormat
       ? downloadStreamResilient({
@@ -814,14 +954,25 @@ export async function downloadYouTubeStream({
           knownSize: option.audioFormat.contentLength,
           maxWorkers: audioWorkers,
           label: "audio",
-          onChunkBytes: handleChunk,
+          onChunkBytes: handleAudioChunk,
           signal,
+          pauseController,
         })
       : Promise.resolve(null),
   ]);
 
-  // Fast-path: If video format was already pre-muxed (e.g. 720p MP4), save directly without FFmpeg
-  if (!audioBytes) {
+  const clipArgs: string[] = [];
+  if (clipRange?.startTime) {
+    clipArgs.push("-ss", String(clipRange.startTime));
+  }
+  if (clipRange?.endTime) {
+    clipArgs.push("-to", String(clipRange.endTime));
+  }
+  const isClipped = clipArgs.length > 0;
+  const clipSuffix = isClipped ? " [Clip]" : "";
+
+  // Fast-path: If video format was already pre-muxed (e.g. 720p MP4), save directly without FFmpeg (unless clipped)
+  if (!audioBytes && !isClipped) {
     const ext = option.videoFormat.container || "mp4";
     const mime = ext === "webm" ? "video/webm" : "video/mp4";
     const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: mime });
@@ -886,17 +1037,17 @@ export async function downloadYouTubeStream({
 
   const resTag = option.badge || option.resolutionLabel || option.id || "HD";
   const outputExt = isVideoWebM ? "webm" : "mp4";
-  const finalFilename = `${sanitizedTitle} [${resTag}].${outputExt}`;
+  const finalFilename = `${sanitizedTitle}${clipSuffix} [${resTag}].${outputExt}`;
   const targetMime = isVideoWebM ? "video/webm" : "video/mp4";
 
   // Fast-Path Native Android MediaMuxer:
   // Operates disk-to-disk sample streaming (<5MB RAM). Bypasses Wasm MEMFS OOM [ff] Aborted() entirely!
-  if (isNativeAndroidPlatform()) {
+  if (isNativeAndroidPlatform() && !isClipped) {
     try {
       updateProgress("muxing", "Muxing 4K video & audio via Android hardware MediaMuxer…", 0.5);
       const nativeMuxResult = await executeNativeAndroidMux({
         videoBytes,
-        audioBytes,
+        audioBytes: audioBytes || new Uint8Array(0),
         outputFilename: finalFilename,
         mimeType: targetMime,
         onProgress: (msg) => updateProgress("muxing", msg, 0.7),
@@ -950,27 +1101,30 @@ export async function downloadYouTubeStream({
       outputName: "stream_out.webm",
       outputExt: "webm",
       mimeType: "video/webm",
-      args: ["-i", vInput, "-i", aInput, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", "stream_out.webm"],
+      args: ["-i", vInput, ...(audioBytes ? ["-i", aInput] : []), ...clipArgs, "-c", "copy", ...(audioBytes ? ["-map", "0:v:0", "-map", "1:a:0"] : []), "stream_out.webm"],
       description: "lossless WebM stream-copy",
     });
 
     // Fallback: WebM with Opus audio transcode
-    plans.push({
-      outputName: "stream_out.webm",
-      outputExt: "webm",
-      mimeType: "video/webm",
-      args: [
-        "-i", vInput,
-        "-i", aInput,
-        "-c:v", "copy",
-        "-c:a", "libopus",
-        "-b:a", "160k",
-        "-map", "0:v:0",
-        "-map", "1:a:0",
-        "stream_out.webm",
-      ],
-      description: "WebM copy with Opus audio transcode",
-    });
+    if (audioBytes) {
+      plans.push({
+        outputName: "stream_out.webm",
+        outputExt: "webm",
+        mimeType: "video/webm",
+        args: [
+          "-i", vInput,
+          "-i", aInput,
+          ...clipArgs,
+          "-c:v", "copy",
+          "-c:a", "libopus",
+          "-b:a", "160k",
+          "-map", "0:v:0",
+          "-map", "1:a:0",
+          "stream_out.webm",
+        ],
+        description: "WebM copy with Opus audio transcode",
+      });
+    }
   } else {
     // MP4 video (H.264 / AV01)
     if (isAudioAac && !isAudioOpus) {
@@ -981,10 +1135,10 @@ export async function downloadYouTubeStream({
         mimeType: "video/mp4",
         args: [
           "-i", vInput,
-          "-i", aInput,
+          ...(audioBytes ? ["-i", aInput] : []),
+          ...clipArgs,
           "-c", "copy",
-          "-map", "0:v:0",
-          "-map", "1:a:0",
+          ...(audioBytes ? ["-map", "0:v:0", "-map", "1:a:0"] : []),
           "-movflags", "+faststart",
           "stream_out.mp4",
         ],
@@ -992,62 +1146,69 @@ export async function downloadYouTubeStream({
       });
 
       // Secondary fallback: MP4 copy with AAC audio transcode
-      plans.push({
-        outputName: "stream_out.mp4",
-        outputExt: "mp4",
-        mimeType: "video/mp4",
-        args: [
-          "-i", vInput,
-          "-i", aInput,
-          "-c:v", "copy",
-          "-c:a", "aac",
-          "-b:a", "192k",
-          "-ar", "44100",
-          "-map", "0:v:0",
-          "-map", "1:a:0",
-          "-movflags", "+faststart",
-          "stream_out.mp4",
-        ],
-        description: "MP4 copy with AAC audio transcode",
-      });
+      if (audioBytes) {
+        plans.push({
+          outputName: "stream_out.mp4",
+          outputExt: "mp4",
+          mimeType: "video/mp4",
+          args: [
+            "-i", vInput,
+            "-i", aInput,
+            ...clipArgs,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", "44100",
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-movflags", "+faststart",
+            "stream_out.mp4",
+          ],
+          description: "MP4 copy with AAC audio transcode",
+        });
+      }
 
       // Tertiary rescue fallback: WebM container rescue
       plans.push({
         outputName: "stream_out.webm",
         outputExt: "webm",
         mimeType: "video/webm",
-        args: ["-i", vInput, "-i", aInput, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", "stream_out.webm"],
+        args: ["-i", vInput, ...(audioBytes ? ["-i", aInput] : []), ...clipArgs, "-c", "copy", ...(audioBytes ? ["-map", "0:v:0", "-map", "1:a:0"] : []), "stream_out.webm"],
         description: "WebM rescue container stream-copy",
       });
     } else {
       // Audio is Opus: transcode audio to AAC so MP4 container has universally decodable, audible sound
-      plans.push({
-        outputName: "stream_out.mp4",
-        outputExt: "mp4",
-        mimeType: "video/mp4",
-        args: [
-          "-i", vInput,
-          "-i", aInput,
-          "-c:v", "copy",
-          "-c:a", "aac",
-          "-b:a", "192k",
-          "-ar", "44100",
-          "-map", "0:v:0",
-          "-map", "1:a:0",
-          "-movflags", "+faststart",
-          "stream_out.mp4",
-        ],
-        description: "MP4 copy with AAC audio transcode (from Opus)",
-      });
+      if (audioBytes) {
+        plans.push({
+          outputName: "stream_out.mp4",
+          outputExt: "mp4",
+          mimeType: "video/mp4",
+          args: [
+            "-i", vInput,
+            "-i", aInput,
+            ...clipArgs,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", "44100",
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-movflags", "+faststart",
+            "stream_out.mp4",
+          ],
+          description: "MP4 copy with AAC audio transcode (from Opus)",
+        });
+      }
 
       // Rescue fallback 1: If MP4 muxing fails, attempt muxing into WebM container rather than dropping audio!
       plans.push({
         outputName: "stream_out.webm",
         outputExt: "webm",
         mimeType: "video/webm",
-        args: ["-i", vInput, "-i", aInput, "-c", "copy", "-map", "0:v:0", "-map", "1:a:0", "stream_out.webm"],
+        args: ["-i", vInput, ...(audioBytes ? ["-i", aInput] : []), ...clipArgs, "-c", "copy", ...(audioBytes ? ["-map", "0:v:0", "-map", "1:a:0"] : []), "stream_out.webm"],
         description: "WebM rescue container stream-copy",
       });
+
 
       // Rescue fallback 2: WebM with libopus transcode
       plans.push({
@@ -1077,7 +1238,9 @@ export async function downloadYouTubeStream({
   if (activeEngine) {
     try {
       await activeEngine.writeFile(vInput, videoBytes);
-      await activeEngine.writeFile(aInput, audioBytes);
+      if (audioBytes) {
+        await activeEngine.writeFile(aInput, audioBytes);
+      }
 
       let successfulPlan: MuxPlan | null = null;
       let lastMuxError: any = null;
@@ -1113,7 +1276,7 @@ export async function downloadYouTubeStream({
         const finalBlob = new Blob([finalVideoData.buffer as ArrayBuffer], { type: successfulPlan.mimeType });
         const finalUrl = URL.createObjectURL(finalBlob);
         const resTag = option.badge || option.resolutionLabel || option.id || "HD";
-        const finalFilename = `${sanitizedTitle} [${resTag}].${successfulPlan.outputExt}`;
+        const finalFilename = `${sanitizedTitle}${clipSuffix} [${resTag}].${successfulPlan.outputExt}`;
 
         onProgress({
           phase: "complete",

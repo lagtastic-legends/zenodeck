@@ -74,19 +74,28 @@ Every release is automatically compiled, signed, and published for all target ar
 
 ## 🌟 What's New in v3.16.0
 
-- **🖥️ Desktop Workstation Top Bar Unification (`workstation-ribbon.tsx`)**:
-  - Removed duplicate `<ThemeToggle />` and `<AudioToggle />` controls, consolidating visual hierarchy into a unified primary header.
-  - Streamlined workstation ribbon into a sleek 36px (`h-9`) sub-strip dedicated exclusively to workspace breadcrumbs and view layout presets.
-- **⚡ 4K 60FPS Downloader 10% Freeze Elimination (`turbo-downloader.ts`, `api-gateway.ts`)**:
-  - Corrected YouTube User-Agent selection: mapped `c=ANDROID` directly to the Android mobile YouTube client UA, preventing CDN 403 Forbidden resets on Android streams.
-  - Enabled native binary arraybuffer handling (`responseType: "arraybuffer"`) in `CapacitorHttp` with safe `ArrayBuffer` conversion.
-  - Implemented an explicit 15-second hard timeout controller on stream fallback with clean state reset and retry prompts.
-  - Enforced strict resolution lock (zero silent quality downgrades, preserving 4K/2K streams and `[4K 60FPS].mp4` tags).
-- **📱 Multi-Architecture Android APK Matrix (`app-download-modal.tsx`)**:
-  - Added an interactive 4-column matrix detailing Universal, ARM64-v8a, ARMeabi-v7a, and x86_64 binaries (`11.99 MB` each, Target SDK 36 verified).
-  - Updated app download modal with direct APK downloads, chipset compatibility details, and security audit badges.
-- **🎛️ Tool Grid Standby vs Online Status Indicators (`tool-grid.tsx`)**:
-  - Added informative tooltips explaining WASM engine on-demand boot vs instant WebAudio DSP execution.
+- **🎬 Universal Media Downloader & Multi-Platform Muxer Engine (`universal-resolver.ts`, `downloader.ts`)**:
+  - **YouTube 4K 60FPS Adaptive Muxing**: Strict resolution lock guarantees real 3840×2160 downloads with zero silent downgrades to 360p. Zero-RAM Android hardware `MediaMuxer` routing directly into `Movies/ZenoDeck`.
+  - **Reddit Split-Audio DASH Probing & Muxing (`reddit.ts`)**: Probes candidate DASH audio streams (`DASH_AUDIO_128.mp4`, `DASH_audio.mp4`) and dual-muxes with video so Reddit downloads always have sound.
+  - **HLS (`.m3u8`) Segment Fetcher & Remuxer (`downloader.ts`)**: Concurrently downloads segments into OPFS and remuxes `.ts` into standard `.mp4` containers via FFmpeg stream copy.
+  - **TikTok & Social Carousels**: 1080p watermark-free TikTok videos + photo albums; multi-item Instagram Reels/Carousels and Twitter multi-media posts.
+- **✂️ Lossless Pre-Download Time-Range Clipper (`turbo-downloader.ts`)**:
+  - Precision trimming (`[startTime, endTime]`) with quick presets (`0–30s`, `0–60s`, `30–60s`) and custom timestamp inputs.
+  - Injects `-ss` / `-to` stream copy flags during muxing for instant keyframe clipping with zero quality loss.
+- **📊 3-Stage Split Telemetry HUD & Non-Destructive Pause/Resume**:
+  - Independent telemetry progress bars for Video Track, Audio Track, and Muxing status with real-time throughput metrics.
+  - `🛡️ RAM-Safe OPFS` active status badge confirming file chunks buffer safely into Origin Private File System.
+  - Non-destructive pause/resume retaining downloaded chunks in-memory or on-disk.
+- **📱 Android Native System Share Intent (`ACTION_SEND`)**:
+  - Registered `android.intent.action.SEND` for `text/plain` in `AndroidManifest.xml` and `MainActivity.java`.
+  - Seamless 1-tap "Share to ZenoDeck" from any Android app (YouTube, TikTok, Instagram, Reddit, X) auto-opens the app and resolves the link.
+- **⚡ 1-Tap Post-Download Deck Actions**:
+  - Completion card shortcuts `[⌨️ Send to ZenoTap]` to attach media to custom keyboard keys and `[🎧 Open in 8D Studio]` for spatial audio processing.
+- **🖥️ Desktop Workstation Top Bar Unification & Universal Mobile Responsive Overhaul**:
+  - Consolidated duplicate header controls, streamlined workstation ribbon, and eliminated mobile FAB button overlap.
+  - Scaled native ZenoTap keyboard across small phones (`values-sw320dp`), standard phones, tablets (`values-sw600dp`), and landscape mode (`values-land`).
+- **📦 Multi-Architecture Android APK Release Suite**:
+  - Optimized signed release APKs (`app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`, `app-universal-release.apk`) shrunk to `11.99 MB` with R8 and ProGuard.
 
 ---
 

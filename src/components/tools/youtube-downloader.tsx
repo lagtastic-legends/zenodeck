@@ -32,6 +32,10 @@ import {
   Search,
   Eye,
   FileCode,
+  Scissors,
+  HardDrive,
+  Headphones,
+  Send,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { getClipboardText } from "@/lib/clipboard";
@@ -49,6 +53,7 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { useUIAudio } from "@/hooks/useUIAudio";
 import { nativeSave } from "@/lib/native-save";
 import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { acquireWakeLock, releaseWakeLock } from "@/lib/wake-lock";
 import {
   extractYouTubeId,
   formatBytes,
@@ -60,9 +65,12 @@ import {
 } from "@/lib/youtube/innertube";
 import {
   downloadYouTubeStream,
+  createPauseController,
+  type PauseController,
   type TurboProgress,
   type TurboDownloadResult,
 } from "@/lib/youtube/turbo-downloader";
+
 import {
   extractPlaylistId,
   resolveYouTubePlaylist,
@@ -107,6 +115,53 @@ export function YouTubeDownloader() {
   const [progress, setProgress] = useState<TurboProgress | null>(null);
   const [downloadResult, setDownloadResult] = useState<TurboDownloadResult | null>(null);
 
+  // Time-Range Clipper & Pause/Resume State
+  const [isClipEnabled, setIsClipEnabled] = useState(false);
+  const [clipStartTime, setClipStartTime] = useState("00:00");
+  const [clipEndTime, setClipEndTime] = useState("");
+  const [isPaused, setIsPaused] = useState(false);
+  const pauseControllerRef = useRef<PauseController | null>(null);
+
+  const handleTogglePause = () => {
+    if (!pauseControllerRef.current) return;
+    if (isPaused) {
+      pauseControllerRef.current.resume();
+      setIsPaused(false);
+      void haptics.light();
+    } else {
+      pauseControllerRef.current.pause();
+      setIsPaused(true);
+      void haptics.light();
+    }
+  };
+
+  const handleSendToZenoTap = (type: "video" | "audio") => {
+    if (!downloadResult) return;
+    void haptics.success();
+    window.dispatchEvent(
+      new CustomEvent("zenodeck:open-deck-media", {
+        detail: {
+          type,
+          url: downloadResult.url,
+          filename: downloadResult.filename,
+        },
+      })
+    );
+  };
+
+  const handleOpenIn8DStudio = () => {
+    if (!downloadResult) return;
+    void haptics.success();
+    window.dispatchEvent(
+      new CustomEvent("zenodeck:open-8d-audio", {
+        detail: {
+          url: downloadResult.url,
+          filename: downloadResult.filename,
+        },
+      })
+    );
+  };
+
   // Playlist & Batch Queue State
   const [playlistInfo, setPlaylistInfo] = useState<YouTubePlaylistInfo | null>(null);
   const [isPlaylistMode, setIsPlaylistMode] = useState(false);
@@ -117,6 +172,7 @@ export function YouTubeDownloader() {
   const [batchStats, setBatchStats] = useState<QueueStats | null>(null);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const batchControllerRef = useRef<BatchQueueController | null>(null);
+
 
   // View Navigation: "downloader" | "subtitles" | "vault"
   const [activeViewTab, setActiveViewTab] = useState<"downloader" | "subtitles" | "vault">("downloader");
@@ -415,6 +471,36 @@ export function YouTubeDownloader() {
     }
   };
 
+  // Listen for native Android ACTION_SEND shared URL event and auto-resolve
+  useEffect(() => {
+    const processSharedUrl = (url: string) => {
+      if (!url) return;
+      const cleanUrl = url.trim();
+      setInputUrl(cleanUrl);
+      void handleResolve(cleanUrl);
+    };
+
+    if (typeof window !== "undefined") {
+      const pendingUrl = (window as any).__zenodeck_pending_shared_url;
+      if (pendingUrl) {
+        (window as any).__zenodeck_pending_shared_url = null;
+        processSharedUrl(pendingUrl);
+      }
+
+      const onSharedUrl = (e: any) => {
+        const url = e?.detail?.url;
+        if (url) {
+          processSharedUrl(url);
+        }
+      };
+
+      window.addEventListener("zenodeck:shared-url", onSharedUrl);
+      return () => {
+        window.removeEventListener("zenodeck:shared-url", onSharedUrl);
+      };
+    }
+  }, []);
+
   // Handle Turbo Download
   const handleStartDownload = async () => {
     if (!videoInfo || !selectedQuality) return;
@@ -435,11 +521,13 @@ export function YouTubeDownloader() {
       setIsDownloading(true);
       clearResult();
       void haptics.medium();
+      void acquireWakeLock();
       abortControllerRef.current = new AbortController();
 
       try {
         const result = await downloadUniversalMedia(universalMedia, chosenUniversalOpt, {
           ffmpegEngine: engine,
+          clipRange: isClipEnabled && (clipStartTime || clipEndTime) ? { startTime: clipStartTime, endTime: clipEndTime } : undefined,
           onProgress: (p) => {
             setProgress({
               phase: p.phase as any,
@@ -483,10 +571,12 @@ export function YouTubeDownloader() {
           playError();
         }
       } finally {
+        void releaseWakeLock();
         setIsDownloading(false);
       }
       return;
     }
+
 
     const isDirectFastPath =
       (!selectedQuality.isAudioOnly && !selectedQuality.audioFormat && Boolean(selectedQuality.videoFormat)) ||
@@ -505,6 +595,9 @@ export function YouTubeDownloader() {
     setIsDownloading(true);
     clearResult();
     void haptics.medium();
+    void acquireWakeLock();
+    pauseControllerRef.current = createPauseController();
+    setIsPaused(false);
 
     abortControllerRef.current = new AbortController();
 
@@ -654,6 +747,8 @@ export function YouTubeDownloader() {
         thumbnailUrl: videoInfo.thumbnailUrl,
         engine: activeEngine,
         maxParallelWorkers: workersCount,
+        clipRange: isClipEnabled && (clipStartTime || clipEndTime) ? { startTime: clipStartTime, endTime: clipEndTime } : undefined,
+        pauseController: pauseControllerRef.current || undefined,
         onProgress: (p) => {
           if (p.downloadedBytes > 0 && stallWatchdogTimer) {
             clearTimeout(stallWatchdogTimer);
@@ -726,11 +821,15 @@ export function YouTubeDownloader() {
         }
       }
     } finally {
+      void releaseWakeLock();
+      pauseControllerRef.current = null;
+      setIsPaused(false);
       if (stallWatchdogTimer) clearTimeout(stallWatchdogTimer);
       if (!didFallback) {
         setIsDownloading(false);
       }
     }
+
   };
 
   // Batch Download Handlers
@@ -1650,7 +1749,86 @@ export function YouTubeDownloader() {
               </div>
             </div>
 
-            {/* Download Button or Progress HUD */}
+            {/* Pre-Download Time-Range Clipper */}
+            <div className="panel-hud rounded-xl border border-border/70 bg-card/30 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsClipEnabled((prev) => !prev)}
+                  className="flex items-center gap-2 text-xs font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Scissors className={`size-3.5 ${isClipEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                  <span>Pre-Download Clip Range (Lossless Trim)</span>
+                  <span className={`rounded-md px-1.5 py-0.5 font-mono text-[9px] uppercase font-bold ${
+                    isClipEnabled ? "bg-primary/20 text-primary border border-primary/30" : "bg-card/60 text-muted-foreground"
+                  }`}>
+                    {isClipEnabled ? "ACTIVE" : "OPTIONAL"}
+                  </span>
+                </button>
+                {isClipEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClipStartTime("00:00");
+                      setClipEndTime("");
+                      setIsClipEnabled(false);
+                    }}
+                    className="font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              {isClipEnabled && (
+                <div className="pt-1.5 space-y-2">
+                  <div className="grid grid-cols-2 gap-2 font-mono text-xs">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground block mb-1">Start Time (mm:ss)</label>
+                      <input
+                        type="text"
+                        value={clipStartTime}
+                        onChange={(e) => setClipStartTime(e.target.value)}
+                        placeholder="00:00"
+                        className="w-full rounded-lg border border-border/70 bg-background/60 px-2.5 py-1.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground block mb-1">End Time (mm:ss)</label>
+                      <input
+                        type="text"
+                        value={clipEndTime}
+                        onChange={(e) => setClipEndTime(e.target.value)}
+                        placeholder={videoInfo?.durationFormatted || "00:30"}
+                        className="w-full rounded-lg border border-border/70 bg-background/60 px-2.5 py-1.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-muted-foreground">Quick Presets:</span>
+                    {[
+                      { label: "0–30s", start: "00:00", end: "00:30" },
+                      { label: "0–60s", start: "00:00", end: "01:00" },
+                      { label: "30s–60s", start: "00:30", end: "01:00" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => {
+                          setClipStartTime(preset.start);
+                          setClipEndTime(preset.end);
+                        }}
+                        className="rounded-md border border-border/60 bg-card/60 px-2 py-0.5 font-mono text-[9px] text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Download Button or 3-Stage Progress HUD */}
             {!isDownloading ? (
               <button
                 type="button"
@@ -1666,7 +1844,7 @@ export function YouTubeDownloader() {
                   <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
                     <div className="inline-flex items-center gap-1.5">
                       <Music className="size-4 shrink-0" />
-                      <span>EXTRACT AUDIO</span>
+                      <span>{isClipEnabled ? "EXTRACT AUDIO CLIP" : "EXTRACT AUDIO"}</span>
                     </div>
                     <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
                       <span>{selectedQuality?.badge}</span>
@@ -1678,7 +1856,7 @@ export function YouTubeDownloader() {
                   <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
                     <div className="inline-flex items-center gap-1.5">
                       <Download className="size-4 shrink-0" />
-                      <span>START TURBO DOWNLOAD</span>
+                      <span>{isClipEnabled ? "START TURBO CLIP DOWNLOAD" : "START TURBO DOWNLOAD"}</span>
                     </div>
                     <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
                       <span>{selectedQuality?.badge || "4K"}</span>
@@ -1689,45 +1867,77 @@ export function YouTubeDownloader() {
                 )}
               </button>
             ) : (
+              /* 3-Stage Split Telemetry HUD */
               <div
-                className={`panel-hud rounded-2xl border p-5 space-y-4 shadow-elevation2 ${
+                className={`panel-hud rounded-2xl border p-4 sm:p-5 space-y-4 shadow-elevation2 ${
                   selectedQuality?.isAudioOnly
-                    ? "border-violet-500/40 bg-card/80"
-                    : "border-red-500/40 bg-card/80"
+                    ? "border-violet-500/40 bg-card/85"
+                    : "border-red-500/40 bg-card/85"
                 }`}
               >
-                <div className="flex items-center justify-between">
+                {/* Header & Controls */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-border/40 pb-3">
                   <div className="flex items-center gap-2">
                     <span className="relative flex size-3">
                       <span
                         className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                          selectedQuality?.isAudioOnly ? "bg-violet-400" : "bg-red-400"
+                          isPaused
+                            ? "bg-amber-400"
+                            : selectedQuality?.isAudioOnly
+                            ? "bg-violet-400"
+                            : "bg-red-400"
                         }`}
                       />
                       <span
                         className={`relative inline-flex rounded-full size-3 ${
-                          selectedQuality?.isAudioOnly ? "bg-violet-500" : "bg-red-500"
+                          isPaused
+                            ? "bg-amber-500"
+                            : selectedQuality?.isAudioOnly
+                            ? "bg-violet-500"
+                            : "bg-red-500"
                         }`}
                       />
                     </span>
                     <span className="font-display text-sm font-bold text-foreground">
-                      {progress?.phase === "muxing"
+                      {isPaused
+                        ? "DOWNLOAD PAUSED"
+                        : progress?.phase === "muxing"
                         ? selectedQuality?.isAudioOnly
                           ? "MASTERING AUDIO IN WEBASSEMBLY…"
-                          : "PACKAGING STREAM IN WEBASSEMBLY…"
+                          : "PACKAGING STREAMS (STAGE 3/3)…"
                         : selectedQuality?.isAudioOnly
                         ? "TURBO DOWNLOADING AUDIO TRACK…"
-                        : "TURBO DOWNLOADING 4K STREAMS…"}
+                        : "ACQUIRING MULTI-STREAM 4K ASSETS…"}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    {progress && progress.speedMbps > 0 && (
+                  {/* Actions & Badges */}
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {/* RAM-Safe OPFS Badge */}
+                    <div className="flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[9px] font-bold text-emerald-400">
+                      <HardDrive className="size-2.5 text-emerald-400" />
+                      <span>RAM-SAFE OPFS</span>
+                    </div>
+
+                    {/* Speed Gauge */}
+                    {progress && progress.speedMbps > 0 && !isPaused && (
                       <div className="flex items-center gap-1 font-mono text-xs font-bold text-amber-400">
                         <Zap className="size-3.5 fill-amber-400" />
                         <span>{progress.speedMbps} MB/s</span>
                       </div>
                     )}
+
+                    {/* Pause / Resume Button */}
+                    <button
+                      type="button"
+                      onClick={handleTogglePause}
+                      className="flex items-center gap-1 rounded-lg border border-border/70 bg-card/60 px-2.5 py-1 font-mono text-[10px] font-bold text-foreground hover:bg-card/90 cursor-pointer transition-all"
+                    >
+                      {isPaused ? <Play className="size-3 text-emerald-400 fill-emerald-400" /> : <Pause className="size-3 text-amber-400" />}
+                      <span>{isPaused ? "Resume" : "Pause"}</span>
+                    </button>
+
+                    {/* Cancel Button */}
                     <button
                       type="button"
                       onClick={handleCancelDownload}
@@ -1738,10 +1948,73 @@ export function YouTubeDownloader() {
                   </div>
                 </div>
 
-                {/* Progress bar */}
+                {/* 3-Stage Progress Step Indicator */}
+                <div className="grid grid-cols-3 gap-2 font-mono text-[10px]">
+                  {/* Step 1: Video */}
+                  <div className={`p-2 rounded-lg border transition-all ${
+                    (progress?.stage?.current || 1) === 1
+                      ? "border-red-500/50 bg-red-500/10 text-foreground"
+                      : (progress?.stage?.current || 1) > 1
+                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                      : "border-border/60 bg-card/40 text-muted-foreground opacity-60"
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold">1. Video Track</span>
+                      <span>{progress?.stage?.videoProgress ?? progress?.progress ?? 0}%</span>
+                    </div>
+                    <div className="h-1 w-full rounded-full bg-border/60 overflow-hidden">
+                      <div
+                        className="h-full bg-red-500 transition-all duration-200"
+                        style={{ width: `${progress?.stage?.videoProgress ?? progress?.progress ?? 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Step 2: Audio */}
+                  <div className={`p-2 rounded-lg border transition-all ${
+                    (progress?.stage?.current || 1) === 2
+                      ? "border-violet-500/50 bg-violet-500/10 text-foreground"
+                      : (progress?.stage?.current || 1) > 2
+                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                      : "border-border/60 bg-card/40 text-muted-foreground opacity-60"
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold">2. Audio Track</span>
+                      <span>{selectedQuality?.isAudioOnly ? progress?.progress : (progress?.stage?.audioProgress ?? 0)}%</span>
+                    </div>
+                    <div className="h-1 w-full rounded-full bg-border/60 overflow-hidden">
+                      <div
+                        className="h-full bg-violet-500 transition-all duration-200"
+                        style={{ width: `${selectedQuality?.isAudioOnly ? progress?.progress : (progress?.stage?.audioProgress ?? 0)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Step 3: Muxing */}
+                  <div className={`p-2 rounded-lg border transition-all ${
+                    progress?.phase === "muxing"
+                      ? "border-amber-500/50 bg-amber-500/10 text-foreground"
+                      : progress?.phase === "complete"
+                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                      : "border-border/60 bg-card/40 text-muted-foreground opacity-60"
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold">3. Muxing</span>
+                      <span>{progress?.phase === "muxing" ? "Active" : progress?.phase === "complete" ? "100%" : "Idle"}</span>
+                    </div>
+                    <div className="h-1 w-full rounded-full bg-border/60 overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500 transition-all duration-200"
+                        style={{ width: progress?.phase === "muxing" ? "75%" : progress?.phase === "complete" ? "100%" : "0%" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overall Progress Bar */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                    <span>{progress?.statusMessage || "Downloading chunks…"}</span>
+                    <span>{progress?.statusMessage || "Streaming chunks…"}</span>
                     <span className="font-bold text-foreground">{progress?.progress || 0}%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-border/60">
@@ -1758,22 +2031,22 @@ export function YouTubeDownloader() {
                   </div>
                 </div>
 
-                {/* Telemetry metrics */}
+                {/* Telemetry Metrics */}
                 <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/50 text-center font-mono text-[10px]">
                   <div>
-                    <span className="text-muted-foreground block">Downloaded</span>
+                    <span className="text-muted-foreground block">Transferred</span>
                     <span className="font-bold text-foreground">
                       {formatBytes(progress?.downloadedBytes || 0)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Active Threads</span>
+                    <span className="text-muted-foreground block">Channels</span>
                     <span className="font-bold text-amber-300">
                       {progress?.activeThreads || workersCount} Workers
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Estimated Time</span>
+                    <span className="text-muted-foreground block">Estimated ETA</span>
                     <span className="font-bold text-foreground">
                       {progress?.etaSeconds && progress.etaSeconds > 0 ? `${progress.etaSeconds}s` : "Calculating…"}
                     </span>
@@ -1781,6 +2054,7 @@ export function YouTubeDownloader() {
                 </div>
               </div>
             )}
+
           </motion.div>
         )}
 
@@ -1856,14 +2130,32 @@ export function YouTubeDownloader() {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2.5 pt-2">
                   <button
                     type="button"
                     onClick={handleSaveToDevice}
-                    className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 px-5 font-display text-xs font-bold text-white shadow-xs hover:bg-violet-500 transition-all cursor-pointer"
+                    className="w-full sm:flex-1 min-w-[180px] flex items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 px-5 font-display text-xs font-bold text-white shadow-xs hover:bg-violet-500 transition-all cursor-pointer"
                   >
                     <Download className="size-4" />
                     <span>SAVE AUDIO TO DEVICE</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendToZenoTap("audio")}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/15 py-3 px-4 font-display text-xs font-bold text-violet-300 hover:bg-violet-500/25 transition-all cursor-pointer"
+                  >
+                    <Send className="size-3.5" />
+                    <span>Send to ZenoTap</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenIn8DStudio}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 py-3 px-4 font-display text-xs font-bold text-indigo-300 hover:bg-indigo-500/25 transition-all cursor-pointer"
+                  >
+                    <Headphones className="size-3.5" />
+                    <span>Open in 8D Studio</span>
                   </button>
 
                   <button
@@ -1910,14 +2202,32 @@ export function YouTubeDownloader() {
                   </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2.5 pt-2">
                   <button
                     type="button"
                     onClick={handleSaveToDevice}
-                    className="w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 px-5 font-display text-xs font-bold text-white shadow-xs hover:bg-emerald-500 transition-all cursor-pointer"
+                    className="w-full sm:flex-1 min-w-[180px] flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 px-5 font-display text-xs font-bold text-white shadow-xs hover:bg-emerald-500 transition-all cursor-pointer"
                   >
                     <Download className="size-4" />
                     <span>SAVE TO DEVICE</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendToZenoTap("video")}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 py-3 px-4 font-display text-xs font-bold text-emerald-300 hover:bg-emerald-500/25 transition-all cursor-pointer"
+                  >
+                    <Send className="size-3.5" />
+                    <span>Send to ZenoTap</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenIn8DStudio}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 py-3 px-4 font-display text-xs font-bold text-indigo-300 hover:bg-indigo-500/25 transition-all cursor-pointer"
+                  >
+                    <Headphones className="size-3.5" />
+                    <span>Open in 8D Studio</span>
                   </button>
 
                   <button
@@ -1930,6 +2240,7 @@ export function YouTubeDownloader() {
                   </button>
                 </div>
               </div>
+
             )}
           </motion.div>
         )}

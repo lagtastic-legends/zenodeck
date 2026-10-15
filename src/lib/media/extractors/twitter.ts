@@ -90,15 +90,103 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
     throw new Error("Could not resolve video from this tweet. Ensure the tweet contains a video and is public.");
   }
 
-  // Extract video media
+  // Extract media items
   const mediaList: any[] = tweetData.media_extended || [];
+  const author = tweetData.user_name || "X User";
+  const authorHandle = tweetData.user_screen_name ? `@${tweetData.user_screen_name}` : undefined;
+  const title = (tweetData.text || `${author}'s Post on X`).slice(0, 120).trim();
+
+  // Multi-item tweet (Carousel / Multi-Photo / Mixed)
+  if (mediaList.length > 1) {
+    const items = mediaList.map((m: any, idx: number) => {
+      const isVideo = m.type === "video" || m.type === "gif";
+      const mediaUrl = m.url || m.video_url || m.image_url;
+      return {
+        id: `${tweetId}_${idx + 1}`,
+        type: isVideo ? ("video" as const) : ("image" as const),
+        url: mediaUrl,
+        thumbnailUrl: m.thumbnail_url || mediaUrl,
+        title: `${title} - Slide ${idx + 1}`,
+        qualities: [
+          {
+            label: `${isVideo ? "HD Video" : "HD Photo"} (${idx + 1}/${mediaList.length})`,
+            resolution: isVideo ? "HD" : "Original",
+            ext: isVideo ? "mp4" : "jpg",
+            downloadUrl: mediaUrl,
+            badge: isVideo ? "VIDEO" : "IMAGE",
+          },
+        ],
+      };
+    });
+
+    const primaryItem = items[0];
+    return {
+      id: tweetId,
+      platform: "twitter",
+      url: cleanUrl,
+      title,
+      author,
+      authorHandle,
+      thumbnailUrl: primaryItem.thumbnailUrl || (tweetData.mediaURLs && tweetData.mediaURLs[0]) || "",
+      qualities: primaryItem.qualities || [],
+      isCarousel: true,
+      items,
+    };
+  }
+
+  // Single Photo Tweet
+  if (mediaList.length === 1 && mediaList[0].type === "image") {
+    const imgUrl = mediaList[0].url;
+    return {
+      id: tweetId,
+      platform: "twitter",
+      url: cleanUrl,
+      title,
+      author,
+      authorHandle,
+      thumbnailUrl: imgUrl,
+      qualities: [
+        {
+          label: "X / Twitter HD Photo (JPG)",
+          resolution: "Original",
+          ext: "jpg",
+          downloadUrl: imgUrl,
+          badge: "IMAGE",
+        },
+      ],
+    };
+  }
+
+  // Video or GIF Tweet
   const videoMedia = mediaList.find((m: any) => m.type === "video" || m.type === "gif") || {
     url: tweetData.video_url || (tweetData.mediaURLs && tweetData.mediaURLs[0]),
     thumbnail_url: tweetData.mediaURLs && tweetData.mediaURLs[0],
   };
 
   if (!videoMedia || !videoMedia.url) {
-    throw new Error("This tweet does not appear to contain a downloadable video or GIF.");
+    // If only image URLs available in fallback
+    if (tweetData.mediaURLs && tweetData.mediaURLs.length > 0) {
+      const imgUrl = tweetData.mediaURLs[0];
+      return {
+        id: tweetId,
+        platform: "twitter",
+        url: cleanUrl,
+        title,
+        author,
+        authorHandle,
+        thumbnailUrl: imgUrl,
+        qualities: [
+          {
+            label: "X / Twitter Photo (JPG)",
+            resolution: "Original",
+            ext: "jpg",
+            downloadUrl: imgUrl,
+            badge: "IMAGE",
+          },
+        ],
+      };
+    }
+    throw new Error("This tweet does not appear to contain downloadable media.");
   }
 
   const qualities: UniversalQualityOption[] = [];
@@ -122,9 +210,6 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
     badge: "MP3",
   });
 
-  const author = tweetData.user_name || "X User";
-  const authorHandle = tweetData.user_screen_name ? `@${tweetData.user_screen_name}` : undefined;
-  const title = (tweetData.text || `${author}'s Post on X`).slice(0, 120).trim();
   const thumbnailUrl = videoMedia.thumbnail_url || (tweetData.mediaURLs && tweetData.mediaURLs[0]) || "";
   const duration = videoMedia.duration_millis ? Math.round(videoMedia.duration_millis / 1000) : undefined;
 

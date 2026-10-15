@@ -1,5 +1,6 @@
 package com.omnitool.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -16,6 +17,8 @@ import com.omnitool.app.keyboard.ZenoDeckKeyboardBridgePlugin;
 import com.omnitool.app.media.ZenoMedia3Plugin;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "ZenoDeckNative";
@@ -103,5 +106,61 @@ public class MainActivity extends BridgeActivity {
                 webView.setNestedScrollingEnabled(true);
             }
         }
+
+        handleSendIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleSendIntent(intent);
+    }
+
+    private void handleSendIntent(Intent intent) {
+        if (intent == null) return;
+        String action = intent.getAction();
+        String type = intent.getType();
+        if (Intent.ACTION_SEND.equals(action) && type != null && "text/plain".equals(type)) {
+            String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+            if (sharedText != null && !sharedText.trim().isEmpty()) {
+                String extractedUrl = extractUrl(sharedText);
+                if (extractedUrl != null && !extractedUrl.isEmpty()) {
+                    dispatchSharedUrlToWebView(extractedUrl);
+                }
+            }
+        }
+    }
+
+    private String extractUrl(String text) {
+        if (text == null) return null;
+        Pattern pattern = Pattern.compile("https?://\\S+");
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            return matcher.group(0);
+        }
+        return text.trim();
+    }
+
+    private void dispatchSharedUrlToWebView(final String url) {
+        if (bridge == null || bridge.getWebView() == null) return;
+        final WebView webView = bridge.getWebView();
+        final String escapedUrl = url.replace("'", "\\'");
+        final String js = "window.__zenodeck_pending_shared_url = '" + escapedUrl + "'; " +
+                          "window.dispatchEvent(new CustomEvent('zenodeck:shared-url', { detail: { url: '" + escapedUrl + "' } }));";
+        webView.post(() -> {
+            try {
+                webView.evaluateJavascript(js, null);
+            } catch (Exception e) {
+                Log.e(TAG, "Error dispatching shared URL immediately", e);
+            }
+        });
+        webView.postDelayed(() -> {
+            try {
+                webView.evaluateJavascript(js, null);
+            } catch (Exception e) {
+                Log.e(TAG, "Error dispatching shared URL post-delayed", e);
+            }
+        }, 1500);
     }
 }

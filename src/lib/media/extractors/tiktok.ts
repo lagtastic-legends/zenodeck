@@ -61,11 +61,70 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
 
   const d = dataObj;
   const qualities: UniversalQualityOption[] = [];
+  const author = d.author?.nickname || d.author?.unique_id || "TikTok Creator";
+  const authorHandle = d.author?.unique_id ? `@${d.author.unique_id}` : undefined;
+  const title = (d.title || `${author}'s TikTok Video`).trim();
+  const coverUrl = d.cover?.startsWith("http") ? d.cover : d.origin_cover || "";
 
-  // HD No Watermark (1080p)
+  // Check for TikTok Slideshow / Photo Album (Carousel)
+  if (Array.isArray(d.images) && d.images.length > 0) {
+    const items = d.images.map((imgUrl: string, idx: number) => {
+      const fullUrl = imgUrl.startsWith("http") ? imgUrl : `https://www.tikwm.com${imgUrl}`;
+      return {
+        id: `${d.id || "slide"}_${idx + 1}`,
+        type: "image" as const,
+        url: fullUrl,
+        thumbnailUrl: fullUrl,
+        title: `${title} - Slide ${idx + 1}`,
+        qualities: [
+          {
+            label: `HD Photo Slide ${idx + 1}`,
+            resolution: "Original",
+            ext: "jpg",
+            downloadUrl: fullUrl,
+            badge: "IMAGE",
+          },
+        ],
+      };
+    });
+
+    const musicUrl = d.music
+      ? d.music.startsWith("http")
+        ? d.music
+        : `https://www.tikwm.com${d.music}`
+      : undefined;
+
+    if (musicUrl) {
+      qualities.push({
+        label: `Background Music (${d.music_info?.title || "MP3"})`,
+        resolution: "Audio",
+        ext: "mp3",
+        isAudioOnly: true,
+        downloadUrl: musicUrl,
+        badge: "MP3",
+      });
+    }
+
+    return {
+      id: d.id || String(Date.now()),
+      platform: "tiktok",
+      url: cleanUrl,
+      title,
+      author,
+      authorHandle,
+      thumbnailUrl: items[0]?.thumbnailUrl || coverUrl,
+      duration: d.duration,
+      viewCount: d.play_count ? String(d.play_count) : undefined,
+      qualities,
+      isCarousel: true,
+      items,
+    };
+  }
+
+  // HD No Watermark (1080p, Highest Priority)
   if (d.hdplay) {
     qualities.push({
-      label: "Full HD Video (No Watermark)",
+      label: "Full HD 1080p Video (No Watermark)",
       resolution: "1080p",
       ext: "mp4",
       fileSize: d.hd_size,
@@ -74,10 +133,10 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
     });
   }
 
-  // Standard No Watermark (720p, Default)
+  // Standard No Watermark (720p HD)
   if (d.play) {
     qualities.push({
-      label: "HD Video (No Watermark)",
+      label: d.hdplay ? "HD 720p Video (No Watermark)" : "HD Video (No Watermark)",
       resolution: "720p",
       ext: "mp4",
       fileSize: d.size,
@@ -86,10 +145,32 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
     });
   }
 
-  // Watermarked Original
+  // MP3 Audio Track (Direct)
+  const musicUrl = d.music
+    ? d.music.startsWith("http")
+      ? d.music
+      : `https://www.tikwm.com${d.music}`
+    : d.play
+    ? d.play.startsWith("http")
+      ? d.play
+      : `https://www.tikwm.com${d.play}`
+    : null;
+
+  if (musicUrl) {
+    qualities.push({
+      label: `Original Audio Track (${d.music_info?.title ? d.music_info.title.slice(0, 30) : "MP3"})`,
+      resolution: "Audio",
+      ext: "mp3",
+      isAudioOnly: true,
+      downloadUrl: musicUrl,
+      badge: "MP3",
+    });
+  }
+
+  // Watermarked Original (Fallback)
   if (d.wmplay) {
     qualities.push({
-      label: "Standard Video (Original)",
+      label: "Standard Video (Original Watermarked)",
       resolution: "720p",
       ext: "mp4",
       fileSize: d.wm_size,
@@ -97,33 +178,6 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
       badge: "SD",
     });
   }
-
-  // MP3 Audio Track
-  if (d.music) {
-    qualities.push({
-      label: "Original Audio Track (MP3)",
-      resolution: "Audio",
-      ext: "mp3",
-      isAudioOnly: true,
-      downloadUrl: d.music.startsWith("http") ? d.music : `https://www.tikwm.com${d.music}`,
-      badge: "MP3",
-    });
-  } else if (d.play) {
-    // If no direct music stream, fallback to extracting audio from video stream
-    qualities.push({
-      label: "Original Audio Track (MP3)",
-      resolution: "Audio",
-      ext: "mp3",
-      isAudioOnly: true,
-      downloadUrl: d.play.startsWith("http") ? d.play : `https://www.tikwm.com${d.play}`,
-      badge: "MP3",
-    });
-  }
-
-  const author = d.author?.nickname || d.author?.unique_id || "TikTok Creator";
-  const authorHandle = d.author?.unique_id ? `@${d.author.unique_id}` : undefined;
-  const title = (d.title || `${author}'s TikTok Video`).trim();
-  const coverUrl = d.cover?.startsWith("http") ? d.cover : d.origin_cover || "";
 
   return {
     id: d.id || String(Date.now()),

@@ -33,6 +33,15 @@ export interface UniversalQualityOption {
   badge?: string;
 }
 
+export interface UniversalMediaItem {
+  id: string;
+  type: "video" | "image" | "audio";
+  url: string;
+  thumbnailUrl?: string;
+  title?: string;
+  qualities?: UniversalQualityOption[];
+}
+
 export interface UniversalMediaInfo {
   id: string;
   platform: PlatformType;
@@ -45,4 +54,6 @@ export interface UniversalMediaInfo {
   durationFormatted?: string;
   viewCount?: string;
   qualities: UniversalQualityOption[];
+  isCarousel?: boolean;
+  items?: UniversalMediaItem[];
 }

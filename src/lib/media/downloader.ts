@@ -11,6 +11,7 @@ import { getOrInitTurboEngine } from "@/lib/youtube/turbo-downloader";
 import { getYouTubeApiUrl } from "@/lib/youtube/innertube";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { zenoApiFetch, resolveApiUrl } from "@/lib/api-gateway";
+import { isNativeAndroidPlatform, executeNativeAndroidMux } from "./native-media-muxer";
 
 export interface MediaDownloadProgress {
   phase: "downloading" | "muxing" | "saving" | "complete";
@@ -167,6 +168,188 @@ export async function fetchStreamWithProgress(
 }
 
 /**
+ * Resolves relative URLs against a base URL
+ */
+function resolveHlsUrl(relativeOrAbsolute: string, baseUrl: string): string {
+  try {
+    return new URL(relativeOrAbsolute, baseUrl).toString();
+  } catch {
+    return relativeOrAbsolute;
+  }
+}
+
+/**
+ * Downloads and remuxes an HLS (.m3u8) playlist into a complete MP4 stream
+ */
+export async function fetchHlsStreamAndRemux(
+  m3u8Url: string,
+  onProgress?: (completedSegments: number, totalSegments: number) => void,
+  abortSignal?: AbortSignal,
+  ffmpegEngine?: any
+): Promise<Uint8Array> {
+  const directM3u8Url = m3u8Url.startsWith("http") ? m3u8Url : resolveApiUrl(m3u8Url);
+
+  // 1. Fetch the master / media playlist
+  let playlistRes = await zenoApiFetch(directM3u8Url, { signal: abortSignal }).catch(() => null);
+  if (!playlistRes || !playlistRes.ok) {
+    // Try via stream proxy
+    const proxyUrl = resolveApiUrl(`/api/youtube/stream?url=${encodeURIComponent(directM3u8Url)}`);
+    playlistRes = await zenoApiFetch(proxyUrl, { signal: abortSignal });
+  }
+
+  if (!playlistRes || !playlistRes.ok) {
+    throw new Error(`Failed to fetch HLS playlist: HTTP ${playlistRes?.status || "network error"}`);
+  }
+
+  const playlistText = await playlistRes.text();
+  let mediaPlaylistUrl = directM3u8Url;
+  let mediaPlaylistText = playlistText;
+
+  // 2. Check if master playlist containing variants (#EXT-X-STREAM-INF)
+  if (playlistText.includes("#EXT-X-STREAM-INF")) {
+    const lines = playlistText.split(/\r?\n/);
+    let bestBandwidth = -1;
+    let bestUri = "";
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith("#EXT-X-STREAM-INF")) {
+        const bwMatch = line.match(/BANDWIDTH=(\d+)/i);
+        const bandwidth = bwMatch ? parseInt(bwMatch[1], 10) : 0;
+        let j = i + 1;
+        while (j < lines.length && (lines[j].trim().startsWith("#") || lines[j].trim() === "")) {
+          j++;
+        }
+        if (j < lines.length) {
+          const uri = lines[j].trim();
+          if (bandwidth > bestBandwidth && uri) {
+            bestBandwidth = bandwidth;
+            bestUri = uri;
+          }
+        }
+      }
+    }
+
+    if (bestUri) {
+      mediaPlaylistUrl = resolveHlsUrl(bestUri, directM3u8Url);
+      let mediaRes = await zenoApiFetch(mediaPlaylistUrl, { signal: abortSignal }).catch(() => null);
+      if (!mediaRes || !mediaRes.ok) {
+        const proxyMediaUrl = resolveApiUrl(`/api/youtube/stream?url=${encodeURIComponent(mediaPlaylistUrl)}`);
+        mediaRes = await zenoApiFetch(proxyMediaUrl, { signal: abortSignal });
+      }
+      if (mediaRes && mediaRes.ok) {
+        mediaPlaylistText = await mediaRes.text();
+      }
+    }
+  }
+
+  // 3. Extract segment URIs and optional init segment (#EXT-X-MAP)
+  const lines = mediaPlaylistText.split(/\r?\n/);
+  const segmentUrls: string[] = [];
+  let initSegmentUrl: string | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith("#EXT-X-MAP:")) {
+      const uriMatch = line.match(/URI=["']?([^"']+)["']?/i);
+      if (uriMatch && uriMatch[1]) {
+        initSegmentUrl = resolveHlsUrl(uriMatch[1], mediaPlaylistUrl);
+      }
+    } else if (!line.startsWith("#")) {
+      segmentUrls.push(resolveHlsUrl(line, mediaPlaylistUrl));
+    }
+  }
+
+  if (segmentUrls.length === 0) {
+    throw new Error("No media segments found in HLS playlist.");
+  }
+
+  // 4. Concurrently fetch segments with controlled concurrency
+  const CONCURRENCY = 4;
+  const segments: Uint8Array[] = new Array(segmentUrls.length);
+  let totalBytes = 0;
+  let completed = 0;
+
+  // Optional: fetch init segment if present (fMP4)
+  let initBytes: Uint8Array | null = null;
+  if (initSegmentUrl) {
+    try {
+      const initRes = await zenoApiFetch(initSegmentUrl, { signal: abortSignal });
+      if (initRes.ok) {
+        const arrBuf = await initRes.arrayBuffer();
+        initBytes = new Uint8Array(arrBuf);
+        totalBytes += initBytes.length;
+      }
+    } catch {}
+  }
+
+  for (let i = 0; i < segmentUrls.length; i += CONCURRENCY) {
+    if (abortSignal?.aborted) throw new Error("HLS download cancelled.");
+    const batch = segmentUrls.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      batch.map(async (url, idx) => {
+        const segIdx = i + idx;
+        let sRes = await zenoApiFetch(url, { signal: abortSignal }).catch(() => null);
+        if (!sRes || !sRes.ok) {
+          const pUrl = resolveApiUrl(`/api/youtube/stream?url=${encodeURIComponent(url)}`);
+          sRes = await zenoApiFetch(pUrl, { signal: abortSignal });
+        }
+        if (!sRes || !sRes.ok) {
+          throw new Error(`Failed to fetch HLS segment ${segIdx + 1}`);
+        }
+        const buf = await sRes.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        segments[segIdx] = u8;
+        totalBytes += u8.length;
+        completed++;
+        onProgress?.(completed, segmentUrls.length);
+      })
+    );
+  }
+
+  // Assemble all segment chunks
+  const combinedBuffer = new Uint8Array(totalBytes);
+  let offset = 0;
+  if (initBytes) {
+    combinedBuffer.set(initBytes, offset);
+    offset += initBytes.length;
+  }
+  for (const seg of segments) {
+    if (seg) {
+      combinedBuffer.set(seg, offset);
+      offset += seg.length;
+    }
+  }
+
+  // 5. Remux if MPEG-TS into MP4 container
+  const isTs = segmentUrls.some((u) => u.includes(".ts")) ||
+    (combinedBuffer.length > 0 && combinedBuffer[0] === 0x47);
+
+  if (isTs) {
+    try {
+      const engine = await getOrInitTurboEngine(ffmpegEngine);
+      if (engine) {
+        const inTs = `hls_in_${Date.now()}.ts`;
+        const outMp4 = `hls_out_${Date.now()}.mp4`;
+        await engine.writeFile(inTs, combinedBuffer);
+        await engine.exec(["-i", inTs, "-c", "copy", outMp4]);
+        const mp4Data = (await engine.readFile(outMp4)) as Uint8Array;
+        try {
+          await engine.deleteFile(inTs);
+          await engine.deleteFile(outMp4);
+        } catch {}
+        return mp4Data;
+      }
+    } catch (ffmpegErr) {
+      console.warn("FFmpeg remux of HLS MPEG-TS to MP4 failed, returning raw stream:", ffmpegErr);
+    }
+  }
+
+  return combinedBuffer;
+}
+
+/**
  * Universal media downloader for non-YouTube media files
  */
 export async function downloadUniversalMedia(
@@ -176,10 +359,21 @@ export async function downloadUniversalMedia(
     ffmpegEngine?: any;
     onProgress?: (progress: MediaDownloadProgress) => void;
     abortSignal?: AbortSignal;
+    clipRange?: { startTime?: string | number; endTime?: string | number };
   }
 ): Promise<TurboDownloadResult> {
   const onProgress = options?.onProgress || (() => {});
   const safeTitle = media.title.replace(/[^\w\s.-]/g, "_").slice(0, 50).trim() || "media";
+
+  const clipArgs: string[] = [];
+  if (options?.clipRange?.startTime) {
+    clipArgs.push("-ss", String(options.clipRange.startTime));
+  }
+  if (options?.clipRange?.endTime) {
+    clipArgs.push("-to", String(options.clipRange.endTime));
+  }
+  const isClipped = clipArgs.length > 0;
+  const clipSuffix = isClipped ? " [Clip]" : "";
 
   onProgress({
     phase: "downloading",
@@ -187,7 +381,7 @@ export async function downloadUniversalMedia(
     percent: 5,
   });
 
-  // 1. Check if stream requires FFmpeg muxing (e.g. Reddit DASH video + audio)
+  // 1. Check if stream requires FFmpeg or native Android MediaMuxer muxing (e.g. Reddit DASH video + audio)
   if (option.requiresMuxing && option.audioUrl) {
     try {
       onProgress({
@@ -211,7 +405,7 @@ export async function downloadUniversalMedia(
         }),
       ]);
 
-      if (!audioBytes) {
+      if (!audioBytes && !isClipped) {
         // Audio stream unavailable, save video directly
         const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: "video/mp4" });
         const filename = `${safeTitle}.${option.ext}`;
@@ -229,7 +423,35 @@ export async function downloadUniversalMedia(
         };
       }
 
-      // Mux with FFmpeg WASM
+      // Native Android Hardware MediaMuxer Fast Path (zero RAM overhead, unless clipped)
+      if (isNativeAndroidPlatform() && !isClipped) {
+        onProgress({
+          phase: "muxing",
+          message: "Muxing streams via Android hardware MediaMuxer…",
+          percent: 75,
+        });
+        const finalFilename = `${safeTitle}.${option.ext}`;
+        const muxRes = await executeNativeAndroidMux({
+          videoBytes,
+          audioBytes: audioBytes || new Uint8Array(0),
+          outputFilename: finalFilename,
+          mimeType: "video/mp4",
+          onProgress: (msg) => onProgress({ phase: "muxing", message: msg, percent: 80 }),
+        });
+        const finalBlob = new Blob([new Uint8Array(0)], { type: "video/mp4" });
+        onProgress({ phase: "complete", message: "Download and hardware muxing complete!", percent: 100 });
+        return {
+          blob: finalBlob,
+          url: "",
+          filename: finalFilename,
+          fileSizeBytes: muxRes.fileSizeBytes,
+          mimeType: "video/mp4",
+          is4K: false,
+          is60fps: false,
+        };
+      }
+
+      // Web / Desktop FFmpeg WASM Muxing
       onProgress({
         phase: "muxing",
         message: "Muxing video & audio with FFmpeg WebAssembly…",
@@ -258,15 +480,16 @@ export async function downloadUniversalMedia(
       const outV = `out_${Date.now()}.mp4`;
 
       await engine.writeFile(inV, videoBytes);
-      await engine.writeFile(inA, audioBytes);
+      if (audioBytes) await engine.writeFile(inA, audioBytes);
 
       try {
         // Fast stream copy mux
-        await engine.exec(["-i", inV, "-i", inA, "-c", "copy", outV]);
+        await engine.exec(["-i", inV, ...(audioBytes ? ["-i", inA] : []), ...clipArgs, "-c", "copy", outV]);
       } catch {
         // Audio transcode fallback
-        await engine.exec(["-i", inV, "-i", inA, "-c:v", "copy", "-c:a", "aac", outV]);
+        await engine.exec(["-i", inV, ...(audioBytes ? ["-i", inA] : []), ...clipArgs, "-c:v", "copy", "-c:a", "aac", outV]);
       }
+
 
       const outputData = (await engine.readFile(outV)) as Uint8Array;
       try {
@@ -297,12 +520,77 @@ export async function downloadUniversalMedia(
     }
   }
 
-  // 2. Direct single-stream download (TikTok, Instagram, Twitter/X, audio tracks)
+  // 2. Check if stream is an HLS playlist (.m3u8)
+  const isHls = Boolean(
+    option.downloadUrl && (option.downloadUrl.includes(".m3u8") || option.ext === "m3u8")
+  );
+
+  if (isHls) {
+    onProgress({
+      phase: "downloading",
+      message: "Fetching HLS playlist and assembling video segments…",
+      percent: 20,
+    });
+    let hlsBytes: Uint8Array;
+    try {
+      hlsBytes = await fetchHlsStreamAndRemux(
+        option.downloadUrl,
+        (completed, total) => {
+          const pct = total ? Math.min(85, 20 + Math.round((completed / total) * 65)) : 50;
+          onProgress({
+            phase: "downloading",
+            message: `HLS segments: ${completed}/${total || "?"} downloaded…`,
+            percent: pct,
+          });
+        },
+        options?.abortSignal,
+        options?.ffmpegEngine
+      );
+    } catch (hlsErr) {
+      console.warn("Direct HLS assembly failed, trying proxy/yt-dlp fallback:", hlsErr);
+      const fallbackUrl = resolveApiUrl(
+        `/api/media/download?url=${encodeURIComponent(media.url)}&quality=${encodeURIComponent(
+          option.badge || option.resolution || "best"
+        )}&format=mp4`
+      );
+      hlsBytes = await fetchStreamWithProgress(fallbackUrl, (rec, tot) => {
+        const pct = tot ? Math.min(85, 30 + Math.round((rec / tot) * 55)) : 60;
+        onProgress({
+          phase: "downloading",
+          message: `Remuxed stream: ${Math.round(rec / 1024 / 1024)} MB received…`,
+          percent: pct,
+          transferredBytes: rec,
+          totalBytes: tot,
+        });
+      }, options?.abortSignal);
+    }
+
+    const finalBlob = new Blob([hlsBytes.buffer as ArrayBuffer], { type: "video/mp4" });
+    const finalFilename = `${safeTitle}.mp4`;
+    const finalBlobUrl = URL.createObjectURL(finalBlob);
+
+    onProgress({ phase: "saving", message: "Saving assembled MP4 to device…", percent: 90 });
+    await nativeSave(finalBlob, finalFilename);
+    onProgress({ phase: "complete", message: "Download and assembly complete!", percent: 100 });
+
+    return {
+      blob: finalBlob,
+      url: finalBlobUrl,
+      filename: finalFilename,
+      fileSizeBytes: hlsBytes.length,
+      mimeType: "video/mp4",
+      is4K: false,
+      is60fps: false,
+    };
+  }
+
+  // 3. Direct single-stream download (TikTok, Instagram, Twitter/X, audio tracks)
   onProgress({
     phase: "downloading",
     message: `Fetching ${media.platform} ${option.label}…`,
     percent: 25,
   });
+
 
   let bytes: Uint8Array;
   try {

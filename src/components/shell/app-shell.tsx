@@ -290,6 +290,22 @@ export function AppShell() {
       if (params.has("pair")) {
         navigate("keyboard-deck");
       }
+
+      // Android ACTION_SEND shared URL routing: open Universal Downloader
+      if ((window as any).__zenodeck_pending_shared_url) {
+        navigate("youtube-downloader");
+      }
+
+      const handleSharedUrl = (e: any) => {
+        if (e?.detail?.url) {
+          navigate("youtube-downloader");
+        }
+      };
+
+      window.addEventListener("zenodeck:shared-url", handleSharedUrl);
+      return () => {
+        window.removeEventListener("zenodeck:shared-url", handleSharedUrl);
+      };
     }
   }, [navigate]);
 

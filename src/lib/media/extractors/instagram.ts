@@ -74,32 +74,102 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
   }
 
   // Strategy 2: Fast Public SnapInsta / FastDL API Fallback
-  if (!directVideoUrl) {
-    try {
-      const snapApi = `https://api.v1.snapinst.app/api/instagram?url=${encodeURIComponent(cleanUrl)}`;
-      const res = await universalFetch(snapApi, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-          Accept: "application/json",
-        },
-      });
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
+  let carouselItems: Array<{
+    id: string;
+    type: "video" | "image";
+    url: string;
+    thumbnailUrl?: string;
+    title?: string;
+    qualities?: UniversalQualityOption[];
+  }> = [];
+
+  try {
+    const snapApi = `https://api.v1.snapinst.app/api/instagram?url=${encodeURIComponent(cleanUrl)}`;
+    const res = await universalFetch(snapApi, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        Accept: "application/json",
+      },
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (Array.isArray(data?.media) && data.media.length > 1) {
+        carouselItems = data.media.map((m: any, idx: number) => {
+          const isVideo = m.type === "video" || m.url?.includes(".mp4");
+          return {
+            id: `${shortcode}_${idx + 1}`,
+            type: isVideo ? ("video" as const) : ("image" as const),
+            url: m.url,
+            thumbnailUrl: m.thumbnail || m.url,
+            title: `${caption} - Slide ${idx + 1}`,
+            qualities: [
+              {
+                label: `${isVideo ? "HD Video" : "HD Photo"} Slide ${idx + 1}`,
+                resolution: isVideo ? "1080p" : "Original",
+                ext: isVideo ? "mp4" : "jpg",
+                downloadUrl: m.url,
+                badge: isVideo ? "VIDEO" : "IMAGE",
+              },
+            ],
+          };
+        });
+      }
+
+      if (!directVideoUrl) {
         if (data?.url) {
           directVideoUrl = data.url;
         } else if (Array.isArray(data?.media) && data.media[0]?.url) {
           directVideoUrl = data.media[0].url;
         }
-        if (data?.title) caption = data.title;
-        if (data?.thumbnail) thumbnailUrl = data.thumbnail;
       }
-    } catch (fbErr) {
-      console.warn("Instagram secondary provider failed:", fbErr);
+      if (data?.title && (!caption || caption === "Instagram Reel")) caption = data.title;
+      if (data?.thumbnail && !thumbnailUrl) thumbnailUrl = data.thumbnail;
     }
+  } catch (fbErr) {
+    console.warn("Instagram secondary provider failed:", fbErr);
+  }
+
+  // If carousel items were found, return carousel payload
+  if (carouselItems.length > 0) {
+    const primaryItem = carouselItems[0];
+    return {
+      id: shortcode,
+      platform: "instagram",
+      url: cleanUrl,
+      title: caption || `${author}'s Instagram Carousel`,
+      author,
+      authorHandle,
+      thumbnailUrl: primaryItem.thumbnailUrl || thumbnailUrl,
+      qualities: primaryItem.qualities || [],
+      isCarousel: true,
+      items: carouselItems,
+    };
   }
 
   if (!directVideoUrl) {
+    // If we have a thumbnail/image URL from embed, offer it as photo download
+    if (thumbnailUrl) {
+      return {
+        id: shortcode,
+        platform: "instagram",
+        url: cleanUrl,
+        title: caption || `${author}'s Instagram Photo`,
+        author,
+        authorHandle,
+        thumbnailUrl,
+        qualities: [
+          {
+            label: "Instagram HD Photo (JPG)",
+            resolution: "Original",
+            ext: "jpg",
+            downloadUrl: thumbnailUrl,
+            badge: "IMAGE",
+          },
+        ],
+      };
+    }
+
     throw new Error(
       "Could not extract video stream from this Instagram link. The post may be private or restricted."
     );
@@ -134,3 +204,4 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
     qualities,
   };
 }
+
