@@ -14,9 +14,9 @@ import fs from "fs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Expose-Headers": "Content-Disposition, Content-Length, Content-Type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
+  "Access-Control-Allow-Headers": "Content-Type, Range, Authorization, User-Agent, X-Requested-With, Accept",
+  "Access-Control-Expose-Headers": "Content-Disposition, Content-Length, Content-Type, Content-Range, Accept-Ranges",
 };
 
 export const dynamic = "force-dynamic";

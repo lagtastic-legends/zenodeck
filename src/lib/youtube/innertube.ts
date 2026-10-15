@@ -28,34 +28,32 @@ export async function universalFetch(
   text: () => Promise<string>;
 }> {
   if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
-    try {
-      let dataPayload: any = undefined;
-      if (options?.body) {
-        try {
-          dataPayload = JSON.parse(options.body);
-        } catch {
-          dataPayload = options.body;
-        }
+    let dataPayload: any = undefined;
+    if (options?.body) {
+      try {
+        dataPayload = JSON.parse(options.body);
+      } catch {
+        dataPayload = options.body;
       }
-      const res = await CapacitorHttp.request({
-        url,
-        method: options?.method || "GET",
-        headers: options?.headers,
-        data: dataPayload,
-        responseType: "text",
-      });
-      const ok = res.status >= 200 && res.status < 300;
-      const textData = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-      return {
-        ok,
-        status: res.status,
-        statusText: ok ? "OK" : `HTTP ${res.status}`,
-        json: async () => (typeof res.data === "string" ? JSON.parse(res.data) : res.data),
-        text: async () => textData,
-      };
-    } catch (err: any) {
-      console.warn("CapacitorHttp native request failed, falling back to fetch:", err);
     }
+    const res = await CapacitorHttp.request({
+      url,
+      method: options?.method || "GET",
+      headers: options?.headers,
+      data: dataPayload,
+      connectTimeout: 15000,
+      readTimeout: 30000,
+      responseType: "text",
+    });
+    const ok = res.status >= 200 && res.status < 300;
+    const textData = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+    return {
+      ok,
+      status: res.status,
+      statusText: ok ? "OK" : `HTTP ${res.status}`,
+      json: async () => (typeof res.data === "string" ? JSON.parse(res.data) : res.data),
+      text: async () => textData,
+    };
   }
 
   const res = await fetch(url, options as any);

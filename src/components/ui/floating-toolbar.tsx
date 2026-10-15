@@ -173,10 +173,15 @@ export function FloatingToolbar({
   defaultOpen = false,
   onToggle,
 }: FloatingToolbarProps) {
+  const view = useNavStore((s) => s.view);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const { playHover, playClick } = useUIAudio();
+
+  if (view !== "dashboard") {
+    return null;
+  }
 
   const handleToggle = () => {
     playClick();

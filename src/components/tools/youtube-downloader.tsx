@@ -389,13 +389,22 @@ export function YouTubeDownloader() {
             data = directInfo;
           }
         } catch (nativeErr: any) {
-          console.warn("Direct device resolution error:", nativeErr);
+          console.warn("Direct device resolution error, retrying once:", nativeErr);
           lastErrorMessage = nativeErr?.message || "";
+          try {
+            await new Promise((r) => setTimeout(r, 600));
+            const retryInfo = await resolveYouTubeVideo(videoId);
+            if (retryInfo && retryInfo.videoId && Array.isArray(retryInfo.qualities) && retryInfo.qualities.length > 0) {
+              data = retryInfo;
+            }
+          } catch (retryErr: any) {
+            lastErrorMessage = retryErr?.message || lastErrorMessage;
+          }
         }
       }
 
-      // 2. Web browser: Query Next.js API route
-      if (!data) {
+      // 2. Web browser: Query Next.js API route (Bypassed entirely on native mobile)
+      if (!data && !Capacitor.isNativePlatform()) {
         const apiUrl = getYouTubeApiUrl("/api/youtube/info");
         // Primary: GET with videoId query parameter
         let res = await fetch(`${apiUrl}?v=${encodeURIComponent(videoId)}`);
@@ -419,18 +428,20 @@ export function YouTubeDownloader() {
 
       // 3. Fallback: Direct Client-Side Resolution (on-device or local desktop client)
       if (!data || !data.videoId || !Array.isArray(data.qualities) || data.qualities.length === 0) {
-        try {
-          const directInfo = await resolveYouTubeVideo(videoId);
-          if (directInfo && directInfo.videoId && Array.isArray(directInfo.qualities) && directInfo.qualities.length > 0) {
-            data = directInfo;
+        if (!Capacitor.isNativePlatform()) {
+          try {
+            const directInfo = await resolveYouTubeVideo(videoId);
+            if (directInfo && directInfo.videoId && Array.isArray(directInfo.qualities) && directInfo.qualities.length > 0) {
+              data = directInfo;
+            }
+          } catch (directErr: any) {
+            if (!lastErrorMessage) lastErrorMessage = directErr?.message || "";
           }
-        } catch (directErr: any) {
-          if (!lastErrorMessage) lastErrorMessage = directErr?.message || "";
         }
       }
 
       if (!data || !data.videoId || !Array.isArray(data.qualities) || data.qualities.length === 0) {
-        throw new Error(data?.error || lastErrorMessage || "Failed to resolve video details");
+        throw new Error(data?.error || lastErrorMessage || "Failed to resolve video details from YouTube");
       }
 
       const info: YouTubeVideoInfo = data;
@@ -1100,33 +1111,33 @@ export function YouTubeDownloader() {
       {/* Tool Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
         <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 scroll-smooth">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
               <Youtube className="size-2.5" />
               <span>YouTube 4K</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400">
               <span>TikTok No-WM</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-pink-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-pink-400">
               <span>Instagram Reels</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-sky-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-sky-400">
               <span>X / Twitter</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-orange-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-orange-500/40 bg-orange-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-orange-400">
               <span>Reddit Mux</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-blue-500/40 bg-blue-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-400">
               <span>Facebook</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-teal-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-teal-500/40 bg-teal-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-teal-400">
               <span>Vimeo</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-purple-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-purple-400">
               <span>Twitch</span>
             </span>
-            <span className="flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-emerald-400">
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-emerald-400">
               <span>yt-dlp Core</span>
             </span>
           </div>
@@ -1152,21 +1163,21 @@ export function YouTubeDownloader() {
       </div>
 
       {/* View Switcher: Downloader | Subtitles | Download Vault */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl border border-border/60 bg-card/40 w-fit">
+      <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl border border-border/60 bg-card/40 w-full sm:w-auto sm:inline-grid">
         <button
           type="button"
           onClick={() => {
             setActiveViewTab("downloader");
             void haptics.light();
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "downloader"
               ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Film className="size-3.5" />
-          <span>Downloader</span>
+          <span className="truncate">Downloader</span>
         </button>
 
         <button
@@ -1175,14 +1186,14 @@ export function YouTubeDownloader() {
             setActiveViewTab("subtitles");
             void haptics.light();
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "subtitles"
               ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Subtitles className="size-3.5" />
-          <span>Subtitles</span>
+          <span className="truncate">Subtitles</span>
           {videoInfo?.subtitles && videoInfo.subtitles.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-red-500/30 text-[10px] text-red-300 font-bold">
               {videoInfo.subtitles.length}
@@ -1196,14 +1207,14 @@ export function YouTubeDownloader() {
             setActiveViewTab("vault");
             void haptics.light();
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "vault"
               ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <History className="size-3.5" />
-          <span>Vault</span>
+          <span className="truncate">Vault</span>
           {historyStore.items.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-[10px] text-amber-300 font-bold">
               {historyStore.items.length}
@@ -1233,7 +1244,7 @@ export function YouTubeDownloader() {
           )}
         </div>
         <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
               <Zap className="size-4 text-primary" />
             </div>

@@ -386,7 +386,7 @@ export function AppShell() {
         <DesktopInspector />
       </div>
 
-      {!isAiOpen && !isLoginScreen && <FloatingToolbar actions={floatingActions} />}
+      {!isAiOpen && !isLoginScreen && view === "dashboard" && <FloatingToolbar actions={floatingActions} />}
       {!isLoginScreen && <StickyMobileCta />}
       <BackConfirmDialog />
       <SaveResultModal />

@@ -542,90 +542,140 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         val fallbackUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
         val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else fallbackUa
 
-        try {
-            while (redirects < maxRedirects) {
+        var totalBytes = -1L
+        var bytesDownloaded = if (destinationFile.exists()) destinationFile.length() else 0L
+
+        var retryCount = 0
+        val maxRetries = 5
+
+        while (retryCount < maxRetries) {
+            if (isCancelled()) {
+                if (destinationFile.exists()) destinationFile.delete()
+                return Result.failure(Exception("Download cancelled"))
+            }
+
+            var currentUrl = streamUrl
+            var redirects = 0
+            val maxRedirects = 5
+            var connection: HttpURLConnection? = null
+
+            try {
+                while (redirects < maxRedirects) {
+                    if (isCancelled()) {
+                        return Result.failure(Exception("Download cancelled"))
+                    }
+                    val urlObj = URL(currentUrl)
+                    connection = (urlObj.openConnection() as HttpURLConnection).apply {
+                        instanceFollowRedirects = false
+                        connectTimeout = 20000
+                        readTimeout = 30000
+                        requestMethod = "GET"
+                        setRequestProperty("User-Agent", effectiveUa)
+                        setRequestProperty("Accept", "*/*")
+                        setRequestProperty("Accept-Encoding", "identity")
+                        setRequestProperty("Connection", "keep-alive")
+                        if (bytesDownloaded > 0) {
+                            setRequestProperty("Range", "bytes=$bytesDownloaded-")
+                        }
+                    }
+
+                    val responseCode = connection.responseCode
+                    if (responseCode in 300..399) {
+                        val location = connection.getHeaderField("Location")
+                        connection.disconnect()
+                        if (location.isNullOrEmpty()) {
+                            return Result.failure(Exception("HTTP redirect $responseCode without Location header"))
+                        }
+                        currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
+                            location
+                        } else {
+                            URL(urlObj, location).toString()
+                        }
+                        redirects++
+                        continue
+                    }
+
+                    if (responseCode == 416) {
+                        // Range already fully satisfied
+                        return Result.success(destinationFile)
+                    }
+
+                    if (responseCode !in 200..299) {
+                        connection.disconnect()
+                        return Result.failure(Exception("HTTP error $responseCode: ${connection.responseMessage} from $currentUrl"))
+                    }
+
+                    // Successful response
+                    break
+                }
+
+                val conn = connection ?: return Result.failure(Exception("Failed to open HTTP connection"))
+                val contentLengthHeader = conn.getHeaderField("Content-Length")
+                val streamLength = contentLengthHeader?.toLongOrNull() ?: -1L
+                if (totalBytes <= 0 && streamLength > 0) {
+                    totalBytes = if (conn.responseCode == 206) bytesDownloaded + streamLength else streamLength
+                }
+
+                val append = bytesDownloaded > 0 && conn.responseCode == 206
+                if (!append) {
+                    bytesDownloaded = 0L
+                }
+
+                conn.inputStream.use { input ->
+                    FileOutputStream(destinationFile, append).use { output ->
+                        val buffer = ByteArray(65536) // 64KB buffer
+                        var lastProgressUpdate = 0L
+
+                        while (true) {
+                            if (isCancelled()) {
+                                destinationFile.delete()
+                                return Result.failure(Exception("Download cancelled"))
+                            }
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            output.write(buffer, 0, read)
+                            bytesDownloaded += read
+
+                            val now = System.currentTimeMillis()
+                            if (now - lastProgressUpdate >= 100 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
+                                lastProgressUpdate = now
+                                onProgress(bytesDownloaded, totalBytes)
+                            }
+                        }
+                        output.flush()
+                    }
+                }
+
+                if (totalBytes <= 0 || bytesDownloaded >= totalBytes) {
+                    Log.i(TAG, "Direct-to-disk download complete: ${destinationFile.name} (${destinationFile.length()} bytes)")
+                    return Result.success(destinationFile)
+                }
+
+                retryCount++
+                Thread.sleep(500)
+            } catch (e: Exception) {
                 if (isCancelled()) {
+                    if (destinationFile.exists()) destinationFile.delete()
                     return Result.failure(Exception("Download cancelled"))
                 }
-                val urlObj = URL(currentUrl)
-                connection = (urlObj.openConnection() as HttpURLConnection).apply {
-                    instanceFollowRedirects = false
-                    connectTimeout = 15000
-                    readTimeout = 30000
-                    requestMethod = "GET"
-                    setRequestProperty("User-Agent", effectiveUa)
-                    setRequestProperty("Accept", "*/*")
-                    setRequestProperty("Accept-Encoding", "identity")
-                    setRequestProperty("Connection", "keep-alive")
+                Log.w(TAG, "Direct-to-disk chunk error on retry $retryCount: ${e.message}")
+                retryCount++
+                if (retryCount >= maxRetries) {
+                    if (destinationFile.exists()) destinationFile.delete()
+                    return Result.failure(e)
                 }
-
-                val responseCode = connection.responseCode
-                if (responseCode in 300..399) {
-                    val location = connection.getHeaderField("Location")
-                    connection.disconnect()
-                    if (location.isNullOrEmpty()) {
-                        return Result.failure(Exception("HTTP redirect $responseCode without Location header"))
-                    }
-                    currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
-                        location
-                    } else {
-                        URL(urlObj, location).toString()
-                    }
-                    redirects++
-                    continue
-                }
-
-                if (responseCode !in 200..299) {
-                    connection.disconnect()
-                    return Result.failure(Exception("HTTP error $responseCode: ${connection.responseMessage} from $currentUrl"))
-                }
-
-                // Successful response
-                break
+                Thread.sleep(800L * retryCount)
+            } finally {
+                try {
+                    connection?.disconnect()
+                } catch (_: Throwable) {}
             }
+        }
 
-            val conn = connection ?: return Result.failure(Exception("Failed to open HTTP connection"))
-            val contentLengthHeader = conn.getHeaderField("Content-Length")
-            val totalBytes = contentLengthHeader?.toLongOrNull() ?: -1L
-
-            conn.inputStream.use { input ->
-                FileOutputStream(destinationFile).use { output ->
-                    val buffer = ByteArray(65536) // 64KB buffer
-                    var bytesDownloaded = 0L
-                    var lastProgressUpdate = 0L
-
-                    while (true) {
-                        if (isCancelled()) {
-                            destinationFile.delete()
-                            return Result.failure(Exception("Download cancelled"))
-                        }
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesDownloaded += read
-
-                        val now = System.currentTimeMillis()
-                        if (now - lastProgressUpdate >= 100 || (totalBytes > 0 && bytesDownloaded == totalBytes)) {
-                            lastProgressUpdate = now
-                            onProgress(bytesDownloaded, totalBytes)
-                        }
-                    }
-                    output.flush()
-                }
-            }
-
-            Log.i(TAG, "Direct-to-disk download complete: ${destinationFile.name} (${destinationFile.length()} bytes)")
-            return Result.success(destinationFile)
-        } catch (e: Exception) {
-            Log.e(TAG, "Direct-to-disk download failed: ${e.message}", e)
-            if (destinationFile.exists()) {
-                destinationFile.delete()
-            }
-            return Result.failure(e)
-        } finally {
-            try {
-                connection?.disconnect()
-            } catch (_: Throwable) {}
+        return if (destinationFile.exists() && destinationFile.length() > 0) {
+            Result.success(destinationFile)
+        } else {
+            Result.failure(Exception("Download failed after $maxRetries retry attempts"))
         }
     }
 
@@ -648,21 +698,33 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         val tempId = System.currentTimeMillis()
 
         val isWebmTarget = outputFileName.endsWith(".webm", ignoreCase = true)
-        val vExt = if (isWebmTarget) "webm" else "mp4"
+        val isAudioOnlyTarget = outputFileName.endsWith(".mp3", ignoreCase = true) ||
+                outputFileName.endsWith(".m4a", ignoreCase = true) ||
+                outputFileName.endsWith(".wav", ignoreCase = true)
+
+        val vExt = if (isWebmTarget) "webm" else if (isAudioOnlyTarget) (if (outputFileName.endsWith(".m4a", ignoreCase = true)) "m4a" else "mp3") else "mp4"
         val aExt = if (isWebmTarget) "webm" else "m4a"
 
         val vTempFile = File(tempDir, "v_${tempId}.$vExt")
         val aTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "a_${tempId}.$aExt") else null
 
-        // Determine destination directory: Movies/ZenoDeck or Downloads/ZenoDeck
-        val moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ZenoDeck")
-        if (!moviesDir.exists()) moviesDir.mkdirs()
-        val targetDir = if (moviesDir.exists() && moviesDir.canWrite()) {
-            moviesDir
+        // Determine destination directory: Music/ZenoDeck for audio, Movies/ZenoDeck for video
+        val targetDir = if (isAudioOnlyTarget) {
+            val musicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "ZenoDeck")
+            if (!musicDir.exists()) musicDir.mkdirs()
+            if (musicDir.exists() && musicDir.canWrite()) musicDir else {
+                val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                downloadsDir
+            }
         } else {
-            val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
-            if (!downloadsDir.exists()) downloadsDir.mkdirs()
-            downloadsDir
+            val moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ZenoDeck")
+            if (!moviesDir.exists()) moviesDir.mkdirs()
+            if (moviesDir.exists() && moviesDir.canWrite()) moviesDir else {
+                val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                downloadsDir
+            }
         }
         val destinationFile = File(targetDir, outputFileName)
 

@@ -51,6 +51,16 @@ const nextConfig: NextConfig = {
         headers: COOP_COEP_HEADERS,
       },
       {
+        // Universal CORS headers for API routes — prevents browser fetch CORS errors
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS, HEAD" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Range, Authorization, User-Agent, X-Requested-With, Accept" },
+          { key: "Access-Control-Expose-Headers", value: "Content-Length, Content-Range, Accept-Ranges, Content-Disposition" },
+        ],
+      },
+      {
         source: "/zenodeck.mobileconfig",
         headers: [
           {

@@ -824,7 +824,11 @@ export async function downloadYouTubeStream({
         };
       } catch (nativeErr: any) {
         if (signal?.aborted) throw nativeErr;
-        console.warn("Native Android direct download failed, falling back to browser pipeline:", nativeErr?.message);
+        console.warn("Native Android direct download error:", nativeErr?.message);
+        throw new Error(
+          nativeErr?.message ||
+          "Native download interrupted. Please check network connection and try again."
+        );
       }
     }
   }

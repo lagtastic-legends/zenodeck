@@ -49,7 +49,7 @@ export function PdfVisualDeck({
   }
 
   return (
-    <div className="panel-hud rounded-tactile border border-border/80 bg-card/80 p-4 text-card-foreground shadow-tactile backdrop-blur-md">
+    <div className="panel-hud w-full max-w-full min-w-0 overflow-x-hidden box-border rounded-tactile border border-border/80 bg-card/80 p-4 text-card-foreground shadow-tactile backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-border/60 pb-2.5 mb-3 font-mono text-xs">
         <div className="flex items-center gap-2">
           <FileText className="size-4 text-primary" />

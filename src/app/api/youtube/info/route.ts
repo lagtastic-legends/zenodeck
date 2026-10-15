@@ -12,8 +12,9 @@ import { detectPlatform } from "@/lib/media/detector";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
+  "Access-Control-Allow-Headers": "Content-Type, Range, Authorization, User-Agent, X-Requested-With, Accept",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges",
 };
 
 export const dynamic = "force-dynamic";

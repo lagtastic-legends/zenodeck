@@ -646,7 +646,7 @@ export function UnifiedAudioStudio({
   }, [progress, elapsedMs]);
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full min-w-0 overflow-x-hidden box-border space-y-6">
       {/* Hidden Audio Player for Web Audio API Audition */}
       <audio
         ref={audioRef}

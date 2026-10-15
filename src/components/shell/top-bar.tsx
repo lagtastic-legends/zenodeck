@@ -96,6 +96,13 @@ export function TopBar() {
               className="relative grid size-8 sm:size-10 place-items-center rounded-xl border border-primary/40 overflow-hidden glow-box-violet shrink-0"
             >
               <img src="/logo.jpg" alt="ZenoDeck" className="w-full h-full object-cover" />
+              {/* Compact mobile engine indicator */}
+              <span
+                className={`absolute bottom-0.5 right-0.5 size-2 rounded-full border border-background ${meta.dotClass} md:hidden ${
+                  state === "ready" ? "shadow-[0_0_6px_oklch(0.75_0.18_162/0.9)]" : ""
+                }`}
+                title={`Engine Status: ${meta.label}`}
+              />
             </motion.div>
           <div className="flex flex-col leading-none truncate">
             <div className="flex items-center gap-1.5">
@@ -105,7 +112,7 @@ export function TopBar() {
               <button
                 type="button"
                 onClick={() => useUpdateStore.getState().openWhatsNew()}
-                className="font-mono text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/25 px-1.5 py-0.5 rounded-full border border-primary/30 transition-all cursor-pointer shadow-[0_0_6px_rgba(139,92,246,0.2)]"
+                className="hidden md:inline-flex font-mono text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/25 px-1.5 py-0.5 rounded-full border border-primary/30 transition-all cursor-pointer shadow-[0_0_6px_rgba(139,92,246,0.2)]"
                 title={`View What's New in v${APP_VERSION}`}
               >
                 v{APP_VERSION}
@@ -133,7 +140,7 @@ export function TopBar() {
           ) : null}
 
           <div
-            className="flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 p-1.5 sm:px-3 sm:py-1.5"
+            className="hidden md:flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 p-1.5 sm:px-3 sm:py-1.5"
             role="status"
             aria-live="polite"
             title={`Engine Status: ${meta.label}`}
@@ -154,14 +161,14 @@ export function TopBar() {
               }`}
             />
             <span
-              className={`hidden sm:inline font-mono text-[10px] font-medium uppercase tracking-[0.18em] ${meta.textClass}`}
+              className="hidden sm:inline font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
             >
               {meta.label}
             </span>
           </div>
 
           <ThemeToggle />
-          <div className="hidden min-[420px]:block">
+          <div className="hidden sm:block">
             <AudioToggle />
           </div>
           <SearchPalette />
@@ -221,7 +228,7 @@ export function TopBar() {
                   window.dispatchEvent(new CustomEvent("omni:show-permissions"));
                 }
               }}
-              className="grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
+              className="hidden lg:grid size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
               title="Manage Device Permissions"
               aria-label="Manage Device Permissions"
             >
@@ -244,7 +251,7 @@ export function TopBar() {
               <button
                 type="button"
                 onClick={() => navigate("auth-gateway")}
-                className="flex items-center gap-2 rounded-full border border-border/70 bg-card/70 pl-1 pr-2.5 py-1 shadow-xs hover:border-primary/50 hover:bg-card transition-all cursor-pointer"
+                className="flex items-center gap-2 rounded-full border border-border/70 bg-card/70 pl-1 pr-2.5 py-1 shadow-xs hover:border-primary/50 hover:bg-card transition-all cursor-pointer mr-1"
                 title={`Account: ${user.email ?? user.displayName} — click to manage or switch accounts`}
               >
                 <UserAvatar user={user} size="sm" showGoogleBadge={true} />
@@ -256,7 +263,7 @@ export function TopBar() {
                 onClick={() => void signOut()}
                 aria-label="Sign out"
                 title="Sign out"
-                className="grid size-7 sm:size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-red-400/40 hover:text-red-300 cursor-pointer"
+                className="hidden sm:grid size-7 sm:size-8 place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-red-400/40 hover:text-red-300 cursor-pointer"
               >
                 <LogOut className="size-3.5" />
               </button>

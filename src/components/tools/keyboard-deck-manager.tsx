@@ -474,7 +474,7 @@ export function KeyboardDeckManager() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden box-border space-y-6 p-3 sm:p-6">
       {/* 3-Step Interactive Onboarding Connection Banner */}
       <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-card/80 via-card/50 to-cyan-950/20 p-4 sm:p-5 backdrop-blur-xl shadow-lg space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -54,7 +54,7 @@ export function ToolShell({ toolId, children }: ToolShellProps) {
   const Icon = tool.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full min-w-0 overflow-x-hidden box-border space-y-6">
       {/* header ---------------------------------------------------------- */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <motion.button
