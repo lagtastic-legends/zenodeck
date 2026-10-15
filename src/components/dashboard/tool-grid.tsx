@@ -360,7 +360,7 @@ export function ToolGrid() {
       <div
         className={
           layoutMode === "grid"
-            ? "grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 gap-1.5 sm:gap-3 lg:gap-3.5"
+            ? "grid grid-cols-2 min-[440px]:grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-3 lg:gap-3.5"
             : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         }
       >
