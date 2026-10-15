@@ -77,7 +77,7 @@ export function WhatsNewModal() {
 
     const storedVersion = localStorage.getItem(LAST_SEEN_KEY);
     if (!storedVersion || storedVersion !== APP_VERSION) {
-      setPreviousVersion(storedVersion || "3.14.1");
+      setPreviousVersion(storedVersion || "0.9.0");
       const settleTimer = setTimeout(() => {
         setIsOpen(true);
         try {
@@ -92,7 +92,7 @@ export function WhatsNewModal() {
   useEffect(() => {
     if (isStoreOpen) {
       const storedVersion = typeof window !== "undefined" ? localStorage.getItem(LAST_SEEN_KEY) : null;
-      setPreviousVersion(storedVersion || "3.14.1");
+      setPreviousVersion(storedVersion || "0.9.0");
       setIsOpen(true);
       try {
         triggerSuccess();
@@ -104,7 +104,7 @@ export function WhatsNewModal() {
   useEffect(() => {
     const handleOpenEvent = () => {
       const storedVersion = typeof window !== "undefined" ? localStorage.getItem(LAST_SEEN_KEY) : null;
-      setPreviousVersion(storedVersion || "3.14.1");
+      setPreviousVersion(storedVersion || "0.9.0");
       setIsOpen(true);
       try {
         triggerSuccess();
@@ -176,10 +176,10 @@ export function WhatsNewModal() {
                 </span>
               </div>
               <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                ZenoDeck & ZenoTap v{APP_VERSION}
+                ZenoDeck & ZenoTap v{APP_VERSION} (General Availability)
               </h2>
               <p className="font-mono text-xs text-muted-foreground">
-                Flagship hardware deck ergonomics, ultra-slimmed APK architecture, and zero-RAM native 4K muxing.
+                Official GA Release: Flagship hardware deck ergonomics, Universal Media Downloader, and ultra-slimmed APK architecture.
               </p>
             </div>
 

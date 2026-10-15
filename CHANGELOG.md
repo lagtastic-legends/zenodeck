@@ -5,6 +5,27 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] — 2026-10-15 (Official General Availability Release)
+
+### 🌟 Milestone: General Availability
+- **Official v1.0.0 GA Launch**: Comprehensive culmination of the ZenoDeck & ZenoTap ecosystem, graduating from rapid preview iterations to a rock-solid, production-grade workstation and native Android companion suite.
+- **🎬 Universal Media Downloader & Direct-to-Disk Engine**:
+  - **Native Android Streaming & Hardware `MediaMuxer`**: Local execution using Kotlin `HttpURLConnection` and `MediaMuxer` with zero remote proxy/server fallback on mobile, eliminating 502 Bad Gateway and 403 Forbidden errors.
+  - **Strict 4K 60FPS Resolution Lock**: Lossless adaptive muxing directly into `Movies/ZenoDeck` with immediate `MediaScanner` indexing into Google Photos.
+  - **Multi-Platform Support**: YouTube (4K60, DASH video/audio, Shorts), Reddit (audio-video DASH muxing), TikTok (lossless watermark-free), Instagram (Reels & Carousels), X/Twitter, and HLS `.m3u8` live stream reconstruction.
+  - **Lossless Pre-Download Time-Range Clipper**: Stream-copy trimming (`-ss`/`-to`) for instantaneous lossless clip generation.
+  - **System Share Intent (`ACTION_SEND`)**: 1-tap "Share to ZenoDeck" from any Android app directly into the downloader.
+- **⌨️ ZenoTap 3D Tactile IME Keyboard**:
+  - **Hardware Deck Ergonomics**: 3D sculpted keycaps with specular highlights and depth bezels, 50% spacebar with horizontal thumb-scrubbing trackpad cursor control.
+  - **Synchronized Deck Themes**: Instant toggle between Obsidian Cyber and Terracotta 60/30/10 warm aesthetics.
+  - **RAM-Safe Coroutine Engine**: Headless background operations keeping IME footprint under `<30MB` RAM.
+- **🎧 Studio 8D Binaural Audio DSP Suite**:
+  - Web Audio & FFmpeg binaural spatial rotation, lookahead peak limiter, parametric EQ, and speed/pitch shifting.
+- **📱 Universal Responsive UI & Mobile Header De-Crowding**:
+  - Strict 360px mobile budget for `TopBar`, embedded engine indicator dot, floating action button safety guards, and full-width responsive grids.
+- **📦 Ultra-Slim 11.99 MB Multi-Architecture APKs**:
+  - 4 tailored signed APK builds (`universal`, `arm64-v8a`, `armeabi-v7a`, `x86_64`) shrunk with ProGuard/R8.
+
 ## [3.16.0] — 2026-10-15
 
 ### Added & Enhanced
