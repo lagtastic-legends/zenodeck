@@ -150,7 +150,7 @@ export function WhatsNewModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-primary/30 bg-card/90 p-5 sm:p-7 shadow-[0_24px_72px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
+            className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-3xl border border-primary/30 bg-card/90 p-5 sm:p-7 shadow-[0_24px_72px_rgba(0,0,0,0.65)] backdrop-blur-2xl scrollbar-thin"
           >
             {/* Header Ambient Glow */}
             <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 size-72 rounded-full bg-primary/20 blur-3xl" />

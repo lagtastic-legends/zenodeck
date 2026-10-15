@@ -15,6 +15,7 @@ import { useUpdateStore } from "@/lib/update-store";
 import { UpdateModal } from "@/components/dialogs/update-modal";
 import { ZenoTapDeckManager } from "@/components/zenotap/zenotap-deck-manager";
 import { useState, useEffect } from "react";
+import { APP_VERSION } from "@/config/version";
 import type { EngineState } from "@/types/omni";
 
 const STATE_META: Record<
@@ -105,9 +106,9 @@ export function TopBar() {
                 type="button"
                 onClick={() => useUpdateStore.getState().openWhatsNew()}
                 className="font-mono text-[9px] font-semibold text-primary bg-primary/10 hover:bg-primary/25 px-1.5 py-0.5 rounded-full border border-primary/30 transition-all cursor-pointer shadow-[0_0_6px_rgba(139,92,246,0.2)]"
-                title="View What's New in v3.15.0"
+                title={`View What's New in v${APP_VERSION}`}
               >
-                v3.15.0
+                v{APP_VERSION}
               </button>
             </div>
             <span className="mt-0.5 hidden font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:block">
@@ -174,7 +175,7 @@ export function TopBar() {
               title={`New version v${storeUpdateInfo.latestVersion} available! Click to install or remove.`}
             >
               <span className="flex size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="hidden xs:inline">Update</span>
+              <span className="hidden sm:inline">Update</span>
               <span className="text-[9px] sm:text-[10px]">v{storeUpdateInfo.latestVersion}</span>
             </button>
           ) : (
@@ -206,7 +207,7 @@ export function TopBar() {
             <button
               type="button"
               onClick={() => setDownloadModalOpen(true)}
-              className="hidden xs:flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2 sm:px-2.5 py-1 text-primary hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
+              className="hidden sm:flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2 sm:px-2.5 py-1 text-primary hover:bg-primary/20 hover:border-primary/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
               title="Download Android APK or Install Web App"
             >
               <Download className="size-3 shrink-0" />
@@ -231,7 +232,7 @@ export function TopBar() {
           <button
             type="button"
             onClick={() => setIsDeckManagerOpen(true)}
-            className="hidden xs:flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 sm:px-2.5 py-1 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
+            className="hidden sm:flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-2 sm:px-2.5 py-1 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/60 transition-all font-mono text-[10px] uppercase tracking-wider cursor-pointer shrink-0"
             title="Manage ZenoTap Keyboard Deck & Device Pairing"
           >
             <Keyboard className="size-3 shrink-0 text-indigo-400" />
@@ -247,7 +248,7 @@ export function TopBar() {
                 title={`Account: ${user.email ?? user.displayName} — click to manage or switch accounts`}
               >
                 <UserAvatar user={user} size="sm" showGoogleBadge={true} />
-                <span className="hidden xs:inline sm:inline max-w-20 sm:max-w-28 truncate font-medium text-xs text-foreground">
+                <span className="hidden sm:inline max-w-20 sm:max-w-28 truncate font-medium text-xs text-foreground">
                   {(user.displayName ?? user.email ?? "user").split(" ")[0]}
                 </span>
               </button>

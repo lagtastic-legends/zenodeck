@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Plus, Layers, Scissors, Settings, Database } from "lucide-react";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
@@ -174,6 +174,8 @@ export function FloatingToolbar({
   onToggle,
 }: FloatingToolbarProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const { playHover, playClick } = useUIAudio();
 
   const handleToggle = () => {
@@ -184,6 +186,29 @@ export function FloatingToolbar({
     setIsOpen(nextState);
     onToggle?.(nextState);
   };
+
+  /* Auto-hide FAB when scrolling down on mobile, restore when scrolling up or at top */
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentY = window.scrollY || document.documentElement.scrollTop;
+          if (currentY > lastScrollY.current + 18 && currentY > 60 && !isOpen) {
+            setIsVisible(false);
+          } else if (currentY < lastScrollY.current - 12 || currentY <= 30) {
+            setIsVisible(true);
+          }
+          lastScrollY.current = Math.max(0, currentY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isOpen]);
 
   /* Register as active overlay so back key/gesture collapses the toolbar first */
   useEffect(() => {
@@ -196,8 +221,16 @@ export function FloatingToolbar({
   }, [isOpen]);
 
   return (
-    <div
-      className="fixed pointer-events-none z-[60] flex flex-col items-center select-none"
+    <motion.div
+      initial={{ y: 0, opacity: 1 }}
+      animate={{
+        y: isVisible || isOpen ? 0 : 80,
+        opacity: isVisible || isOpen ? 1 : 0,
+      }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      className={`fixed z-[60] flex flex-col items-center select-none ${
+        isVisible || isOpen ? "pointer-events-auto" : "pointer-events-none"
+      }`}
       style={{
         right: "calc(env(safe-area-inset-right, 0px) + 1.25rem)",
         bottom: "calc(env(safe-area-inset-bottom, 0px) + 5.5rem)",
@@ -257,6 +290,6 @@ export function FloatingToolbar({
           )}
         </AnimatePresence>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

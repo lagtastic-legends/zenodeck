@@ -290,7 +290,12 @@ class ZenoDeckKeyboardService : InputMethodService() {
         )
 
         rvGifDeck?.apply {
-            layoutManager = GridLayoutManager(this@ZenoDeckKeyboardService, 3)
+            val spanCount = try {
+                resources.getInteger(R.integer.keyboard_grid_span_count)
+            } catch (_: Exception) {
+                3
+            }
+            layoutManager = GridLayoutManager(this@ZenoDeckKeyboardService, spanCount)
             adapter = gifAdapter
             setHasFixedSize(true)
         }

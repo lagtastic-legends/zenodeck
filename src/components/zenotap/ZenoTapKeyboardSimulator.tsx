@@ -427,9 +427,9 @@ export function ZenoTapKeyboardSimulator({
               </div>
             ) : (
               /* Miniature QWERTY Keys */
-              <div className="space-y-1 text-center font-mono">
+              <div className="space-y-1 text-center font-mono w-full max-w-full overflow-hidden px-0.5">
                 {["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row, rowIdx) => (
-                  <div key={rowIdx} className="flex justify-center gap-1">
+                  <div key={rowIdx} className="flex justify-center gap-0.5 sm:gap-1 w-full">
                     {row.split("").map((char) => (
                       <motion.button
                         key={char}
@@ -442,7 +442,7 @@ export function ZenoTapKeyboardSimulator({
                           setCursorPos((p) => p + 1);
                           triggerEcho(char, 200);
                         }}
-                        className={`size-7 sm:size-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer ${
+                        className={`flex-1 min-w-0 max-w-8 h-7 sm:h-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center p-0 ${
                           isTerracotta
                             ? "bg-[#342A24] text-[#FAF5EE] hover:bg-[#43362E]"
                             : "bg-[#27272E] text-neutral-100 border border-neutral-700/60 hover:bg-neutral-800"
@@ -466,13 +466,14 @@ export function ZenoTapKeyboardSimulator({
                 sensory.triggerTap();
                 toast.info("Navigates to main ZenoDeck studio");
               }}
-              className={`w-[25%] h-8 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer truncate ${
+              className={`w-[25%] h-8 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer truncate px-1 flex items-center justify-center ${
                 isTerracotta
                   ? "bg-[#EFE7DC] border-[#342A24]/20 text-[#342A24]"
                   : "bg-neutral-900 border-neutral-800 text-neutral-300"
               }`}
             >
-              ⚡ ZenoDeck
+              <span className="hidden sm:inline">⚡ ZenoDeck</span>
+              <span className="sm:hidden">⚡ App</span>
             </button>
 
             {/* 50% Spacebar with Horizontal Cursor Trackpad Gesture */}
@@ -501,8 +502,8 @@ export function ZenoTapKeyboardSimulator({
                     : "bg-slate-400"
                 }`}
               />
-              <span className="text-[10px] font-mono leading-none">
-                {isScrubbing ? "Scrubbing..." : "Space (50% Deck)"}
+              <span className="text-[10px] font-mono leading-none truncate px-1">
+                {isScrubbing ? "Scrubbing..." : "Space"}
               </span>
             </div>
 

@@ -95,7 +95,7 @@ export function VideoTimelineTrimmer({
           const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
           onSeek?.(pct * safeDuration);
         }}
-        className="relative my-3 h-10 w-full rounded-md border border-border/70 bg-background/90 overflow-hidden select-none cursor-pointer"
+        className="relative my-3 h-10 w-full rounded-md border border-border/70 bg-background/90 overflow-hidden select-none cursor-pointer touch-none"
       >
         {/* Filmstrip frame grid placeholders */}
         <div className="absolute inset-0 flex divide-x divide-border/20 opacity-25 pointer-events-none">

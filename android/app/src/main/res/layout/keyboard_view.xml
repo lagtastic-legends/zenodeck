@@ -2,16 +2,16 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/keyboard_root"
     android:layout_width="match_parent"
-    android:layout_height="280dp"
+    android:layout_height="@dimen/keyboard_total_height"
     android:orientation="vertical"
     android:background="#0E0F14"
-    android:padding="5dp">
+    android:padding="@dimen/keyboard_padding">
 
     <!-- Top Morphing Utility Ribbon: Controls, Mode Pills & Status Indicator -->
     <LinearLayout
         android:id="@+id/layout_utility_ribbon"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
+        android:layout_height="@dimen/keyboard_ribbon_height"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="4dp"
@@ -20,7 +20,7 @@
         <!-- Left: Mode Switcher Pills ([⌨️ Keys], [⚡ Vault]) -->
         <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="28dp"
+            android:layout_height="@dimen/keyboard_ribbon_pill_height"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
@@ -28,12 +28,12 @@
                 android:id="@+id/btn_mode_vault"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="26dp"
+                android:layout_height="@dimen/keyboard_ribbon_btn_height"
                 android:background="@drawable/bg_utility_pill"
                 android:text="⚡ Vault"
                 android:textAllCaps="false"
                 android:textColor="#22D3EE"
-                android:textSize="10sp"
+                android:textSize="@dimen/keyboard_text_size_ribbon"
                 android:textStyle="bold"
                 android:paddingHorizontal="8dp" />
 
@@ -41,13 +41,13 @@
                 android:id="@+id/btn_mode_keys"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="26dp"
+                android:layout_height="@dimen/keyboard_ribbon_btn_height"
                 android:layout_marginStart="4dp"
                 android:background="@drawable/bg_utility_pill"
                 android:text="⌨️ Keys"
                 android:textAllCaps="false"
                 android:textColor="#94A3B8"
-                android:textSize="10sp"
+                android:textSize="@dimen/keyboard_text_size_ribbon"
                 android:paddingHorizontal="8dp" />
         </LinearLayout>
 
@@ -80,7 +80,7 @@
                     android:layout_height="wrap_content"
                     android:text="ZenoTap"
                     android:textColor="#F1F5F9"
-                    android:textSize="11sp"
+                    android:textSize="@dimen/keyboard_text_size_title"
                     android:textStyle="bold" />
 
                 <TextView
@@ -93,7 +93,7 @@
                     android:paddingVertical="1dp"
                     android:text="GIF • WebP Ready"
                     android:textColor="#10B981"
-                    android:textSize="8sp"
+                    android:textSize="@dimen/keyboard_text_size_badge"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -103,7 +103,7 @@
                 android:layout_height="wrap_content"
                 android:text="Detecting host app capabilities..."
                 android:textColor="#64748B"
-                android:textSize="9sp"
+                android:textSize="@dimen/keyboard_text_size_sub"
                 android:ellipsize="end"
                 android:maxLines="1" />
 
@@ -158,7 +158,7 @@
     <LinearLayout
         android:id="@+id/layout_clipboard_pill"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
+        android:layout_height="@dimen/keyboard_clipboard_height"
         android:orientation="horizontal"
         android:background="@drawable/bg_utility_pill"
         android:paddingHorizontal="8dp"
@@ -244,7 +244,7 @@
             <HorizontalScrollView
                 android:id="@+id/scroll_category_filter"
                 android:layout_width="match_parent"
-                android:layout_height="28dp"
+                android:layout_height="@dimen/keyboard_category_strip_height"
                 android:scrollbars="none"
                 android:paddingHorizontal="4dp"
                 android:paddingBottom="4dp">
@@ -385,7 +385,7 @@
     <!-- Bottom Action & 50% Spacebar Strip -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="38dp"
+        android:layout_height="@dimen/keyboard_bottom_strip_height"
         android:layout_marginTop="4dp"
         android:orientation="horizontal"
         android:gravity="center_vertical">
@@ -395,13 +395,13 @@
             android:id="@+id/btn_open_app"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="@dimen/keyboard_key_height"
             android:layout_weight="0.25"
             android:background="@drawable/bg_keycap_special"
             android:text="⚡ ZenoDeck"
             android:textAllCaps="false"
             android:textColor="#E2E8F0"
-            android:textSize="10sp"
+            android:textSize="@dimen/keyboard_key_text_size"
             android:paddingHorizontal="4dp" />
 
         <!-- 50% Width Tactile Hardware Spacebar with Glowing LED Trackpad -->
@@ -409,27 +409,27 @@
             android:id="@+id/btn_spacebar"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="@dimen/keyboard_key_height"
             android:layout_weight="0.5"
             android:layout_marginHorizontal="4dp"
             android:background="@drawable/bg_spacebar_50"
             android:text="Space"
             android:textAllCaps="false"
             android:textColor="#F1F5F9"
-            android:textSize="11sp" />
+            android:textSize="@dimen/keyboard_key_text_size" />
 
         <!-- Switch Input Key (12% Width) -->
         <Button
             android:id="@+id/btn_switch_input"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="@dimen/keyboard_key_height"
             android:layout_weight="0.12"
             android:background="@drawable/bg_keycap_special"
             android:text="⌨"
             android:textAllCaps="false"
             android:textColor="#94A3B8"
-            android:textSize="11sp"
+            android:textSize="@dimen/keyboard_key_text_size"
             android:paddingHorizontal="2dp" />
 
         <!-- Tactile Backspace Key with Accelerate-on-hold and Swipe-to-delete (13% Width) -->
@@ -437,14 +437,14 @@
             android:id="@+id/btn_backspace"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="@dimen/keyboard_key_height"
             android:layout_marginStart="3dp"
             android:layout_weight="0.13"
             android:background="@drawable/bg_keycap_special"
             android:text="⌫"
             android:textAllCaps="false"
             android:textColor="#F87171"
-            android:textSize="12sp"
+            android:textSize="@dimen/keyboard_key_text_size"
             android:textStyle="bold"
             android:paddingHorizontal="2dp" />
     </LinearLayout>

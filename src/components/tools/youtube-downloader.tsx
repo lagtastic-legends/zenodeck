@@ -1656,26 +1656,36 @@ export function YouTubeDownloader() {
                 type="button"
                 onClick={handleStartDownload}
                 disabled={!selectedQuality}
-                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold text-white transition-all cursor-pointer ${
+                className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold text-white transition-all cursor-pointer ${
                   selectedQuality?.isAudioOnly
                     ? "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 shadow-lg shadow-violet-500/25 hover:opacity-95"
                     : "bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 shadow-lg shadow-red-500/20 hover:opacity-95"
                 }`}
               >
                 {selectedQuality?.isAudioOnly ? (
-                  <>
-                    <Music className="size-4 shrink-0" />
-                    <span className="truncate">
-                      EXTRACT AUDIO ({selectedQuality?.badge}) · {formatBytes(selectedQuality?.approxSizeBytes || 0)}
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                    <div className="inline-flex items-center gap-1.5">
+                      <Music className="size-4 shrink-0" />
+                      <span>EXTRACT AUDIO</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
+                      <span>{selectedQuality?.badge}</span>
+                      <span>•</span>
+                      <span>{formatBytes(selectedQuality?.approxSizeBytes || 0)}</span>
                     </span>
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <Download className="size-4 shrink-0" />
-                    <span className="truncate">
-                      START TURBO DOWNLOAD ({selectedQuality?.badge || "4K"}) · {formatBytes(selectedQuality?.approxSizeBytes || 0)}
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                    <div className="inline-flex items-center gap-1.5">
+                      <Download className="size-4 shrink-0" />
+                      <span>START TURBO DOWNLOAD</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
+                      <span>{selectedQuality?.badge || "4K"}</span>
+                      <span>•</span>
+                      <span>{formatBytes(selectedQuality?.approxSizeBytes || 0)}</span>
                     </span>
-                  </>
+                  </div>
                 )}
               </button>
             ) : (
@@ -1838,7 +1848,7 @@ export function YouTubeDownloader() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="font-mono text-xs font-semibold text-foreground truncate">
+                  <p className="font-mono text-xs font-semibold text-foreground break-all line-clamp-2">
                     {downloadResult.filename}
                   </p>
                   <p className="font-mono text-[10px] text-muted-foreground">
@@ -1892,7 +1902,7 @@ export function YouTubeDownloader() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="font-mono text-xs font-semibold text-foreground truncate">
+                  <p className="font-mono text-xs font-semibold text-foreground break-all line-clamp-2">
                     {downloadResult.filename}
                   </p>
                   <p className="font-mono text-[10px] text-muted-foreground">
