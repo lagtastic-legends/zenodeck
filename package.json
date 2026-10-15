@@ -1,6 +1,27 @@
 {
   "name": "zenodeck",
   "version": "3.16.0",
+  "description": "Heavy-Duty, 100% Client-Side WebAssembly Media & Document Workstation with Universal Downloader and ZenoTap IME",
+  "homepage": "https://omni-tool-two.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lagtastic-legends/zenodeck.git"
+  },
+  "keywords": [
+    "webassembly",
+    "ffmpeg-wasm",
+    "universal-downloader",
+    "youtube-downloader",
+    "4k-60fps",
+    "android",
+    "ime-keyboard",
+    "spatial-audio",
+    "audio-dsp",
+    "client-side",
+    "privacy-first"
+  ],
+  "author": "Lagtastic Legends",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack -p 3000",
@@ -10,8 +31,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "npx tsx scripts/test-e2e-suite.ts",
-    "test:all": "npx tsx scripts/test-e2e-suite.ts && npx tsx scripts/test-youtube-suite.ts && npx tsx scripts/test-m2-muxing.ts && npx tsx scripts/test-m3-native-save.ts && npx tsx scripts/test-subtitles-and-vault.ts && npx tsx scripts/test-multi-platform-downloader.ts && npx tsx scripts/test-universal-downloader.ts && npx tsx scripts/test-sensory-feedback.ts && npx tsx scripts/test-dsp-m1.ts && npx tsx scripts/test-audio-dsp-e2e.ts && npx tsx scripts/test-dsp-studio-grade.ts && npx tsx scripts/test-audio-effects-engine.ts && npx tsx scripts/test-updater.ts && npx tsx scripts/test-ai-route.ts && npx tsx scripts/test-zenotap-security.ts && npx tsx scripts/test-zenotap-sync.ts",
-    "test:ci": "npx tsx scripts/test-e2e-suite.ts && npx tsx scripts/test-m2-muxing.ts && npx tsx scripts/test-m3-native-save.ts && npx tsx scripts/test-subtitles-and-vault.ts && npx tsx scripts/test-universal-downloader.ts && npx tsx scripts/test-sensory-feedback.ts && npx tsx scripts/test-dsp-m1.ts && npx tsx scripts/test-audio-dsp-e2e.ts && npx tsx scripts/test-dsp-studio-grade.ts && npx tsx scripts/test-audio-effects-engine.ts && npx tsx scripts/test-updater.ts && npx tsx scripts/test-ai-route.ts && npx tsx scripts/test-zenotap-security.ts && npx tsx scripts/test-zenotap-sync.ts",
+    "test:all": "npx tsx scripts/test-e2e-suite.ts && npx tsx scripts/test-youtube-suite.ts && npx tsx scripts/test-m2-muxing.ts && npx tsx scripts/test-m3-native-save.ts && npx tsx scripts/test-subtitles-and-vault.ts && npx tsx scripts/test-multi-platform-downloader.ts && npx tsx scripts/test-universal-downloader.ts && npx tsx scripts/test-sensory-feedback.ts && npx tsx scripts/test-dsp-m1.ts && npx tsx scripts/test-audio-dsp-e2e.ts && npx tsx scripts/test-dsp-studio-grade.ts && npx tsx scripts/test-audio-effects-engine.ts && npx tsx scripts/test-updater.ts && npx tsx scripts/test-ai-route.ts && npx tsx scripts/test-zenotap-security.ts && npx tsx scripts/test-zenotap-sync.ts && npx tsx scripts/test-phase1-extractors.ts && npx tsx scripts/test-phase4-share-intent.ts && npx tsx scripts/test-universal-downloader-v316.ts",
+    "test:ci": "npx tsx scripts/test-e2e-suite.ts && npx tsx scripts/test-m2-muxing.ts && npx tsx scripts/test-m3-native-save.ts && npx tsx scripts/test-subtitles-and-vault.ts && npx tsx scripts/test-universal-downloader.ts && npx tsx scripts/test-sensory-feedback.ts && npx tsx scripts/test-dsp-m1.ts && npx tsx scripts/test-audio-dsp-e2e.ts && npx tsx scripts/test-dsp-studio-grade.ts && npx tsx scripts/test-audio-effects-engine.ts && npx tsx scripts/test-updater.ts && npx tsx scripts/test-ai-route.ts && npx tsx scripts/test-zenotap-security.ts && npx tsx scripts/test-zenotap-sync.ts && npx tsx scripts/test-phase1-extractors.ts && npx tsx scripts/test-phase4-share-intent.ts && npx tsx scripts/test-universal-downloader-v316.ts",
 
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",

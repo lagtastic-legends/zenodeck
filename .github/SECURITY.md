@@ -13,13 +13,14 @@
 
 | Version | Supported          |
 | :---    | :---               |
-| 3.6.x   | :white_check_mark: |
-| 3.5.x   | :white_check_mark: |
-| 3.4.x   | :white_check_mark: |
-| 3.3.x   | :white_check_mark: |
-| 3.2.x   | :white_check_mark: |
-| 3.1.x   | :white_check_mark: |
-| 3.0.x   | :white_check_mark: |
+| 3.16.x  | :white_check_mark: |
+| 3.15.x  | :white_check_mark: |
+| 3.14.x  | :white_check_mark: |
+| 3.13.x  | :white_check_mark: |
+| 3.12.x  | :white_check_mark: |
+| 3.11.x  | :white_check_mark: |
+| 3.10.x  | :white_check_mark: |
+| 3.x     | :white_check_mark: |
 | < 3.0   | :x:                |
 
 ---
