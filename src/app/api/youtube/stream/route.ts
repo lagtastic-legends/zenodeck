@@ -104,11 +104,17 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
     const candidateUrls = buildCandidateUrls(targetUrl);
     const rangeHeader = req.headers.get("range");
 
+    const isAndroidVrStream = targetUrl.includes("c=ANDROID_VR") || targetUrl.includes("client=28");
     const isIosStream = targetUrl.includes("c=IOS") || targetUrl.includes("sparams=");
+    const reqUa = req.headers.get("user-agent");
+    const defaultUa = isAndroidVrStream
+      ? "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
+      : isIosStream
+      ? "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)"
+      : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
     const fetchHeaders: Record<string, string> = {
-      "User-Agent": isIosStream
-        ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
-        : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+      "User-Agent": reqUa && !reqUa.includes("node-fetch") && !reqUa.includes("Next.js") ? reqUa : defaultUa,
       Accept: "*/*",
       "Accept-Encoding": "identity",
     };

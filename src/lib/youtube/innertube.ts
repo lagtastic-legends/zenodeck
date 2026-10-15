@@ -260,8 +260,12 @@ const ANDROID_VR_CLIENT_VERSION = "1.56.21";
 const ANDROID_VR_USER_AGENT =
   "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
 
-const IOS_CLIENT_VERSION = "20.10.4";
-const IOS_USER_AGENT = `com.google.ios.youtube/${IOS_CLIENT_VERSION} (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)`;
+const IOS_CLIENT_VERSION = "19.45.4";
+const IOS_USER_AGENT =
+  "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)";
+
+const ANDROID_TESTSUITE_USER_AGENT =
+  "com.google.android.youtube/1.9 (Linux; U; Android 11) gzip";
 
 export interface InnerTubeClientConfig {
   name: string;
@@ -344,9 +348,13 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
       client: {
         clientName: "IOS",
         clientVersion: IOS_CLIENT_VERSION,
+        deviceMake: "Apple",
         deviceModel: "iPhone16,2",
+        osName: "iPhone",
+        osVersion: "18.1.0.22B83",
         hl: "en",
         gl: "US",
+        userAgent: IOS_USER_AGENT,
       },
     },
   },
@@ -362,8 +370,12 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
       client: {
         clientName: "IOS",
         clientVersion: IOS_CLIENT_VERSION,
+        deviceMake: "Apple",
         deviceModel: "iPhone16,2",
+        osName: "iPhone",
+        osVersion: "18.1.0.22B83",
         hl: "en",
+        userAgent: IOS_USER_AGENT,
       },
     },
   },
@@ -371,13 +383,15 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
     name: "ANDROID_TESTSUITE",
     headers: {
       "Content-Type": "application/json",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "User-Agent": ANDROID_TESTSUITE_USER_AGENT,
     },
     context: {
       client: {
         clientName: "ANDROID_TESTSUITE",
         clientVersion: "1.9",
+        androidSdkVersion: 30,
         hl: "en",
+        userAgent: ANDROID_TESTSUITE_USER_AGENT,
       },
     },
   },

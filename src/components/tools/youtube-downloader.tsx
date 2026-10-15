@@ -821,6 +821,53 @@ export function YouTubeDownloader() {
 
       if (Capacitor.isNativePlatform()) {
         console.error("Native Android download encountered error:", err);
+        const isExpiredOrForbidden =
+          err.message?.includes("403") ||
+          err.message?.includes("expired") ||
+          err.message?.includes("Forbidden");
+
+        if (isExpiredOrForbidden && videoInfo?.videoId && !abortControllerRef.current?.signal.aborted) {
+          try {
+            console.info("Re-resolving fresh stream manifest on Android via InnerTube client pipeline...");
+            setProgress({
+              phase: "resolving",
+              progress: 10,
+              speedMbps: 0,
+              downloadedBytes: 0,
+              totalBytes: selectedQuality.approxSizeBytes || 0,
+              activeThreads: 1,
+              etaSeconds: 0,
+              statusMessage: "Refreshing unthrottled stream credentials…",
+            });
+            const freshInfo = await resolveYouTubeVideo(videoInfo.videoId);
+            setVideoInfo(freshInfo);
+            const matchingQ =
+              freshInfo.qualities.find((q) => q.id === selectedQuality.id) ||
+              freshInfo.qualities.find((q) => q.badge === selectedQuality.badge) ||
+              freshInfo.qualities[0];
+            if (matchingQ) {
+              setSelectedQuality(matchingQ);
+              const retryRes = await downloadYouTubeStream({
+                option: matchingQ,
+                videoTitle: freshInfo.title,
+                author: freshInfo.author,
+                thumbnailUrl: freshInfo.thumbnailUrl,
+                engine: activeEngine,
+                maxParallelWorkers: workersCount,
+                signal: abortControllerRef.current.signal,
+                onProgress: (p) => setProgress(p),
+              });
+              currentResultUrlRef.current = retryRes.url;
+              setDownloadResult(retryRes);
+              void haptics.success();
+              playSuccess();
+              return;
+            }
+          } catch (retryErr: any) {
+            console.warn("On-device stream re-resolution retry failed:", retryErr);
+          }
+        }
+
         setResolveError(
           err.message?.includes("CORS") || err.message?.includes("502")
             ? "YouTube download interrupted. Please check connection and try again."
