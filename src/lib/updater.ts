@@ -27,6 +27,7 @@ export interface AppUpdateInfo {
   releaseUrl: string;
   apkUrl?: string;
   apkSize?: number;
+  assets?: AppReleaseAsset[];
   error?: string;
 }
 
@@ -90,8 +91,19 @@ export async function checkForUpdates(forceRefresh = false): Promise<AppUpdateIn
 
     let apkUrl: string | undefined = undefined;
     let apkSize: number | undefined = undefined;
+    const assets: AppReleaseAsset[] = [];
 
     if (Array.isArray(data.assets)) {
+      data.assets.forEach((a: any) => {
+        if (a && a.name && a.browser_download_url) {
+          assets.push({
+            name: a.name,
+            size: a.size || 0,
+            browser_download_url: a.browser_download_url,
+          });
+        }
+      });
+
       // Find zenodeck.apk or versioned apk
       const apkAsset =
         data.assets.find((a: any) => a.name === "zenodeck.apk") ||
@@ -113,6 +125,7 @@ export async function checkForUpdates(forceRefresh = false): Promise<AppUpdateIn
       releaseUrl: data.html_url || `${GITHUB_REPO_URL}/releases/tag/${tagName}`,
       apkUrl,
       apkSize,
+      assets,
     };
 
     if (updateAvailable) {

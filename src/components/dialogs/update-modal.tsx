@@ -342,6 +342,30 @@ export function UpdateModal({
                   </motion.div>
                 ) : null}
 
+                {/* Available APK Architecture Chips */}
+                <div className="rounded-xl border border-border/70 bg-card/40 p-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="uppercase text-muted-foreground font-semibold">
+                      Target Android Architectures (11.99 MB · API 24+)
+                    </span>
+                    <span className="text-emerald-400 font-bold">R8 Shrunk</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 font-mono text-[9px] text-primary font-semibold" title="Universal: All Android devices">
+                      Universal (Default)
+                    </span>
+                    <span className="rounded-md border border-border/60 bg-background/60 px-2 py-0.5 font-mono text-[9px] text-foreground" title="ARM64: Modern 64-bit phones (Snapdragon, Tensor)">
+                      arm64-v8a
+                    </span>
+                    <span className="rounded-md border border-border/60 bg-background/60 px-2 py-0.5 font-mono text-[9px] text-foreground" title="ARMv7: Legacy 32-bit devices">
+                      armeabi-v7a
+                    </span>
+                    <span className="rounded-md border border-border/60 bg-background/60 px-2 py-0.5 font-mono text-[9px] text-foreground" title="x86_64: Tablets, Chromebooks, Emulators">
+                      x86_64
+                    </span>
+                  </div>
+                </div>
+
                 {/* Action Controls */}
                 <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
                   <button

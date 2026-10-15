@@ -178,9 +178,12 @@ async function fetchChunkUniversal({
 
   const effectiveCandidateUrl = injectYouTubeRangeParam(candidateUrl, rangeHeader);
 
-  const isIos = effectiveCandidateUrl.includes("c=IOS") || effectiveCandidateUrl.includes("sparams=");
+  const isIos = effectiveCandidateUrl.includes("c=IOS");
+  const isAndroid = effectiveCandidateUrl.includes("c=ANDROID");
   const defaultUa = isIos
     ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)"
+    : isAndroid
+    ? "com.google.android.youtube/21.26.364 (Linux; U; Android 14) gzip"
     : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
   const headers: Record<string, string> = {
@@ -283,6 +286,9 @@ async function probeStreamSizeSafe(
   knownSize?: number,
   signal?: AbortSignal
 ): Promise<number> {
+  if (knownSize && knownSize > 0) {
+    return knownSize;
+  }
   if (candidateUrls.length <= 1) {
     return knownSize || 0;
   }

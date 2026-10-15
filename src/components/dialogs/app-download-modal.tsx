@@ -15,6 +15,8 @@ import {
   Layers,
   ExternalLink,
   Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { usePwaStore } from "@/lib/pwa/pwa-store";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -28,6 +30,7 @@ export function AppDownloadModal() {
   const [mounted, setMounted] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [showArchitectures, setShowArchitectures] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -129,7 +132,7 @@ export function AppDownloadModal() {
 
           {/* Options Grid */}
           <div className="mt-5 space-y-3.5">
-            {/* 1. Android APK Direct Download */}
+            {/* 1. Android APK Section with Multi-Architecture Breakdown */}
             <div className="rounded-xl border border-border/80 bg-background/50 p-4 transition-all hover:border-primary/50">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
@@ -140,9 +143,12 @@ export function AppDownloadModal() {
                     <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-[9px] font-bold text-emerald-400">
                       Signed v{APP_VERSION}
                     </span>
+                    <span className="rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] font-bold text-primary">
+                      11.99 MB
+                    </span>
                   </div>
                   <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                    Complete offline bundle (24.5 MB). 100% on-device WebAssembly, zero accounts or permissions required.
+                    Flagship R8-optimized release (11.99 MB). 100% on-device WebAssembly, zero cloud uploads, zero account requirements.
                   </p>
                 </div>
 
@@ -156,15 +162,150 @@ export function AppDownloadModal() {
                   <span>Download</span>
                 </a>
               </div>
-              <div className="mt-2.5 flex items-center gap-3 border-t border-border/40 pt-2 font-mono text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="size-3 text-emerald-400" /> Target SDK 36 (Android 15+)
-                </span>
-                <span>·</span>
-                <span>Universal & ARM64 Supported</span>
-                <span>·</span>
-                <span>Keystore Signed</span>
+
+              {/* Architecture Selector Bar */}
+              <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2.5 font-mono text-[10px]">
+                <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <ShieldCheck className="size-3" /> Target SDK 36 (Android 7.0–15+)
+                  </span>
+                  <span>·</span>
+                  <span>R8 Compressed (~11.99 MB)</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptics.light();
+                    setShowArchitectures(!showArchitectures);
+                  }}
+                  className="flex items-center gap-1 text-primary hover:text-primary/80 font-bold transition-all cursor-pointer shrink-0"
+                >
+                  <span>{showArchitectures ? "Hide Architectures" : "All 4 Architectures"}</span>
+                  {showArchitectures ? (
+                    <ChevronUp className="size-3" />
+                  ) : (
+                    <ChevronDown className="size-3" />
+                  )}
+                </button>
               </div>
+
+              {/* Expandable Architecture Matrix */}
+              <AnimatePresence>
+                {showArchitectures && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 pt-3 border-t border-border/40 space-y-2">
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Specific Processor Architecture Builds:
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* Universal */}
+                        <div className="rounded-lg border border-border/60 bg-card/60 p-2.5 flex flex-col justify-between gap-1.5">
+                          <div>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-display text-[11px] font-bold text-foreground">
+                                Universal APK
+                              </span>
+                              <span className="font-mono text-[9px] text-primary font-bold">11.99 MB</span>
+                            </div>
+                            <p className="font-mono text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                              All devices (ARM64, ARMv7, x86_64). API 24+.
+                            </p>
+                          </div>
+                          <a
+                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck.apk"
+                            download="zenodeck.apk"
+                            onClick={() => haptics.light()}
+                            className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
+                          >
+                            <Download className="size-2.5" />
+                            <span>zenodeck.apk</span>
+                          </a>
+                        </div>
+
+                        {/* ARM64-v8a */}
+                        <div className="rounded-lg border border-border/60 bg-card/60 p-2.5 flex flex-col justify-between gap-1.5">
+                          <div>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-display text-[11px] font-bold text-foreground">
+                                ARM64-v8a
+                              </span>
+                              <span className="font-mono text-[9px] text-emerald-400 font-bold">11.99 MB</span>
+                            </div>
+                            <p className="font-mono text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                              Modern 64-bit phones (Snapdragon, Tensor, Dimensity).
+                            </p>
+                          </div>
+                          <a
+                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-arm64-v8a.apk"
+                            download="zenodeck-v3.15.0-arm64-v8a.apk"
+                            onClick={() => haptics.light()}
+                            className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
+                          >
+                            <Download className="size-2.5" />
+                            <span>arm64-v8a.apk</span>
+                          </a>
+                        </div>
+
+                        {/* ARMeabi-v7a */}
+                        <div className="rounded-lg border border-border/60 bg-card/60 p-2.5 flex flex-col justify-between gap-1.5">
+                          <div>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-display text-[11px] font-bold text-foreground">
+                                ARMeabi-v7a
+                              </span>
+                              <span className="font-mono text-[9px] text-amber-400 font-bold">11.99 MB</span>
+                            </div>
+                            <p className="font-mono text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                              Legacy 32-bit Android phones and budget devices.
+                            </p>
+                          </div>
+                          <a
+                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-armeabi-v7a.apk"
+                            download="zenodeck-v3.15.0-armeabi-v7a.apk"
+                            onClick={() => haptics.light()}
+                            className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
+                          >
+                            <Download className="size-2.5" />
+                            <span>armeabi-v7a.apk</span>
+                          </a>
+                        </div>
+
+                        {/* x86_64 */}
+                        <div className="rounded-lg border border-border/60 bg-card/60 p-2.5 flex flex-col justify-between gap-1.5">
+                          <div>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-display text-[11px] font-bold text-foreground">
+                                x86_64
+                              </span>
+                              <span className="font-mono text-[9px] text-cyan-400 font-bold">11.99 MB</span>
+                            </div>
+                            <p className="font-mono text-[9px] text-muted-foreground mt-0.5 leading-tight">
+                              Chromebooks, Android Studio emulators, WSA.
+                            </p>
+                          </div>
+                          <a
+                            href="https://github.com/lagtastic-legends/zenodeck/releases/download/v3.15.0/zenodeck-v3.15.0-x86_64.apk"
+                            download="zenodeck-v3.15.0-x86_64.apk"
+                            onClick={() => haptics.light()}
+                            className="inline-flex items-center justify-center gap-1 rounded bg-secondary/80 hover:bg-secondary px-2 py-1 font-mono text-[9px] font-semibold text-foreground transition-all"
+                          >
+                            <Download className="size-2.5" />
+                            <span>x86_64.apk</span>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* 2. Web App (PWA) Install */}

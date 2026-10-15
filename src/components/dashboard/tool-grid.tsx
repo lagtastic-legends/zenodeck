@@ -157,6 +157,7 @@ const ToolCard = memo(function ToolCard({
                 className={`${
                   isMatrixView ? "hidden sm:flex" : "flex"
                 } items-center gap-1 rounded-full border border-border/70 bg-card/60 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground`}
+                title="WASM Engine Standby — Boots automatically on demand when tapped"
               >
                 <span className="size-1.5 rounded-full bg-muted-foreground/60" />
                 standby
@@ -168,13 +169,14 @@ const ToolCard = memo(function ToolCard({
             {isMatrixView && (
               <span
                 className="sm:hidden size-2 rounded-full bg-pulse shadow-[0_0_6px_var(--pulse)] animate-pulse mt-1"
-                title="Online"
+                title="Instant WebAudio DSP — 0ms Latency"
               />
             )}
             <span
               className={`${
                 isMatrixView ? "hidden sm:flex" : "flex"
               } items-center gap-1 rounded-full border border-pulse/30 bg-pulse/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-pulse`}
+              title="Instant WebAudio DSP — Zero latency execution"
             >
               <span className="size-1.5 animate-pulse rounded-full bg-pulse" />
               online

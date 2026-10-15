@@ -265,25 +265,53 @@ async function fetchViaCapacitorHttp(url: string, options?: ZenoApiFetchOptions)
     }
   }
 
+  const isBinary = Boolean(
+    headers["Range"] ||
+    headers["range"] ||
+    url.includes("/api/youtube/stream") ||
+    url.includes("/api/youtube/download") ||
+    url.includes("/api/media/download")
+  );
+
+  const responseType = isBinary ? "arraybuffer" : "text";
+
   try {
     const res = await CapacitorHttp.request({
       url,
       method,
       headers,
       data: dataPayload,
-      connectTimeout: options?.timeoutMs || 10000,
-      readTimeout: options?.timeoutMs || 45000,
-      responseType: "text",
+      connectTimeout: options?.timeoutMs || 8000,
+      readTimeout: options?.timeoutMs || (isBinary ? 20000 : 15000),
+      responseType: responseType as any,
     });
 
     const isOk = res.status >= 200 && res.status < 300;
-    const bodyStr = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+    let responseBody: BodyInit;
+    const contentType = isBinary ? "application/octet-stream" : "application/json; charset=utf-8";
 
-    return new Response(bodyStr, {
+    if (isBinary) {
+      if (typeof res.data === "string") {
+        const binStr = atob(res.data);
+        const bytes = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+        responseBody = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+      } else if (res.data instanceof ArrayBuffer) {
+        responseBody = res.data;
+      } else if (res.data instanceof Uint8Array) {
+        responseBody = res.data.buffer.slice(res.data.byteOffset, res.data.byteOffset + res.data.byteLength) as ArrayBuffer;
+      } else {
+        responseBody = new ArrayBuffer(0);
+      }
+    } else {
+      responseBody = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+    }
+
+    return new Response(responseBody, {
       status: res.status,
       statusText: isOk ? "OK" : `HTTP ${res.status}`,
       headers: {
-        "Content-Type": "application/json; charset=utf-8",
+        "Content-Type": contentType,
         "X-Capacitor-Http-Routed": "true",
       },
     });

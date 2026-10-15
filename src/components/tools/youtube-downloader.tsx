@@ -512,7 +512,7 @@ export function YouTubeDownloader() {
     let stallWatchdogTimer: any = null;
 
     const triggerYtDlpStreamFallback = async (reason?: string) => {
-      console.warn("Direct turbo streaming stalled or failed, activating high-speed stream fallback:", reason);
+      console.warn("Direct turbo streaming stalled or failed, activating stream fallback:", reason);
       setProgress({
         phase: "downloading",
         progress: 10,
@@ -521,13 +521,22 @@ export function YouTubeDownloader() {
         totalBytes: selectedQuality.approxSizeBytes || 0,
         activeThreads: 1,
         etaSeconds: 0,
-        statusMessage: "Connecting to high-speed stream engine…",
+        statusMessage: "Connecting to stream engine…",
       });
 
       const qualityParam = selectedQuality.badge || selectedQuality.resolutionLabel || selectedQuality.label || "best";
       const fallbackUrl = getYouTubeApiUrl(
         `/api/youtube/download?url=${encodeURIComponent(inputUrl.trim() || videoInfo.videoId)}&quality=${encodeURIComponent(qualityParam)}&format=${encodeURIComponent(selectedQuality.container)}`
       );
+
+      // Strict 15-second hard timeout on fallback stream to guarantee UI never freezes indefinitely
+      const fallbackTimeoutController = new AbortController();
+      const fallbackTimeoutTimer = setTimeout(() => {
+        fallbackTimeoutController.abort();
+      }, 15000);
+
+      const onParentAbort = () => fallbackTimeoutController.abort();
+      abortControllerRef.current?.signal.addEventListener("abort", onParentAbort, { once: true });
 
       let streamBytes: Uint8Array;
       try {
@@ -547,12 +556,18 @@ export function YouTubeDownloader() {
               statusMessage: `Streaming media: ${(received / (1024 * 1024)).toFixed(1)} MB transferred…`,
             });
           },
-          abortControllerRef.current?.signal
+          fallbackTimeoutController.signal
         );
       } catch (streamErr: any) {
+        if (fallbackTimeoutController.signal.aborted && !abortControllerRef.current?.signal.aborted) {
+          throw new Error("Stream connection timed out. Please check your network and tap Download to retry.");
+        }
         // STRICT RESOLUTION LOCK: Banned silent 360p fallback!
         // Never substitute itag 18 or lower resolutions when user requested 4K/2K/1080p.
         throw streamErr;
+      } finally {
+        clearTimeout(fallbackTimeoutTimer);
+        abortControllerRef.current?.signal.removeEventListener("abort", onParentAbort);
       }
 
       const mimeType = selectedQuality.isAudioOnly
