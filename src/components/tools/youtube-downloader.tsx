@@ -883,6 +883,7 @@ export function YouTubeDownloader() {
     setBatchItems(itemsToDownload);
     setIsBatchRunning(true);
     void haptics.medium();
+    void acquireWakeLock();
 
     const controller = new BatchQueueController({
       items: itemsToDownload,
@@ -896,6 +897,7 @@ export function YouTubeDownloader() {
         setBatchStats(stats);
       },
       onQueueComplete: (finalItems) => {
+        void releaseWakeLock();
         setIsBatchRunning(false);
         setBatchItems([...finalItems]);
         void haptics.success();
@@ -909,12 +911,14 @@ export function YouTubeDownloader() {
 
   const handlePauseBatch = () => {
     void haptics.light();
+    void releaseWakeLock();
     batchControllerRef.current?.pause();
     setIsBatchRunning(false);
   };
 
   const handleCancelBatch = () => {
     void haptics.light();
+    void releaseWakeLock();
     batchControllerRef.current?.cancel();
     setIsBatchRunning(false);
     setBatchItems([]);
