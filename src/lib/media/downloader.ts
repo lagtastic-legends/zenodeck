@@ -11,7 +11,7 @@ import { getOrInitTurboEngine } from "@/lib/youtube/turbo-downloader";
 import { getYouTubeApiUrl } from "@/lib/youtube/innertube";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { zenoApiFetch, resolveApiUrl } from "@/lib/api-gateway";
-import { isNativeAndroidPlatform, executeNativeAndroidMux } from "./native-media-muxer";
+import { isNativeAndroidPlatform, executeNativeAndroidMux, executeNativeYouTubeDownload } from "./native-media-muxer";
 
 export interface MediaDownloadProgress {
   phase: "downloading" | "muxing" | "saving" | "complete";
@@ -381,7 +381,53 @@ export async function downloadUniversalMedia(
     percent: 5,
   });
 
-  // 1. Check if stream requires FFmpeg or native Android MediaMuxer muxing (e.g. Reddit DASH video + audio)
+  // 1. Native Android Hardware Engine Fast-Path:
+  // Downloads directly to flash storage via Kotlin HttpURLConnection with 2MB chunks,
+  // hardware MediaMuxer, and system MediaScanner indexing into Movies/ZenoDeck.
+  // Bypasses Chromium WebView fetch(), avoids CORS, and eliminates memory strain.
+  if (isNativeAndroidPlatform() && !isClipped) {
+    const finalFilename = `${safeTitle}.${option.ext}`;
+    onProgress({
+      phase: "downloading",
+      message: `Starting native Android download (${media.platform.toUpperCase()})…`,
+      percent: 5,
+    });
+
+    const res = await executeNativeYouTubeDownload({
+      videoUrl: option.downloadUrl,
+      audioUrl: option.audioUrl || undefined,
+      outputFilename: finalFilename,
+      approxSizeBytes: option.fileSize,
+      onProgress: (data) => {
+        onProgress({
+          phase: (data.phase === "muxing" ? "muxing" : "downloading") as any,
+          message:
+            data.phase === "muxing"
+              ? "Muxing streams via Android hardware MediaMuxer…"
+              : `Downloading ${media.platform} stream…`,
+          percent: data.percent,
+          transferredBytes: data.bytesDownloaded,
+          totalBytes: data.totalBytes,
+          speedMBs: data.speedMbps,
+        });
+      },
+      signal: options?.abortSignal,
+    });
+
+    const finalBlob = new Blob([new Uint8Array(0)], { type: res.mimeType });
+    onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
+    return {
+      blob: finalBlob,
+      url: "",
+      filename: res.filename,
+      fileSizeBytes: res.fileSizeBytes,
+      mimeType: res.mimeType,
+      is4K: false,
+      is60fps: false,
+    };
+  }
+
+  // 2. Web/Desktop: Check if stream requires FFmpeg muxing (e.g. Reddit DASH video + audio)
   if (option.requiresMuxing && option.audioUrl) {
     try {
       onProgress({

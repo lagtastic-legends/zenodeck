@@ -65,6 +65,17 @@ def detect_platform_name(meta, input_url):
         return "pinterest"
     return extractor or "social"
 
+def get_user_agent(f=None, meta=None):
+    if f and isinstance(f, dict):
+        f_headers = f.get("http_headers") or {}
+        if f_headers.get("User-Agent"):
+            return f_headers.get("User-Agent")
+    if meta and isinstance(meta, dict):
+        meta_headers = meta.get("http_headers") or {}
+        if meta_headers.get("User-Agent"):
+            return meta_headers.get("User-Agent")
+    return "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"
+
 def get_base_ydl_opts():
     opts = {
         'quiet': True,
@@ -74,10 +85,11 @@ def get_base_ydl_opts():
         'retries': 5,
         'fragment_retries': 5,
         'nocheckcertificate': True,
+        'geo_bypass': True,
         'js_runtimes': {'node': {}},
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'web', 'tv_embedded']
+                'player_client': ['android', 'ios', 'android_vr', 'web']
             }
         }
     }
@@ -114,15 +126,27 @@ def get_video_info(url):
             seen_badges = set()
 
             # Find best audio source URL first
+            # Find best audio source URL first and collect all audio formats
+            audio_formats = []
             best_audio = None
             best_abr = 0
             for f in formats:
                 acodec = f.get("acodec")
-                if acodec and acodec != "none":
+                if acodec and acodec != "none" and f.get("url"):
                     abr = f.get("abr") or 0
-                    if abr > best_abr and f.get("url"):
+                    if abr > best_abr:
                         best_abr = abr
                         best_audio = f
+                    audio_formats.append({
+                        "itag": f.get("format_id", 0),
+                        "url": f.get("url"),
+                        "mimeType": f.get("mime_type") or "audio/mp4",
+                        "container": f.get("ext") or "m4a",
+                        "codec": acodec,
+                        "bitrate": int((f.get("abr") or 128) * 1000),
+                        "contentLength": f.get("filesize") or f.get("filesize_approx") or 0,
+                        "userAgent": get_user_agent(f, meta),
+                    })
 
             best_audio_format = None
             if best_audio:
@@ -134,6 +158,7 @@ def get_video_info(url):
                     "codec": best_audio.get("acodec") or "aac",
                     "bitrate": int((best_audio.get("abr") or 128) * 1000),
                     "contentLength": best_audio.get("filesize") or best_audio.get("filesize_approx") or 0,
+                    "userAgent": get_user_agent(best_audio, meta),
                 }
 
             # Process Video Formats (handles landscape and vertical portrait videos)
@@ -148,6 +173,7 @@ def get_video_info(url):
                 reverse=True
             )
 
+            video_formats = []
             for f in sorted_formats:
                 vcodec = f.get("vcodec", "none")
                 if (not vcodec or vcodec == "none") or not f.get("url"):
@@ -157,6 +183,21 @@ def get_video_info(url):
                 height = f.get("height") or 0
                 fps = f.get("fps") or 30
                 filesize = f.get("filesize") or f.get("filesize_approx") or 0
+                ext = f.get("ext", "mp4")
+
+                video_formats.append({
+                    "itag": f.get("format_id", 0),
+                    "url": f.get("url"),
+                    "mimeType": f.get("mime_type") or f"video/{ext}",
+                    "container": ext,
+                    "codec": vcodec,
+                    "bitrate": int((f.get("tbr") or 1000) * 1000),
+                    "contentLength": filesize,
+                    "width": width,
+                    "height": height,
+                    "fps": int(fps),
+                    "userAgent": get_user_agent(f, meta),
+                })
 
                 # Determine effective resolution for both horizontal and vertical videos (e.g. TikTok 1080x1920)
                 effective_res = height
@@ -194,7 +235,6 @@ def get_video_info(url):
 
                 if badge and badge not in seen_badges:
                     seen_badges.add(badge)
-                    ext = f.get("ext", "mp4")
                     # If this stream already has audio, it doesn't need separate audio
                     has_audio = f.get("acodec") and f.get("acodec") != "none"
                     v_format = {
@@ -208,6 +248,7 @@ def get_video_info(url):
                         "width": width,
                         "height": height,
                         "fps": int(fps),
+                        "userAgent": get_user_agent(f, meta),
                     }
 
                     # If stream already has audio, audioFormat is self, otherwise best_audio_format
@@ -323,6 +364,35 @@ def get_video_info(url):
             if not thumb and platform == "youtube":
                 thumb = f"https://i.ytimg.com/vi/{vid_id}/maxresdefault.jpg"
 
+            # Subtitles collection
+            subtitles_raw = meta.get("subtitles") or {}
+            automatic_captions = meta.get("automatic_captions") or {}
+            sub_tracks = []
+            seen_langs = set()
+
+            for lang, fmts in subtitles_raw.items():
+                if not fmts:
+                    continue
+                vtt_fmt = next((f for f in fmts if f.get("ext") == "vtt"), fmts[0])
+                sub_tracks.append({
+                    "languageCode": lang,
+                    "languageName": vtt_fmt.get("name") or lang,
+                    "baseUrl": vtt_fmt.get("url") or "",
+                    "isAutoGenerated": False
+                })
+                seen_langs.add(lang)
+
+            for lang, fmts in automatic_captions.items():
+                if not fmts or lang in seen_langs:
+                    continue
+                vtt_fmt = next((f for f in fmts if f.get("ext") == "vtt"), fmts[0])
+                sub_tracks.append({
+                    "languageCode": lang,
+                    "languageName": f"{vtt_fmt.get('name') or lang} (auto)",
+                    "baseUrl": vtt_fmt.get("url") or "",
+                    "isAutoGenerated": True
+                })
+
             return {
                 "videoId": vid_id,
                 "platform": platform,
@@ -336,6 +406,62 @@ def get_video_info(url):
                 "viewCount": str(meta.get("view_count", "")),
                 "webpageUrl": meta.get("webpage_url") or url,
                 "qualities": qualities,
+                "videoFormats": video_formats,
+                "audioFormats": audio_formats,
+                "subtitles": sub_tracks,
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+def get_subtitles_info(url):
+    try:
+        import yt_dlp
+    except ImportError:
+        return {"error": "yt-dlp is not installed. Run: pip install yt-dlp"}
+
+    ydl_opts = get_base_ydl_opts()
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            meta = ydl.extract_info(url, download=False)
+            if not meta:
+                return {"error": "Failed to extract metadata for subtitles"}
+
+            subtitles = meta.get("subtitles") or {}
+            automatic_captions = meta.get("automatic_captions") or {}
+
+            tracks = []
+            seen_langs = set()
+
+            for lang, fmts in subtitles.items():
+                if not fmts:
+                    continue
+                vtt_fmt = next((f for f in fmts if f.get("ext") == "vtt"), fmts[0])
+                tracks.append({
+                    "language": lang,
+                    "name": vtt_fmt.get("name") or lang,
+                    "url": vtt_fmt.get("url"),
+                    "ext": vtt_fmt.get("ext", "vtt"),
+                    "isAutoGenerated": False
+                })
+                seen_langs.add(lang)
+
+            for lang, fmts in automatic_captions.items():
+                if not fmts or lang in seen_langs:
+                    continue
+                vtt_fmt = next((f for f in fmts if f.get("ext") == "vtt"), fmts[0])
+                tracks.append({
+                    "language": lang,
+                    "name": f"{vtt_fmt.get('name') or lang} (auto)",
+                    "url": vtt_fmt.get("url"),
+                    "ext": vtt_fmt.get("ext", "vtt"),
+                    "isAutoGenerated": True
+                })
+
+            return {
+                "videoId": meta.get("id") or "media",
+                "title": meta.get("title") or "Subtitles",
+                "subtitles": tracks
             }
     except Exception as e:
         return {"error": str(e)}
@@ -384,6 +510,36 @@ def download_video(url, quality="best", output_dir=".", output_format=None, json
             'preferredquality': '320' if quality == 'audio-320' else '192',
         })
 
+    def progress_hook(d):
+        if d.get('status') == 'downloading':
+            total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+            downloaded = d.get('downloaded_bytes') or 0
+            speed = d.get('speed') or 0
+            eta = d.get('eta') or 0
+            percent = round((downloaded / total * 100), 2) if total > 0 else 0
+            p = {
+                "type": "progress",
+                "percent": percent,
+                "downloadedBytes": downloaded,
+                "totalBytes": total,
+                "speedBytesPerSec": int(speed) if speed else 0,
+                "eta": eta
+            }
+            sys.stdout.write(f"PROGRESS:{json.dumps(p)}\n")
+            sys.stdout.flush()
+        elif d.get('status') == 'finished':
+            total = d.get('total_bytes') or d.get('downloaded_bytes') or 0
+            p = {
+                "type": "progress",
+                "percent": 100.0,
+                "downloadedBytes": total,
+                "totalBytes": total,
+                "speedBytesPerSec": 0,
+                "eta": 0
+            }
+            sys.stdout.write(f"PROGRESS:{json.dumps(p)}\n")
+            sys.stdout.flush()
+
     ydl_opts = {
         'format': format_selector,
         'outtmpl': outtmpl,
@@ -394,10 +550,12 @@ def download_video(url, quality="best", output_dir=".", output_format=None, json
         'retries': 5,
         'fragment_retries': 5,
         'nocheckcertificate': True,
+        'geo_bypass': True,
         'js_runtimes': {'node': {}},
+        'progress_hooks': [progress_hook],
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'web', 'tv_embedded']
+                'player_client': ['android', 'ios', 'android_vr', 'web']
             }
         }
     }
@@ -499,6 +657,7 @@ def get_playlist_info(url):
 def main():
     parser = argparse.ArgumentParser(description="ZenoDeck Universal Media Downloader Engine (yt-dlp)")
     parser.add_argument("url", help="Video or media URL (YouTube, TikTok, Instagram, Twitter/X, Reddit, etc.)")
+    parser.add_argument("--subtitles", action="store_true", help="Output available subtitle tracks in JSON")
     parser.add_argument("--info-json", action="store_true", help="Output video details and stream qualities in JSON")
     parser.add_argument("--playlist-json", action="store_true", help="Output playlist items in JSON")
     parser.add_argument("--download", action="store_true", help="Download the media directly using yt-dlp")
@@ -516,6 +675,11 @@ def main():
         target_url = f"https://www.youtube.com/watch?v={vid}" if vid else raw_url
     else:
         target_url = raw_url
+
+    if args.subtitles:
+        data = get_subtitles_info(target_url)
+        print(json.dumps(data, indent=2))
+        return 0 if "error" not in data else 1
 
     if args.playlist_json:
         data = get_playlist_info(target_url)
