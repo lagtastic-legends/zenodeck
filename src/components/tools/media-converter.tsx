@@ -9,7 +9,7 @@
  */
 
 import { motion } from "framer-motion";
-import { AlertTriangle, Film, Music4, Wand2 } from "lucide-react";
+import { AlertTriangle, Film, Music4, Wand2, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { DropZone } from "@/components/media/drop-zone";
@@ -27,6 +27,64 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoTimelineTrimmer } from "@/components/media/video-timeline-trimmer";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+
+const CONVERTER_PRESETS: PresetItem[] = [
+  {
+    id: "universal-mp4-web",
+    name: "Universal MP4 Web (H.264/AAC)",
+    description: "Maximum compatibility across iOS, Android, macOS, Windows, and Chromium with balanced compression.",
+    category: "recommended",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["MP4", "H.264", "AAC 256k", "FastStart"],
+    params: { mode: "video", videoFormat: "mp4", quality: "balanced", audioKbps: "256" },
+  },
+  {
+    id: "apple-native-mov",
+    name: "Apple Native MOV QuickTime",
+    description: "Lossless-compatible QuickTime container with high-fidelity H.264 video and stereo AAC.",
+    category: "studio",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["MOV", "QuickTime", "High Fidelity"],
+    params: { mode: "video", videoFormat: "mov", quality: "high", audioKbps: "320" },
+  },
+  {
+    id: "audiophile-320k-mp3",
+    name: "Audiophile 320kbps MP3 Extraction",
+    description: "Studio-grade stereo MP3 extraction with transparent lookahead peak limiter and zero vocal phase issues.",
+    category: "recommended",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["MP3", "320 kbps", "Lookahead Limiter"],
+    params: { mode: "audio", audioFormat: "mp3", audioKbps: "320" },
+  },
+  {
+    id: "studio-lossless-wav",
+    name: "Studio Lossless WAV (PCM 16-bit)",
+    description: "Uncompressed PCM 16-bit stereo at 44.1kHz for master audio engineering, DAW mixing, and editing.",
+    category: "studio",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["WAV", "PCM 16-bit", "Bit-Perfect"],
+    params: { mode: "audio", audioFormat: "wav", audioKbps: "320" },
+  },
+  {
+    id: "lossless-flac",
+    name: "Lossless FLAC Master",
+    description: "Bit-perfect FLAC compression preserving 100% audio dynamic range with reduced file size.",
+    category: "studio",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["FLAC", "Lossless", "Archival"],
+    params: { mode: "audio", audioFormat: "flac", audioKbps: "320" },
+  },
+  {
+    id: "social-compact-video",
+    name: "Social Compact Video (WebM/MP4)",
+    description: "Aggressive CRF compression designed for rapid mobile sharing over cellular networks.",
+    category: "social",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["MP4", "Compact", "Low Bandwidth"],
+    params: { mode: "video", videoFormat: "mp4", quality: "compact", audioKbps: "128" },
+  },
+];
 
 type Mode = "video" | "audio";
 type VideoFormat = "mp4" | "mov" | "mkv" | "avi" | "webm";
@@ -212,6 +270,17 @@ export function MediaConverter() {
   const [trimRange, setTrimRange] = useState<{ start: number; end: number } | null>(null);
   const [hasAudio, setHasAudio] = useState<boolean | null>(null);
   const [originalExt, setOriginalExt] = useState<string>("m4a");
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string>("universal-mp4-web");
+
+  const handleApplyPreset = (preset: PresetItem) => {
+    setActivePresetId(preset.id);
+    if (preset.params.mode) setMode(preset.params.mode as Mode);
+    if (preset.params.videoFormat) setVideoFormat(preset.params.videoFormat as VideoFormat);
+    if (preset.params.audioFormat) setAudioFormat(preset.params.audioFormat as AudioFormat);
+    if (preset.params.quality) setQuality(preset.params.quality as Quality);
+    if (preset.params.audioKbps) setAudioKbps(preset.params.audioKbps);
+  };
 
   const effectiveName = customName || (file ? file.name : "");
   const targetExt = mode === "video" ? videoFormat : audioFormat === "original" ? originalExt : audioFormat;
@@ -327,6 +396,21 @@ export function MediaConverter() {
             onSnapshot={handleSnapshot}
           />
         )}
+
+        {/* Preset trigger button & target header */}
+        <div className="flex items-center justify-between gap-2 px-1">
+          <p className="font-mono text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            Conversion Target
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsPresetModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-mono font-medium transition-colors cursor-pointer"
+          >
+            <Sparkles className="size-3.5 text-primary" />
+            <span>Presets</span>
+          </button>
+        </div>
 
         {/* mode tabs */}
         <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
@@ -481,6 +565,22 @@ export function MediaConverter() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="media-converter"
+        toolTitle="Media Converter"
+        builtinPresets={CONVERTER_PRESETS}
+        activePresetId={activePresetId}
+        onSelectPreset={handleApplyPreset}
+        currentSettings={{
+          mode,
+          format: mode === "video" ? videoFormat : audioFormat,
+          quality: mode === "video" ? quality : undefined,
+          audioKbps,
+        }}
+      />
     </div>
   );
 }

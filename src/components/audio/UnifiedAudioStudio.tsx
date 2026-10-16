@@ -63,6 +63,55 @@ import {
 } from "@/lib/audio-dsp";
 import { formatBytes } from "@/lib/format";
 import type { VideoMeta } from "@/lib/media/probe";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+
+const AUDIO_STUDIO_PRESETS: PresetItem[] = [
+  {
+    id: "spatial-8d-concert",
+    name: "8D Concert Hall Experience",
+    description: "Immersive 360-degree rotating binaural spatialization with dynamic stereo widening and concert hall acoustics.",
+    category: "recommended",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["8D Spatial", "8s Orbit", "Widening 1.35x"],
+    params: { effect: "spatial-8d", cycleSec: 8, intensity: 0.85, widening: 1.35 },
+  },
+  {
+    id: "slowed-reverb-vibes",
+    name: "Slowed + Reverb Nostalgia",
+    description: "Moody aesthetic pitch downshift with lush cathedral reverberation and warm stereo warmth.",
+    category: "social",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["Cathedral Reverb", "Warm Echo", "55% Wet"],
+    params: { effect: "reverb", space: "cathedral", wetPercent: 55, dryPercent: 70 },
+  },
+  {
+    id: "bass-boost-extreme",
+    name: "Bass Boost Extreme (+18dB Sub)",
+    description: "Tier 5 heavy sub-harmonic analog warmth with lookahead peak limiter protecting against distortion.",
+    category: "studio",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["Tier 5 Insane", "Sub-Harmonics", "+18dB"],
+    params: { effect: "bass-booster", tier: 5, gainDb: 18 },
+  },
+  {
+    id: "podcast-vocal-clarity",
+    name: "Podcast Vocal Clarity & Denoise",
+    description: "Adaptive spectral denoising paired with multi-band speech presence lift for crystal clear voice notes.",
+    category: "recommended",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["Voice Denoise", "Mid Presence", "Clean Voice"],
+    params: { effect: "noise-reducer", denoiseAmount: 12, voiceClarity: true },
+  },
+  {
+    id: "nightcore-speed",
+    name: "Nightcore Hyperdrive (+4 Semitones)",
+    description: "High-energy speedup and pitch lift popularized in dance remixes and TikTok hyperpop edits.",
+    category: "social",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["+4 Semitones", "1.25x Speed", "Hyperpop"],
+    params: { effect: "pitch-shifter", semitones: 4 },
+  },
+];
 
 const FORMAT_OPTIONS: { value: AudioFormat; label: string }[] = [
   { value: "mp3", label: "MP3 · Standard Audio" },
@@ -613,28 +662,32 @@ export function UnifiedAudioStudio({
     );
   }, [activeToolMeta, params]);
 
-  /* Custom glassmorphic preset dropdown state */
-  const [showPresetMenu, setShowPresetMenu] = useState(false);
-  const presetDropdownRef = useRef<HTMLDivElement | null>(null);
+  /* Preset Selector Modal State & Catalog */
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string>("spatial-8d-concert");
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        presetDropdownRef.current &&
-        !presetDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowPresetMenu(false);
-      }
-    }
-    if (showPresetMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showPresetMenu]);
+  const combinedAudioPresets = useMemo<PresetItem[]>(() => {
+    const dynamicFromActiveTool: PresetItem[] = (activeToolMeta.presets || []).map((p, idx) => ({
+      id: `${activeEffect}-${idx}`,
+      name: p.label,
+      description: `${activeToolMeta.name} optimized profile: ${p.label}`,
+      category: "recommended" as const,
+      engineTier: "Tier 4: Wasm MT" as const,
+      chips: [activeToolMeta.name, p.label],
+      params: { effect: activeEffect, ...p.params },
+    }));
+    return [...AUDIO_STUDIO_PRESETS, ...dynamicFromActiveTool];
+  }, [activeToolMeta, activeEffect]);
 
-  useEffect(() => {
-    setShowPresetMenu(false);
-  }, [activeEffect]);
+  const handleApplyAudioPreset = (preset: PresetItem) => {
+    setActivePresetId(preset.id);
+    const targetEffect = (preset.params.effect as AudioEffectType) || activeEffect;
+    if (targetEffect !== activeEffect) {
+      handleSelectTool(targetEffect, preset.params);
+    } else {
+      setParams((prev) => ({ ...prev, ...preset.params }));
+    }
+  };
 
   /* Dynamic real-time ETA calculation based on elapsed time and progress ratio */
   const etaSeconds = useMemo(() => {
@@ -981,91 +1034,26 @@ export function UnifiedAudioStudio({
                 </div>
               </div>
 
-              {/* Custom Dark-Glass Preset Selector */}
-              <div className="relative shrink-0" ref={presetDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void haptics.light();
-                    setShowPresetMenu((prev) => !prev);
-                  }}
-                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition-all shadow-xs cursor-pointer ${
-                    currentPresetMatch
-                      ? "border-primary/50 bg-primary/15 text-primary font-semibold hover:border-primary hover:bg-primary/20"
-                      : "border-border/70 bg-background/80 text-foreground hover:border-primary/40 hover:bg-card"
-                  }`}
-                  aria-label="Preset Selection"
-                  aria-expanded={showPresetMenu}
-                >
-                  <Sparkles className={`size-3.5 ${currentPresetMatch ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className="max-w-[120px] sm:max-w-[200px] truncate text-left">
-                    {currentPresetMatch ? currentPresetMatch.label : "Load Preset..."}
-                  </span>
-                  <ChevronDown
-                    className={`size-3 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                      showPresetMenu ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {/* Animated Glassmorphic Menu */}
-                <AnimatePresence>
-                  {showPresetMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 4, scale: 0.96 }}
-                      transition={{ duration: 0.15, ease: "easeOut" }}
-                      className="absolute right-0 top-full mt-1.5 z-50 min-w-[240px] max-w-[320px] max-h-[360px] overflow-y-auto rounded-xl border border-white/15 bg-zinc-950/98 p-1.5 shadow-2xl backdrop-blur-2xl ring-1 ring-black/60 scroll-hud"
-                    >
-                      <div className="px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 border-b border-white/10 mb-1 flex items-center justify-between">
-                        <span>{activeToolMeta.name} Presets</span>
-                        <span className="text-primary font-bold">{activeToolMeta.presets.length} Presets</span>
-                      </div>
-
-                      <div className="space-y-0.5">
-                        {activeToolMeta.presets.map((preset) => {
-                          const isSelected = currentPresetMatch?.label === preset.label;
-                          return (
-                            <button
-                              key={preset.label}
-                              type="button"
-                              onClick={() => {
-                                void haptics.light();
-                                setParams((prev) => ({ ...prev, ...preset.params }));
-                                setShowPresetMenu(false);
-                              }}
-                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left font-mono text-xs transition-colors cursor-pointer ${
-                                isSelected
-                                  ? "bg-primary/25 text-primary font-bold border border-primary/40 shadow-xs"
-                                  : "text-zinc-200 hover:bg-white/10 hover:text-white"
-                              }`}
-                            >
-                              <span className="truncate pr-2">{preset.label}</span>
-                              {isSelected && <Check className="size-3.5 text-primary shrink-0 stroke-[2.5]" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="pt-1 mt-1 border-t border-white/10">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void haptics.light();
-                            setParams(getDefaultAudioParams(activeEffect));
-                            setShowPresetMenu(false);
-                          }}
-                          className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left font-mono text-[11px] text-zinc-400 hover:bg-white/5 hover:text-zinc-200 transition-colors cursor-pointer"
-                        >
-                          <span>Reset to Factory Defaults</span>
-                          <RotateCcw className="size-3 opacity-70 shrink-0" />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              {/* Flagship Preset Selector Trigger */}
+              <button
+                type="button"
+                onClick={() => {
+                  void haptics.light();
+                  setIsPresetModalOpen(true);
+                }}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition-all shadow-xs cursor-pointer ${
+                  currentPresetMatch
+                    ? "border-primary/50 bg-primary/15 text-primary font-semibold hover:border-primary hover:bg-primary/20"
+                    : "border-border/70 bg-background/80 text-foreground hover:border-primary/40 hover:bg-card"
+                }`}
+                aria-label="Preset Selection"
+              >
+                <Sparkles className={`size-3.5 ${currentPresetMatch ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="max-w-[120px] sm:max-w-[200px] truncate text-left">
+                  {currentPresetMatch ? currentPresetMatch.label : "Presets & FX Master..."}
+                </span>
+                <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+              </button>
             </div>
 
             {/* Quick Presets Horizontal Chip Rail */}
@@ -1632,6 +1620,17 @@ export function UnifiedAudioStudio({
         </div>
       </div>
     )}
+
+    <PresetSelectorModal
+      isOpen={isPresetModalOpen}
+      onClose={() => setIsPresetModalOpen(false)}
+      toolId={`audio-${activeEffect}`}
+      toolTitle={`${activeToolMeta.name} Presets`}
+      builtinPresets={combinedAudioPresets}
+      activePresetId={activePresetId}
+      onSelectPreset={handleApplyAudioPreset}
+      currentSettings={params}
+    />
   </div>
 );
 }

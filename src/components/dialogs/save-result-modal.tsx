@@ -1,12 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
-  CheckCircle2,
-  AlertTriangle,
   FolderCheck,
+  AlertTriangle,
   FileAudio,
   FileVideo,
   FileImage,
@@ -14,15 +11,23 @@ import {
   Files,
   Share2,
   Check,
-  X,
+  Copy,
+  ExternalLink,
   HardDrive,
+  Headphones,
+  Scissors,
+  Settings2,
+  Sparkles,
+  Layers,
 } from "lucide-react";
+import { ZenoModal } from "@/components/ui/zeno-modal";
 import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { useHaptics } from "@/hooks/use-haptics";
 import { formatBytes } from "@/lib/format";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
+import { openAppSettings } from "@/lib/permissions";
 
 function getFileCategory(filename: string): "audio" | "video" | "image" | "pdf" | "file" {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
@@ -39,21 +44,21 @@ const CATEGORY_CONFIG = {
     color: "text-cyan-400 dark:text-cyan-400",
     bg: "bg-cyan-500/10",
     border: "border-cyan-500/30",
-    badge: "AUDIO",
+    badge: "AUDIO TRACK",
   },
   video: {
     Icon: FileVideo,
     color: "text-violet-500 dark:text-violet-400",
     bg: "bg-violet-500/10",
     border: "border-violet-500/30",
-    badge: "VIDEO",
+    badge: "VIDEO STREAM",
   },
   image: {
     Icon: FileImage,
     color: "text-emerald-500 dark:text-emerald-400",
     bg: "bg-emerald-500/10",
     border: "border-emerald-500/30",
-    badge: "IMAGE",
+    badge: "IMAGE FRAME",
   },
   pdf: {
     Icon: FileText,
@@ -67,7 +72,7 @@ const CATEGORY_CONFIG = {
     color: "text-muted-foreground",
     bg: "bg-muted/30",
     border: "border-border/50",
-    badge: "FILE",
+    badge: "MEDIA FILE",
   },
 };
 
@@ -87,75 +92,52 @@ export function SaveResultModal() {
   const [mounted, setMounted] = useState(false);
   const [isSharing, startShareTransition] = useTransition();
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [pathCopied, setPathCopied] = useState(false);
+  const [vaultAdded, setVaultAdded] = useState(false);
   const haptics = useHaptics();
 
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
       (window as any).__omni_save_store = useSaveDialogStore;
-      (window as any).__omni_show_save_success = (filename: string, opts?: any) => {
+      (window as any).__omni_show_save_success = (name: string, opts?: any) => {
         useSaveDialogStore.getState().showSuccess({
-          filename,
+          filename: name,
           directory: opts?.directory || "Documents",
           fileSize: opts?.fileSize || 13084221,
           ...opts,
         });
       };
-      (window as any).__omni_show_save_error = (filename: string, errorMessage?: string) => {
+      (window as any).__omni_show_save_error = (name: string, errMsg?: string) => {
         useSaveDialogStore.getState().showError({
-          filename,
-          errorMessage,
+          filename: name,
+          errorMessage: errMsg,
         });
       };
     }
   }, []);
 
-  // Lock body scroll when dialog is active
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
-      haptics.notification(status === "success" ? "success" : "warning");
-    } else {
-      document.body.style.overflow = "";
       setShareSuccess(false);
+      setPathCopied(false);
+      setVaultAdded(false);
+      void haptics.notification(status === "success" ? "success" : "warning");
     }
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, [isOpen, status, haptics]);
-
-  // Register with Android hardware back button and Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const unregisterBack = useNavStore.getState().registerOverlay("save-result-modal", () => {
-      close();
-      return true;
-    });
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      unregisterBack();
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, close]);
 
   if (!mounted) return null;
 
   const category = getFileCategory(filename);
   const catConfig = CATEGORY_CONFIG[category];
   const isSuccess = status === "success";
+  const fullDisplayPath = `/${directory || "Documents"}/${filename}`;
 
   const handleShare = async () => {
-    haptics.impact("light");
+    void haptics.light();
     startShareTransition(async () => {
       try {
         if (Capacitor.isNativePlatform()) {
-          // Native Capacitor share
           await Share.share({
             title: filename,
             text: `Sharing ${filename} from ZenoDeck`,
@@ -164,7 +146,6 @@ export function SaveResultModal() {
           });
           setShareSuccess(true);
         } else if (typeof navigator !== "undefined" && navigator.share) {
-          // Web Share API
           if (blob && navigator.canShare?.({ files: [new File([blob], filename, { type: blob.type })] })) {
             await navigator.share({
               files: [new File([blob], filename, { type: blob.type })],
@@ -179,7 +160,6 @@ export function SaveResultModal() {
           }
           setShareSuccess(true);
         } else {
-          // Fallback: copy file name or download
           if (blob) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -195,187 +175,292 @@ export function SaveResultModal() {
           setShareSuccess(true);
         }
       } catch {
-        // User cancelled share dialog
+        // User dismissed share sheet
       }
     });
   };
 
+  const handleCopyPath = async () => {
+    void haptics.light();
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(fullDisplayPath);
+        setPathCopied(true);
+        setTimeout(() => setPathCopied(false), 2000);
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleSendToVault = () => {
+    void haptics.medium();
+    try {
+      if (typeof window !== "undefined") {
+        const key = "zenotap_vault_history";
+        const current = JSON.parse(localStorage.getItem(key) || "[]");
+        const entry = {
+          id: `vault-${Date.now()}`,
+          title: filename,
+          path: fullDisplayPath,
+          size: fileSize || 0,
+          category,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(key, JSON.stringify([entry, ...current.slice(0, 49)]));
+        setVaultAdded(true);
+      }
+    } catch (e) {
+      console.warn("Could not save to ZenoTap Vault history:", e);
+    }
+  };
+
+  const handleOpenStudio = () => {
+    void haptics.medium();
+    close();
+    useNavStore.getState().navigate("spatial-8d");
+  };
+
+  const handleTrimCompress = () => {
+    void haptics.medium();
+    close();
+    if (category === "audio") {
+      useNavStore.getState().navigate("trimmer");
+    } else {
+      useNavStore.getState().navigate("video-compressor");
+    }
+  };
+
   const handleDismiss = () => {
-    haptics.impact("medium");
+    void haptics.light();
     close();
   };
 
-  return createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="save-dialog-title"
-          className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pointer-events-auto"
-        >
-          {/* Glassmorphism Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={handleDismiss}
-            className="absolute inset-0 bg-background/80 dark:bg-black/85 backdrop-blur-md"
-          />
-
-          {/* Dialog Container */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 8 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className={`relative w-full max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[calc(100dvh-2.5rem)] overflow-y-auto rounded-2xl border ${
-              isSuccess
-                ? "border-emerald-500/40 dark:border-emerald-500/30 shadow-[0_12px_45px_rgba(0,0,0,0.6),0_0_35px_rgba(16,185,129,0.18)]"
-                : "border-rose-500/40 dark:border-rose-500/30 shadow-[0_12px_45px_rgba(0,0,0,0.6),0_0_35px_rgba(244,63,94,0.18)]"
-            } bg-card/95 dark:bg-zinc-950/95 text-foreground backdrop-blur-2xl`}
-          >
-            {/* Ambient Laser Edge Highlight */}
-            <div
-              className={`h-1 w-full bg-gradient-to-r from-transparent ${
-                isSuccess ? "via-emerald-400 dark:via-pulse" : "via-rose-500"
-              } to-transparent opacity-90`}
-            />
-
-            {/* Close Button */}
-            <button
-              onClick={handleDismiss}
-              aria-label="Close dialog"
-              className="absolute right-3.5 top-4 rounded-xl border border-border/60 bg-card/60 p-1.5 text-muted-foreground transition-all hover:bg-secondary hover:text-foreground active:scale-95 focus:outline-none"
-            >
-              <X className="size-4" />
-            </button>
-
-            <div className="p-5 sm:p-6 space-y-4">
-              {/* Status Header */}
-              <div className="flex items-center gap-3.5">
-                <div
-                  className={`relative flex size-12 shrink-0 items-center justify-center rounded-2xl border ${
-                    isSuccess
-                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
-                      : "border-rose-500/40 bg-rose-500/15 text-rose-500 dark:text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.25)]"
-                  }`}
+  return (
+    <ZenoModal
+      isOpen={isOpen}
+      onClose={handleDismiss}
+      overlayId="save-result-modal"
+      title={isSuccess ? "File Saved to Storage" : "Storage Access Required"}
+      subtitle={isSuccess ? `Verified 100% On-Device · ${directory || "Documents"}` : "System Permission Needed"}
+      badge={isSuccess ? "SAVED" : "DENIED"}
+      badgeTone={isSuccess ? "emerald" : "rose"}
+      size="md"
+      footer={
+        <div className="flex w-full items-center gap-2.5">
+          {isSuccess ? (
+            <>
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={isSharing}
+                className="flex flex-1 min-h-11 items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/70 px-3 font-display text-xs font-bold tracking-wider text-foreground transition-all hover:bg-secondary hover:border-primary/40 active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                <Share2 className="size-4 text-primary" />
+                <span>{shareSuccess ? "SHARED!" : "SHARE FILE"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="flex flex-1 min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 font-display text-xs font-extrabold tracking-widest text-zinc-950 uppercase transition-all hover:opacity-95 active:scale-95 cursor-pointer shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+              >
+                <Check className="size-4 stroke-[3]" />
+                <span>DONE</span>
+              </button>
+            </>
+          ) : (
+            <>
+              {Capacitor.isNativePlatform() && (
+                <button
+                  type="button"
+                  onClick={() => void openAppSettings()}
+                  className="flex flex-1 min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/15 px-3 font-display text-xs font-bold tracking-wider text-amber-300 transition-all hover:bg-amber-500/25 active:scale-95 cursor-pointer"
                 >
-                  {isSuccess ? (
-                    <FolderCheck className="size-6 animate-pulse" />
-                  ) : (
-                    <AlertTriangle className="size-6 animate-bounce" />
-                  )}
-                  {/* Outer Pulsing Ring */}
-                  <span
-                    className={`absolute -inset-1 rounded-2xl border ${
-                      isSuccess ? "border-emerald-500/20" : "border-rose-500/20"
-                    } animate-ping pointer-events-none opacity-40`}
-                  />
-                </div>
+                  <Settings2 className="size-4" />
+                  <span>APP SETTINGS</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="flex flex-1 min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-500 px-4 font-display text-xs font-extrabold tracking-widest text-white uppercase transition-all hover:bg-rose-600 active:scale-95 cursor-pointer"
+              >
+                <span>ACKNOWLEDGE</span>
+              </button>
+            </>
+          )}
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* Status Notification Banner */}
+        <div className="flex items-center gap-3.5">
+          <div
+            className={`relative flex size-12 shrink-0 items-center justify-center rounded-2xl border ${
+              isSuccess
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+                : "border-rose-500/40 bg-rose-500/15 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.25)]"
+            }`}
+          >
+            {isSuccess ? (
+              <FolderCheck className="size-6 animate-pulse" />
+            ) : (
+              <AlertTriangle className="size-6 animate-bounce" />
+            )}
+          </div>
 
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest uppercase ${
-                        isSuccess
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
-                          : "bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30"
-                      }`}
-                    >
-                      <span className="size-1.5 rounded-full bg-current animate-pulse" />
-                      {isSuccess ? "SAVED TO DEVICE" : "PERMISSION REQUIRED"}
-                    </span>
-                  </div>
-                  <h3
-                    id="save-dialog-title"
-                    className="font-display text-sm sm:text-base font-bold tracking-wider text-foreground uppercase"
-                  >
-                    {isSuccess ? "File Saved to Storage" : "Storage Access Required"}
-                  </h3>
-                </div>
+          <div className="space-y-0.5">
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-widest uppercase ${
+                isSuccess
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                  : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+              }`}
+            >
+              <span className="size-1.5 rounded-full bg-current animate-ping" />
+              {isSuccess ? "VERIFIED DIRECT-TO-DISK" : "WRITE PERMISSION BLOCKED"}
+            </span>
+            <h3 className="font-display text-sm sm:text-base font-bold tracking-wide text-foreground">
+              {isSuccess ? "Media Saved Successfully" : "Storage Access Required"}
+            </h3>
+          </div>
+        </div>
+
+        {/* File Details & Spec Pills */}
+        {isSuccess ? (
+          <div className="rounded-2xl border border-border/70 bg-secondary/30 dark:bg-card/40 p-4 space-y-3 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${catConfig.border} ${catConfig.bg} ${catConfig.color}`}
+              >
+                <catConfig.Icon className="size-5" />
               </div>
 
-              {/* Inset File Detail Card */}
-              {isSuccess ? (
-                <div className="rounded-xl border border-border/70 bg-secondary/40 dark:bg-card/40 p-3.5 space-y-2.5 backdrop-blur-sm">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`flex size-9 shrink-0 items-center justify-center rounded-xl border ${catConfig.border} ${catConfig.bg} ${catConfig.color}`}
-                    >
-                      <catConfig.Icon className="size-5" />
-                    </div>
-
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p
-                        title={filename}
-                        className="font-mono text-xs font-semibold text-foreground break-all line-clamp-2 select-all leading-snug"
-                      >
-                        {filename}
-                      </p>
-
-                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground font-mono">
-                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                          <HardDrive className="size-3" />
-                          {directory || "Documents"}
-                        </span>
-                        {fileSize && fileSize > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>{formatBytes(fileSize)}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-border/40 pt-2 text-[10px] font-mono text-muted-foreground">
-                    <span>Target Folder:</span>
-                    <span className="truncate max-w-[210px] text-foreground font-medium">
-                      📁 /{directory || "Documents"}/{filename}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 space-y-2 text-xs font-mono text-rose-600 dark:text-rose-200/90 leading-relaxed">
-                  <p>{errorMessage || "Device storage permission was denied."}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Storage permission is required to save processed media. Please enable file permissions in device settings.
-                  </p>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                {isSuccess && (
-                  <button
-                    onClick={handleShare}
-                    disabled={isSharing}
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border/80 bg-card/70 dark:bg-card/60 px-3 font-display text-xs font-bold tracking-wider text-foreground transition-all hover:bg-secondary hover:border-pulse/40 active:scale-95 disabled:opacity-50 cursor-pointer"
-                  >
-                    <Share2 className="size-4 text-pulse" />
-                    <span>{shareSuccess ? "SHARED" : "SHARE FILE"}</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={handleDismiss}
-                  className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 font-display text-xs font-bold tracking-widest uppercase transition-all active:scale-95 cursor-pointer ${
-                    isSuccess
-                      ? "bg-pulse text-zinc-950 font-extrabold hover:bg-pulse/90 shadow-[0_0_20px_rgba(16,185,129,0.3)] col-span-1"
-                      : "bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] col-span-2"
-                  }`}
+              <div className="min-w-0 flex-1 space-y-1">
+                <p
+                  title={filename}
+                  className="font-mono text-xs font-semibold text-foreground break-all line-clamp-2 select-all leading-snug"
                 >
-                  <Check className="size-4" strokeWidth={3} />
-                  <span>{isSuccess ? "DONE" : "ACKNOWLEDGE"}</span>
-                </button>
+                  {filename}
+                </p>
+
+                {/* Spec Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/20 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    <catConfig.Icon className="size-3" />
+                    {catConfig.badge}
+                  </span>
+
+                  {fileSize && fileSize > 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary/60 border border-border/60 px-2 py-0.5 font-mono text-[10px] font-semibold text-foreground/80">
+                      <HardDrive className="size-3 text-muted-foreground" />
+                      {formatBytes(fileSize)}
+                    </span>
+                  ) : null}
+
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
+                    <Check className="size-3" />
+                    CRC Verified
+                  </span>
+                </div>
               </div>
             </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>,
-    document.body
+
+            {/* Target Path Bar with 1-Tap Copy */}
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-[11px] font-mono">
+              <div className="min-w-0 flex-1 truncate text-muted-foreground">
+                <span className="text-muted-foreground/60">Path: </span>
+                <span className="text-foreground font-medium">{fullDisplayPath}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyPath}
+                className="flex items-center gap-1 rounded-lg border border-border/80 bg-secondary/70 hover:bg-secondary px-2 py-1 text-[10px] font-bold text-foreground transition-colors cursor-pointer shrink-0"
+              >
+                {pathCopied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                <span>{pathCopied ? "COPIED" : "COPY"}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 space-y-2 text-xs font-mono text-rose-300 leading-relaxed">
+            <p className="font-bold text-rose-200">{errorMessage || "Storage write permission was denied."}</p>
+            <p className="text-[11px] text-muted-foreground">
+              Android scoped storage requires explicit user permission to write media to the shared Documents/Download partition.
+            </p>
+          </div>
+        )}
+
+        {/* 1-Tap Workflow Handoffs (Only on Success) */}
+        {isSuccess && (
+          <div className="space-y-2 pt-1">
+            <p className="font-mono text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80">
+              One-Tap Next Steps
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {/* Action 1: Send to ZenoTap Vault */}
+              <button
+                type="button"
+                onClick={handleSendToVault}
+                className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
+                  vaultAdded
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                    : "border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 text-foreground"
+                }`}
+              >
+                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                  {vaultAdded ? <Check className="size-4 text-emerald-400" /> : <Layers className="size-4" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[11px] font-bold truncate">
+                    {vaultAdded ? "In ZenoTap Vault" : "ZenoTap Vault"}
+                  </p>
+                  <p className="font-mono text-[9px] text-muted-foreground truncate">
+                    Pin to keyboard deck
+                  </p>
+                </div>
+              </button>
+
+              {/* Action 2: Open in 8D Studio */}
+              <button
+                type="button"
+                onClick={handleOpenStudio}
+                className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 p-2.5 text-left transition-all cursor-pointer text-foreground"
+              >
+                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
+                  <Headphones className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[11px] font-bold truncate">8D Studio</p>
+                  <p className="font-mono text-[9px] text-muted-foreground truncate">
+                    Binaural 360 & DSP
+                  </p>
+                </div>
+              </button>
+
+              {/* Action 3: Trim / Compress */}
+              <button
+                type="button"
+                onClick={handleTrimCompress}
+                className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 p-2.5 text-left transition-all cursor-pointer text-foreground"
+              >
+                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-400">
+                  <Scissors className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[11px] font-bold truncate">
+                    {category === "audio" ? "Audio Trimmer" : "Compressor"}
+                  </p>
+                  <p className="font-mono text-[9px] text-muted-foreground truncate">
+                    {category === "audio" ? "Slice & fade track" : "Reduce size ≤10MB"}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </ZenoModal>
   );
 }

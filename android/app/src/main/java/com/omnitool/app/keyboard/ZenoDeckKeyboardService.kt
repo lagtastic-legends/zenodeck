@@ -106,6 +106,15 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var layoutClipboardPill: View? = null
     private var pbClipboardProcessing: ProgressBar? = null
 
+    // Inline Popup Overlay References (Avoids BadTokenException)
+    private var imePopupOverlay: View? = null
+    private var tvPopupTitle: TextView? = null
+    private var tvPopupDesc: TextView? = null
+    private var btnPopupInject: Button? = null
+    private var btnPopupPin: Button? = null
+    private var btnPopupDelete: Button? = null
+    private var btnPopupClose: Button? = null
+
     // Category Filter References
     private var btnCatAll: Button? = null
     private var btnCatGifs: Button? = null
@@ -223,6 +232,23 @@ class ZenoDeckKeyboardService : InputMethodService() {
         btnModeVault = root.findViewById(R.id.btn_mode_vault)
         btnModeKeys = root.findViewById(R.id.btn_mode_keys)
         tvKeyEchoPreview = root.findViewById(R.id.tv_key_echo_preview)
+
+        // Bind Inline Popup Overlay
+        imePopupOverlay = root.findViewById(R.id.ime_popup_overlay)
+        tvPopupTitle = root.findViewById(R.id.tv_popup_title)
+        tvPopupDesc = root.findViewById(R.id.tv_popup_desc)
+        btnPopupInject = root.findViewById(R.id.btn_popup_inject)
+        btnPopupPin = root.findViewById(R.id.btn_popup_pin)
+        btnPopupDelete = root.findViewById(R.id.btn_popup_delete)
+        btnPopupClose = root.findViewById(R.id.btn_popup_close)
+
+        btnPopupClose?.setOnClickListener {
+            vibrateTick()
+            hidePopupOverlay()
+        }
+        imePopupOverlay?.setOnClickListener {
+            hidePopupOverlay()
+        }
 
         btnModeVault?.setOnClickListener {
             btnModeVault?.isSelected = true
@@ -518,45 +544,49 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
     /**
      * Long-press management options on vault cards:
-     * - Toggle Pin / Unpin
-     * - Delete Media
-     * - Copy Media to Clipboard
+     * Inline glassmorphic popup overlay preventing BadTokenException
      */
     private fun showVaultCardOptionsDialog(file: File) {
         vibrateHeavy()
         val isPinned = file.name.startsWith("pinned_", ignoreCase = true)
-        val pinLabel = if (isPinned) "📌 Unpin from Top" else "📌 Pin to Top"
+        val cleanName = file.nameWithoutExtension.removePrefix("pinned_")
 
-        val options = arrayOf(pinLabel, "📋 Copy to Clipboard", "🗑️ Delete Item")
+        if (imePopupOverlay != null) {
+            tvPopupTitle?.text = cleanName
+            tvPopupDesc?.text = if (isPinned) "Pinned item • Choose action" else "Vault item • Choose action"
+            btnPopupPin?.text = if (isPinned) "Unpin" else "Pin 📌"
 
-        AlertDialog.Builder(this)
-            .setTitle(file.nameWithoutExtension.removePrefix("pinned_"))
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> togglePinFile(file)
-                    1 -> {
-                        val contentUri = FileProvider.getUriForFile(
-                            this@ZenoDeckKeyboardService,
-                            "$packageName.fileprovider",
-                            file
-                        )
-                        executeFallback(file, contentUri, null, "User copied from options")
-                    }
-                    2 -> deleteVaultFile(file)
-                }
+            btnPopupInject?.setOnClickListener {
+                vibrateTactileClick()
+                hidePopupOverlay()
+                commitGif(file, description = file.nameWithoutExtension)
             }
-            .setNegativeButton("Cancel", null)
-            .create()
-            .apply {
-                window?.setType(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                    else
-                        @Suppress("DEPRECATION")
-                        android.view.WindowManager.LayoutParams.TYPE_PHONE
-                )
+
+            btnPopupPin?.setOnClickListener {
+                vibrateTick()
+                hidePopupOverlay()
+                togglePinFile(file)
             }
-            .show()
+
+            btnPopupDelete?.setOnClickListener {
+                vibrateTick()
+                hidePopupOverlay()
+                deleteVaultFile(file)
+            }
+
+            imePopupOverlay?.visibility = View.VISIBLE
+        } else {
+            val contentUri = FileProvider.getUriForFile(
+                this@ZenoDeckKeyboardService,
+                "$packageName.fileprovider",
+                file
+            )
+            executeFallback(file, contentUri, null, "User long-pressed item")
+        }
+    }
+
+    private fun hidePopupOverlay() {
+        imePopupOverlay?.visibility = View.GONE
     }
 
     private fun togglePinFile(file: File) {
@@ -1056,6 +1086,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
         super.onFinishInputView(finishingInput)
         currentEditorInfo = null
         hideKeyEcho()
+        hidePopupOverlay()
         Log.d(TAG, "onFinishInputView: finishingInput=$finishingInput")
     }
 

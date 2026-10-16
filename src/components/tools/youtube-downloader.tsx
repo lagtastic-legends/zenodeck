@@ -94,6 +94,55 @@ import type {
   UniversalQualityOption,
   PlatformType,
 } from "@/lib/media/types";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+
+const DOWNLOADER_PRESETS: PresetItem[] = [
+  {
+    id: "cinema-4k-master",
+    name: "Cinema 4K 60FPS Master",
+    description: "Lossless Ultra HD (2160p60) video muxed with pristine multi-channel stereo audio.",
+    category: "studio",
+    engineTier: "Tier 2: Media3 HW",
+    chips: ["4K 60FPS", "Lossless MP4", "Hardware Mux"],
+    params: { badge: "4K 60FPS", isAudioOnly: false },
+  },
+  {
+    id: "smooth-1080p-mobile",
+    name: "Smooth 1080p 60FPS (Universal)",
+    description: "Full HD 60fps high-bitrate stream optimized for all mobile screens and TVs.",
+    category: "recommended",
+    engineTier: "Tier 1: FastCopy",
+    chips: ["1080P 60", "Universal MP4", "H.264 High"],
+    params: { badge: "1080P 60", isAudioOnly: false },
+  },
+  {
+    id: "social-share-light",
+    name: "WhatsApp & Discord Ready (<15MB)",
+    description: "Lightweight 720p/480p compact video tailored for fast social sharing without hitting upload limits.",
+    category: "social",
+    engineTier: "Tier 1: FastCopy",
+    chips: ["720P / 480P", "<15 MB", "Fast Share"],
+    params: { badge: "720P", isAudioOnly: false },
+  },
+  {
+    id: "audiophile-320k-mp3",
+    name: "Audiophile Studio 320kbps MP3",
+    description: "Maximum bitrate studio MP3 with ID3 track tagging and embedded high-res cover art.",
+    category: "studio",
+    engineTier: "Tier 1: FastCopy",
+    chips: ["320 KBPS", "Studio Master", "ID3 Cover Art"],
+    params: { badge: "320 KBPS", id: "audio-320", isAudioOnly: true },
+  },
+  {
+    id: "zenotap-reaction-clip",
+    name: "ZenoTap Sticker & Reaction Clip",
+    description: "Fast-path looping reaction snippet formatted for instant ZenoTap keyboard sharing.",
+    category: "social",
+    engineTier: "Tier 2: Media3 HW",
+    chips: ["Reaction Loop", "<5MB", "ZenoTap Ready"],
+    params: { badge: "720P", isAudioOnly: false, clipEnabled: true },
+  },
+];
 
 export function YouTubeDownloader() {
   const { engine, state: engineState, boot } = useFFmpegEngine();
@@ -132,6 +181,44 @@ export function YouTubeDownloader() {
       pauseControllerRef.current.pause();
       setIsPaused(true);
       void haptics.light();
+    }
+  };
+
+  // Preset Selector Modal State
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string>("smooth-1080p-mobile");
+
+  const handleApplyDownloaderPreset = (preset: PresetItem) => {
+    setActivePresetId(preset.id);
+    if (!videoInfo || !videoInfo.qualities) return;
+    const isAudioTarget = Boolean(preset.params?.isAudioOnly);
+    if (isAudioTarget) {
+      setMediaTypeTab("audio");
+      const targetAudio =
+        videoInfo.qualities.find((q) => q.isAudioOnly && (q.id === preset.params?.id || q.badge === preset.params?.badge)) ||
+        videoInfo.qualities.find((q) => q.isAudioOnly) ||
+        videoInfo.qualities[0];
+      if (targetAudio) setSelectedQuality(targetAudio);
+    } else {
+      setMediaTypeTab("video");
+      const targetVideo =
+        videoInfo.qualities.find(
+          (q) =>
+            !q.isAudioOnly &&
+            (q.badge === preset.params?.badge ||
+              (preset.id.includes("4k") && q.is4K) ||
+              (preset.id.includes("1080") && (q.badge.includes("1080") || q.resolutionLabel.includes("1080"))) ||
+              (preset.id.includes("social") && (q.badge.includes("720") || q.badge.includes("480"))))
+        ) ||
+        videoInfo.qualities.find((q) => !q.isAudioOnly) ||
+        videoInfo.qualities[0];
+      if (targetVideo) setSelectedQuality(targetVideo);
+    }
+
+    if (preset.params?.clipEnabled) {
+      setIsClipEnabled(true);
+      setClipStartTime("00:00");
+      setClipEndTime("00:15");
     }
   };
 
@@ -1705,9 +1792,24 @@ export function YouTubeDownloader() {
                   </button>
                 </div>
 
-                <span className="hidden sm:inline-block font-mono text-[11px] text-muted-foreground">
-                  {selectedQuality ? `${selectedQuality.label} · ${formatBytes(selectedQuality.approxSizeBytes)}` : ""}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void haptics.light();
+                      setIsPresetModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-primary/50 bg-primary/15 px-3 py-1 font-mono text-xs font-semibold text-primary hover:bg-primary/25 hover:border-primary transition-all cursor-pointer shadow-xs active:scale-95"
+                    title="Open Quality & Format Presets"
+                  >
+                    <Zap className="size-3.5 fill-current" />
+                    <span>Presets</span>
+                  </button>
+
+                  <span className="hidden sm:inline-block font-mono text-[11px] text-muted-foreground">
+                    {selectedQuality ? `${selectedQuality.label} · ${formatBytes(selectedQuality.approxSizeBytes)}` : ""}
+                  </span>
+                </div>
               </div>
 
               {/* Quality Cards Grid */}
@@ -2429,6 +2531,22 @@ export function YouTubeDownloader() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Universal Downloader Preset Selector Modal */}
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="youtube-downloader"
+        toolTitle="Media Downloader"
+        builtinPresets={DOWNLOADER_PRESETS}
+        activePresetId={activePresetId}
+        onSelectPreset={handleApplyDownloaderPreset}
+        currentSettings={{
+          quality: selectedQuality?.badge || selectedQuality?.resolutionLabel,
+          format: selectedQuality?.container,
+          isAudioOnly: selectedQuality?.isAudioOnly,
+        }}
+      />
 
       {/* Floating Background Mini Player Deck */}
       <YouTubeMiniPlayer />

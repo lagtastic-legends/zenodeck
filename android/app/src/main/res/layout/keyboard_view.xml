@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/keyboard_root"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/keyboard_outer_container"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/keyboard_total_height"
-    android:orientation="vertical"
-    android:background="#0E0F14"
-    android:padding="@dimen/keyboard_padding">
+    android:layout_height="@dimen/keyboard_total_height">
+
+    <LinearLayout
+        android:id="@+id/keyboard_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#0E0F14"
+        android:padding="@dimen/keyboard_padding">
 
     <!-- Top Morphing Utility Ribbon: Controls, Mode Pills & Status Indicator -->
     <LinearLayout
@@ -448,5 +453,107 @@
             android:textStyle="bold"
             android:paddingHorizontal="2dp" />
     </LinearLayout>
+    </LinearLayout>
 
-</LinearLayout>
+    <!-- Inline Glassmorphic Popup Overlay (Avoids BadTokenException) -->
+    <FrameLayout
+        android:id="@+id/ime_popup_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="#DD0E0F14"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:background="@drawable/bg_utility_pill"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_popup_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Vault Item Actions"
+                    android:textColor="#F1F5F9"
+                    android:textStyle="bold"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btn_popup_close"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="✕"
+                    android:textColor="#94A3B8"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_popup_desc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:layout_marginBottom="12dp"
+                android:text="Select an action to execute"
+                android:textColor="#94A3B8"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_popup_inject"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_keycap_primary"
+                    android:text="Inject"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btn_popup_pin"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_keycap_special"
+                    android:text="Pin"
+                    android:textAllCaps="false"
+                    android:textColor="#22D3EE"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btn_popup_delete"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_keycap_special"
+                    android:text="Delete"
+                    android:textAllCaps="false"
+                    android:textColor="#F87171"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

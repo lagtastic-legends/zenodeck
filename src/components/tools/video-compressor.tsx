@@ -7,7 +7,7 @@
  */
 
 import { motion } from "framer-motion";
-import { Minimize2 } from "lucide-react";
+import { Minimize2, Sparkles } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { DropZone } from "@/components/media/drop-zone";
@@ -26,6 +26,55 @@ import { useMediaJob } from "@/hooks/use-media-job";
 import { formatBytes } from "@/lib/format";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
 import type { VideoMeta } from "@/lib/media/probe";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+
+const COMPRESSOR_PRESETS: PresetItem[] = [
+  {
+    id: "discord-limit",
+    name: "Discord & Slack (≤10 MB)",
+    description: "Aggressive CRF 28 and AAC 128k audio designed to stay strictly under standard chat upload limits.",
+    category: "social",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["720p", "CRF 28", "AAC Audio", "≤10MB"],
+    params: { crf: 28, resolution: "720", keepAudio: true },
+  },
+  {
+    id: "email-attachment",
+    name: "Email Attachment (≤25 MB)",
+    description: "Balanced 720p compression tuned for standard email provider file size boundaries.",
+    category: "social",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["720p", "CRF 26", "Universal"],
+    params: { crf: 26, resolution: "720", keepAudio: true },
+  },
+  {
+    id: "high-fidelity-master",
+    name: "Archival High-Fidelity Master",
+    description: "Preserves native resolution with near-lossless CRF 20 for premium quality preservation.",
+    category: "studio",
+    engineTier: "Tier 3: WebCodecs",
+    chips: ["Original Res", "CRF 20", "Lossless Look"],
+    params: { crf: 20, resolution: "original", keepAudio: true },
+  },
+  {
+    id: "balanced-mobile",
+    name: "Balanced Mobile (Recommended)",
+    description: "Optimized balance between compression speed, bandwidth savings, and crisp mobile playback.",
+    category: "recommended",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["720p", "CRF 24", "Recommended"],
+    params: { crf: 24, resolution: "720", keepAudio: true },
+  },
+  {
+    id: "ultra-compact",
+    name: "Ultra Compact Minimalist",
+    description: "Maximum file reduction downscaling to 480p with CRF 34 for poor connectivity situations.",
+    category: "social",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["480p", "CRF 34", "Tiny Size"],
+    params: { crf: 34, resolution: "480", keepAudio: true },
+  },
+];
 
 type Resolution = "original" | "1080" | "720" | "480" | "360";
 
@@ -53,6 +102,15 @@ export function VideoCompressor() {
   const [resolution, setResolution] = useState<Resolution>("720");
   const [keepAudio, setKeepAudio] = useState(true);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [activePresetId, setActivePresetId] = useState<string>("balanced-mobile");
+
+  const handleApplyPreset = (preset: PresetItem) => {
+    setActivePresetId(preset.id);
+    if (typeof preset.params.crf === "number") setCrf(preset.params.crf);
+    if (preset.params.resolution) setResolution(preset.params.resolution as Resolution);
+    if (typeof preset.params.keepAudio === "boolean") setKeepAudio(preset.params.keepAudio);
+  };
 
   /* Auto-pick a sensible resolution ceiling from the source height. */
   const effectiveResolution = useMemo<Resolution>(() => {
@@ -133,6 +191,21 @@ export function VideoCompressor() {
           label="Drop a video to compress"
           disabled={busy}
         />
+
+        {/* Preset trigger button & settings header */}
+        <div className="flex items-center justify-between gap-2 px-1">
+          <p className="font-mono text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            Compression Parameters
+          </p>
+          <button
+            type="button"
+            onClick={() => setIsPresetModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-mono font-medium transition-colors cursor-pointer"
+          >
+            <Sparkles className="size-3.5 text-primary" />
+            <span>Presets</span>
+          </button>
+        </div>
 
         {/* CRF slider */}
         <div className="space-y-2.5 rounded-xl border border-border/60 bg-card/40 p-4">
@@ -266,6 +339,17 @@ export function VideoCompressor() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="video-compressor"
+        toolTitle="Video Compressor"
+        builtinPresets={COMPRESSOR_PRESETS}
+        activePresetId={activePresetId}
+        onSelectPreset={handleApplyPreset}
+        currentSettings={{ crf, resolution: effectiveResolution, keepAudio }}
+      />
     </div>
   );
 }
