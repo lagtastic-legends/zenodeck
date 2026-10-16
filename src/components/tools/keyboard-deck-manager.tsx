@@ -26,7 +26,9 @@ import {
   Image as ImageIcon,
   ArrowRight,
   ShieldCheck,
+  Sliders,
 } from "lucide-react";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { useEffect, useState, useCallback, useId } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -224,6 +226,54 @@ function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: Sort
   );
 }
 
+const VAULT_DECK_PRESETS: PresetItem[] = [
+  {
+    id: "discord-sticker",
+    name: "Discord Animated Sticker",
+    description: "Ultra-fast WebP sticker (<500KB) tailored for Discord message reactions.",
+    category: "social",
+    engineTier: "Tier 1: FastCopy",
+    chips: ["320x320", "WebP", "30 fps", "<500 KB"],
+    params: { format: "webp", width: 320, height: 320, fps: 30 },
+  },
+  {
+    id: "telegram-reaction",
+    name: "Telegram Reaction GIF",
+    description: "Compact 256x256 GIF with optimized color palette for instant mobile injection.",
+    category: "social",
+    engineTier: "Tier 2: Media3 HW",
+    chips: ["256x256", "GIF", "128 Colors", "<1.0 MB"],
+    params: { format: "gif", width: 256, height: 256, colors: 128 },
+  },
+  {
+    id: "whatsapp-sticker",
+    name: "WhatsApp Sticker Profile",
+    description: "512x512 square transparent WebP format compliant with WhatsApp sticker tray specifications.",
+    category: "recommended",
+    engineTier: "Tier 3: WebCodecs",
+    chips: ["512x512", "Animated WebP", "Alpha", "16px Safe"],
+    params: { format: "webp", width: 512, height: 512, alpha: true },
+  },
+  {
+    id: "micro-vault-loop",
+    name: "Micro Vault Card Loop",
+    description: "Ultra-low memory footprint for rapid IME caching and zero-lag keyboard drawer rendering.",
+    category: "recommended",
+    engineTier: "Tier 1: FastCopy",
+    chips: ["160x160", "GIF / WebP", "15 fps", "<250 KB"],
+    params: { format: "webp", width: 160, height: 160, fps: 15 },
+  },
+  {
+    id: "studio-master-loop",
+    name: "Lossless Studio Master Loop",
+    description: "Full dynamic color range and 60fps loop timing for flagship device keyboards.",
+    category: "studio",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["480x480", "GIF High-DPI", "30-60 fps", "Floyd-Steinberg"],
+    params: { format: "gif", width: 480, height: 480, dither: true },
+  },
+];
+
 export function KeyboardDeckManager() {
   const haptics = useHaptics();
   const [gifs, setGifs] = useState<DeckGifItem[]>([]);
@@ -231,6 +281,8 @@ export function KeyboardDeckManager() {
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("discord-sticker");
 
   // Cloud Pairing state
   const [syncToken, setSyncToken] = useState<string | null>(null);
@@ -778,17 +830,31 @@ export function KeyboardDeckManager() {
             </p>
           </div>
 
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors self-start sm:self-auto">
-            <Upload className="size-3.5" />
-            <span>{isUploading ? "Uploading..." : "Add Media Files"}</span>
-            <input
-              type="file"
-              accept="image/gif,image/webp"
-              multiple
-              onChange={(e) => void handleFileUpload(e)}
-              className="hidden"
-            />
-          </label>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                setShowPresetModal(true);
+              }}
+              className="flex items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 transition-colors cursor-pointer"
+            >
+              <Sliders className="size-3.5 text-violet-400" />
+              <span>Presets</span>
+            </button>
+
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors">
+              <Upload className="size-3.5" />
+              <span>{isUploading ? "Uploading..." : "Add Media Files"}</span>
+              <input
+                type="file"
+                accept="image/gif,image/webp"
+                multiple
+                onChange={(e) => void handleFileUpload(e)}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
 
         {gifs.length === 0 && !loading && (
@@ -823,6 +889,19 @@ export function KeyboardDeckManager() {
           </SortableContext>
         </DndContext>
       </div>
+
+      <PresetSelectorModal
+        isOpen={showPresetModal}
+        onClose={() => setShowPresetModal(false)}
+        toolId="zenotap-vault"
+        toolTitle="ZenoTap Vault Presets"
+        builtinPresets={VAULT_DECK_PRESETS}
+        activePresetId={selectedPresetId}
+        onSelectPreset={(preset) => {
+          setSelectedPresetId(preset.id);
+          toast.success(`Active vault preset: ${preset.name}`);
+        }}
+      />
     </div>
   );
 }

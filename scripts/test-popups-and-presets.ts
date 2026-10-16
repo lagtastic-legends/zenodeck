@@ -82,6 +82,13 @@ async function runTestSuite() {
   assert(audioSrc.includes("AUDIO_STUDIO_PRESETS"), "UnifiedAudioStudio must define AUDIO_STUDIO_PRESETS");
   assert(audioSrc.includes("<PresetSelectorModal"), "UnifiedAudioStudio must mount PresetSelectorModal");
 
+  // Keyboard Deck Manager
+  const deckManagerPath = path.join(root, "src/components/tools/keyboard-deck-manager.tsx");
+  assert(fs.existsSync(deckManagerPath), "keyboard-deck-manager.tsx must exist");
+  const deckManagerSrc = fs.readFileSync(deckManagerPath, "utf-8");
+  assert(deckManagerSrc.includes("VAULT_DECK_PRESETS"), "keyboard-deck-manager must define VAULT_DECK_PRESETS");
+  assert(deckManagerSrc.includes("<PresetSelectorModal"), "keyboard-deck-manager must mount PresetSelectorModal");
+
   // 4. System Modals Standardized with ZenoModal
   console.log("\n[TEST 4] Verifying System Modals Standardized with ZenoModal...");
 
@@ -108,6 +115,12 @@ async function runTestSuite() {
   const appDownSrc = fs.readFileSync(appDownPath, "utf-8");
   assert(appDownSrc.includes("<ZenoModal"), "app-download-modal must use ZenoModal");
   assert(appDownSrc.includes("arm64-v8a"), "app-download-modal must list ARM64 architecture build");
+
+  // Update Modal
+  const updateModalPath = path.join(root, "src/components/dialogs/update-modal.tsx");
+  assert(fs.existsSync(updateModalPath), "update-modal.tsx must exist");
+  const updateModalSrc = fs.readFileSync(updateModalPath, "utf-8");
+  assert(updateModalSrc.includes("<ZenoModal"), "update-modal must use ZenoModal");
 
   // Whats New Modal
   const whatsNewPath = path.join(root, "src/components/shell/whats-new-modal.tsx");
