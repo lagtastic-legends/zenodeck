@@ -18,16 +18,16 @@ function runTests() {
   console.log("✓ parseSemver passed");
 
   // 2. Test isNewerVersion
-  assert(isNewerVersion("v1.0.1", "1.0.0") === true, "1.0.1 > 1.0.0");
-  assert(isNewerVersion("1.1.0", "1.0.0") === true, "1.1.0 > 1.0.0");
-  assert(isNewerVersion("2.0.0", "1.0.0") === true, "2.0.0 > 1.0.0");
-  assert(isNewerVersion("1.0.0", "1.0.0") === false, "1.0.0 not > 1.0.0");
-  assert(isNewerVersion("0.9.9", "1.0.0") === false, "0.9.9 not > 1.0.0");
-  assert(isNewerVersion("0.1.0", "1.0.0") === false, "0.1.0 not > 1.0.0");
+  assert(isNewerVersion("v1.0.2", "1.0.1") === true, "1.0.2 > 1.0.1");
+  assert(isNewerVersion("1.1.0", "1.0.1") === true, "1.1.0 > 1.0.1");
+  assert(isNewerVersion("2.0.0", "1.0.1") === true, "2.0.0 > 1.0.1");
+  assert(isNewerVersion("1.0.1", "1.0.1") === false, "1.0.1 not > 1.0.1");
+  assert(isNewerVersion("1.0.0", "1.0.1") === false, "1.0.0 not > 1.0.1");
+  assert(isNewerVersion("0.9.9", "1.0.1") === false, "0.9.9 not > 1.0.1");
   console.log("✓ isNewerVersion comparisons passed");
 
   // 3. Test current version
-  assert(APP_VERSION === "1.0.0", "APP_VERSION must be 1.0.0");
+  assert(APP_VERSION === "1.0.1", "APP_VERSION must be 1.0.1");
   console.log("✓ APP_VERSION config constant verified: " + APP_VERSION);
 
   // 4. Test dismissUpdateNotification logic & mock storage
@@ -72,16 +72,16 @@ function runTests() {
 
   // 6. Test Post-Update Celebration Modal version-diff trigger logic
   const LAST_SEEN_KEY = "zenodeck_last_seen_version";
-  mockStorage[LAST_SEEN_KEY] = "0.9.0"; // User upgraded from 0.9.0 to 1.0.0
+  mockStorage[LAST_SEEN_KEY] = "1.0.0"; // User upgraded from 1.0.0 to 1.0.1
 
   const storedVersion = mockStorage[LAST_SEEN_KEY];
   const shouldTriggerModal = !storedVersion || storedVersion !== APP_VERSION;
-  assert(shouldTriggerModal === true, "Modal must trigger when storedVersion (0.9.0) !== APP_VERSION (1.0.0)");
+  assert(shouldTriggerModal === true, "Modal must trigger when storedVersion (1.0.0) !== APP_VERSION (1.0.1)");
 
   // Simulate user dismissing modal
   mockStorage[LAST_SEEN_KEY] = APP_VERSION;
   const shouldTriggerAfterDismiss = mockStorage[LAST_SEEN_KEY] !== APP_VERSION;
-  assert(shouldTriggerAfterDismiss === false, "Modal must NOT trigger after zenodeck_last_seen_version is updated to 1.0.0");
+  assert(shouldTriggerAfterDismiss === false, "Modal must NOT trigger after zenodeck_last_seen_version is updated to 1.0.1");
   console.log("✓ Post-Update Celebration Modal version-diff state machine verified");
 
   // 7. Test OTA Notification Channel & deduplication logic

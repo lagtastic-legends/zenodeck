@@ -1,381 +1,142 @@
 <p align="center">
-  <img src="public/logo.jpg" alt="ZenoDeck Logo" width="128" height="128" style="border-radius: 28px; box-shadow: 0 12px 32px rgba(139, 92, 246, 0.35);" />
+  <img src="public/logo.jpg" alt="ZenoDeck Logo" width="120" height="120" style="border-radius: 28px; box-shadow: 0 12px 32px rgba(139, 92, 246, 0.35);" />
 </p>
 
 <h1 align="center">ZenoDeck</h1>
 
 <p align="center">
-  <strong>The Heavy-Duty, 100% Client-Side WebAssembly Media & Document Workstation</strong>
+  <strong>The Heavy-Duty, 100% Client-Side WebAssembly Media & Document Workstation</strong><br />
+  <em>Featuring the Universal Media Downloader & ZenoTap 3D Tactile IME Keyboard</em>
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases">
-    <img src="https://img.shields.io/badge/Release-v1.0.0%20(GA)-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.0" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.1">
+    <img src="https://img.shields.io/badge/Release-v1.0.1-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.1" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.0/zenodeck.apk">
-    <img src="https://img.shields.io/badge/Android%20Universal-zenodeck.apk-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK Download" />
-  </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.0/zenodeck-v1.0.0-arm64-v8a.apk">
-    <img src="https://img.shields.io/badge/ARM64%20APK-v1.0.0-00BCD4?style=for-the-badge&logo=android&logoColor=white" alt="ARM64 APK Download" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.1/app-universal-release.apk">
+    <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
-    <img src="https://img.shields.io/badge/iOS%20Profile-Install%20on%20iPhone-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile Download" />
+    <img src="https://img.shields.io/badge/iOS%20Profile-Web%20Clip-000000?style=for-the-badge&logo=apple&logoColor=white" alt="iOS Profile" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License" />
   </a>
-  <img src="https://img.shields.io/badge/Privacy-100%25%20On--Device-10B981?style=for-the-badge" alt="Privacy" />
+  <img src="https://img.shields.io/badge/Privacy-100%25%20On--Device-10B981?style=for-the-badge" alt="100% On-Device Privacy" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/ci.yml">
-    <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
-  </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml">
-    <img src="https://github.com/lagtastic-legends/zenodeck/actions/workflows/release.yml/badge.svg" alt="Release Build Status" />
-  </a>
   <img src="https://img.shields.io/badge/Tests-100%25%20Passing-success?style=flat-square&logo=vitest&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js" />
-  <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor" />
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white" alt="Capacitor 8" />
   <img src="https://img.shields.io/badge/WebAssembly-FFmpeg%20WASM-654FF0?style=flat-square&logo=webassembly&logoColor=white" alt="WebAssembly" />
-  <img src="https://img.shields.io/badge/Code%20Style-CodeRabbit%20%26%20ESLint-4B32C3?style=flat-square" alt="Code Style" />
 </p>
 
 ---
 
-## ⚡ Overview
+## ⚡ What is ZenoDeck?
 
-**ZenoDeck** is an open-source, high-performance media workstation and document utility suite built for modern web browsers and Android devices.
+**ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
-Unlike traditional cloud converters and SaaS editing tools that upload private documents, photos, audio, and videos to external servers, ZenoDeck executes every transformation **100% on-device** using client-side **WebAssembly (FFmpeg WASM)**, the hardware-accelerated **WebCodecs API**, **WebGL 2.0 Shaders**, and the native **Web Audio API**. Not a single byte ever leaves your hardware.
+Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
 
 ---
 
-## 🚀 Download & Installation Matrix
+## 🚀 Download & Installation (v1.0.1)
 
-Every release is automatically compiled, signed, and published for all target architectures:
+All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
-| Platform / Binary | Download Link | Architecture & Description | Size & Checksum |
+| Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Android Universal APK** | [**Download zenodeck.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.0/zenodeck.apk) | Universal signed APK supporting all 64-bit & 32-bit Android phones, tablets, and emulators. | **11.99 MB** · `6662664B...` |
-| **⚡ Android ARM64-v8a APK** | [**Download zenodeck-v1.0.0-arm64-v8a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.0/zenodeck-v1.0.0-arm64-v8a.apk) | Dedicated lightweight build for modern 64-bit ARM phones (Pixel, Galaxy, OnePlus, Xiaomi). | **11.99 MB** · `6662664B...` |
-| **📱 Android ARMv7a APK** | [**Download zenodeck-v1.0.0-armeabi-v7a.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.0/zenodeck-v1.0.0-armeabi-v7a.apk) | Dedicated lightweight build for legacy 32-bit Android smartphones. | **11.99 MB** · `6662664B...` |
-| **💻 Android x86_64 APK** | [**Download zenodeck-v1.0.0-x86_64.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.0/zenodeck-v1.0.0-x86_64.apk) | Dedicated build for Android tablets, Chromebooks, and emulators. | **11.99 MB** · `6662664B...` |
-| **⚡ Direct Web Host Mirror** | [**Download zenodeck.apk (Direct Mirror)**](https://omni-tool-two.vercel.app/zenodeck.apk) | Direct fast download mirrored straight from the live web host. | **11.99 MB** |
-| **🍏 Apple iOS Web Clip** | [**Download zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | Apple Web Clip Configuration Profile. Installs ZenoDeck in full-screen standalone mode. | **0.09 MB** |
-| **🌐 Progressive Web App** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant launch in modern desktop and mobile browsers. Zero installation required. | PWA |
-| **📦 GitHub Releases Hub** | [**GitHub Releases Hub (v1.0.0)**](https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.0) | Full release notes, raw SHA256 checksums, and source tarballs. | Hub |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.1/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.1/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.1/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.1/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12 MB** |
+| **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
+| **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 
 ---
 
-## 🌟 What's New in v1.0.0 (Official General Availability)
+## 🌟 Flagship Highlights
 
-- **🎬 Native Direct-to-Disk Universal Media Acquisition**:
-  - **Zero-RAM Hardware `MediaMuxer` on Android**: Eliminates intermediate server hops and Vercel proxy dependencies by routing video & audio streams directly through native Kotlin `HttpURLConnection` and hardware `MediaMuxer` (<5MB RAM overhead, ~1.5s execution).
-  - **Strict 4K 60FPS Resolution Lock**: Lossless adaptive muxing directly into `Movies/ZenoDeck` with immediate `MediaScanner` indexing into Google Photos. Total ban on silent quality downgrades.
-  - **Multi-Platform Coverage**: YouTube (4K60, DASH video/audio, Shorts), Reddit (audio-video DASH muxing), TikTok (lossless watermark-free), Instagram (Reels & Carousels), X/Twitter, and HLS `.m3u8` live stream reconstruction.
-  - **Lossless Pre-Download Time-Range Clipper**: Stream-copy trimming (`-ss`/`-to`) for instantaneous lossless clip generation with zero re-encoding artifacts.
-  - **System Share Intent (`ACTION_SEND`)**: 1-tap "Share to ZenoDeck" from any Android app directly into the downloader.
-- **⌨️ ZenoTap Native IME Keyboard & 50% Spacebar Trackpad**:
-  - **Tactile 3D Keycaps**: Precision 1dp top specular highlight border, 8dp rounded corners, recessed bottom bezel depth shadow, and glowing pressed state.
-  - **50% Ergonomic Spacebar Deck & Thumb Trackpad**: Horizontal thumb scrubbing shifts cursor left/right with `VibrationEffect.EFFECT_TICK` haptics.
-  - **Synchronized Deck Themes**: Instant cross-boundary theme switching between `"obsidian"` (cyberpunk dark violet/cyan) and `"terracotta"` (60/30/10 `#FAF5EE` linen, `#342A24` timber, `#C2652A` clay).
-  - **Headless Coroutine Media Engine**: Isolated media actions (GIF compression, sticker conversion) operating headlessly on `Dispatchers.IO` keeping IME footprint strictly below `<30MB` RAM.
-- **🎧 Studio 8D Binaural Audio DSP Suite**:
-  - Web Audio & FFmpeg binaural spatial rotation, lookahead peak limiter, parametric EQ, and speed/pitch shifting.
-- **📱 Universal Responsive UI & Mobile Header De-Crowding**:
-  - Strict 360px mobile budget for `TopBar`, embedded engine indicator dot, floating action button safety guards, and full-width responsive grids.
-- **📦 Ultra-Slim 11.99 MB Multi-Architecture APKs**:
-  - 4 tailored signed APK builds (`universal`, `arm64-v8a`, `armeabi-v7a`, `x86_64`) shrunk with ProGuard/R8.
+### 🎬 Universal Media Acquisition Engine
+- **Strict 4K 60FPS Resolution Lock**: Real 3840×2160 uncompressed video downloads with zero silent downgrades to 360p.
+- **Direct-to-Disk 2MB Bounded Streaming**: On Android, streams are downloaded in 2MB slices with YouTube `&range=` parameter and `Range:` header, completely bypassing Chromium CORS, header stripping, and CDN socket timeouts.
+- **Hardware Zero-RAM MediaMuxer**: Multiplexes separate 4K video and high-bitrate audio streams directly into flash storage (`Movies/ZenoDeck`) with instant Google Photos / MediaStore indexing.
+- **Multi-Platform Support**: YouTube (4K60, DASH, Shorts), Reddit (audio-video DASH muxing), TikTok (watermark-free), Instagram (Reels & Carousels), X/Twitter, Vimeo, Pinterest, and HLS `.m3u8` streams.
+- **Lossless Time-Range Clipper**: Stream-copy trimming (`-ss`/`-to`) for instantaneous video clipping with zero re-encoding artifacts.
+- **Android System Share Intent**: Share video URLs directly from any Android app into ZenoDeck with 1 tap.
 
----
+### ⌨️ ZenoTap Native Android IME Keyboard
+- **Tactile 3D Keycaps**: Precision 1dp top specular highlight border, 8dp corner radius, recessed depth shadows, and responsive pressed glow.
+- **50% Spacebar Trackpad**: Ergonomic wide spacebar with horizontal thumb scrubbing that scrubs the text cursor smoothly left/right with haptic tick feedback.
+- **Headless Media Dispatcher**: Convert copied clipboard images into Telegram/WhatsApp WebP stickers or animated GIFs headlessly on `Dispatchers.IO` (<30MB RAM footprint).
+- **Synced Themes**: Seamless cross-platform switching between Cyberpunk `"obsidian"` and Warm Linen `"terracotta"` themes.
 
-## 🌟 What's New in v3.16.0
+### 🎧 Studio Audio DSP Suite
+- **8D Binaural Spatial Audio**: Dynamic HRTF headphone surround sound with customizable orbit speed and reverb radius.
+- **Mastering Suite**: 10-band parametric EQ, lookahead peak limiter, vocal isolation / karaoke remover, tempo & pitch shift, and bass boost.
 
-- **🎬 Universal Media Downloader & Multi-Platform Muxer Engine (`universal-resolver.ts`, `downloader.ts`)**:
-  - **YouTube 4K 60FPS Adaptive Muxing**: Strict resolution lock guarantees real 3840×2160 downloads with zero silent downgrades to 360p. Zero-RAM Android hardware `MediaMuxer` routing directly into `Movies/ZenoDeck`.
-  - **Reddit Split-Audio DASH Probing & Muxing (`reddit.ts`)**: Probes candidate DASH audio streams (`DASH_AUDIO_128.mp4`, `DASH_audio.mp4`) and dual-muxes with video so Reddit downloads always have sound.
-  - **HLS (`.m3u8`) Segment Fetcher & Remuxer (`downloader.ts`)**: Concurrently downloads segments into OPFS and remuxes `.ts` into standard `.mp4` containers via FFmpeg stream copy.
-  - **TikTok & Social Carousels**: 1080p watermark-free TikTok videos + photo albums; multi-item Instagram Reels/Carousels and Twitter multi-media posts.
-- **✂️ Lossless Pre-Download Time-Range Clipper (`turbo-downloader.ts`)**:
-  - Precision trimming (`[startTime, endTime]`) with quick presets (`0–30s`, `0–60s`, `30–60s`) and custom timestamp inputs.
-  - Injects `-ss` / `-to` stream copy flags during muxing for instant keyframe clipping with zero quality loss.
-- **📊 3-Stage Split Telemetry HUD & Non-Destructive Pause/Resume**:
-  - Independent telemetry progress bars for Video Track, Audio Track, and Muxing status with real-time throughput metrics.
-  - `🛡️ RAM-Safe OPFS` active status badge confirming file chunks buffer safely into Origin Private File System.
-  - Non-destructive pause/resume retaining downloaded chunks in-memory or on-disk.
-- **📱 Android Native System Share Intent (`ACTION_SEND`)**:
-  - Registered `android.intent.action.SEND` for `text/plain` in `AndroidManifest.xml` and `MainActivity.java`.
-  - Seamless 1-tap "Share to ZenoDeck" from any Android app (YouTube, TikTok, Instagram, Reddit, X) auto-opens the app and resolves the link.
-- **⚡ 1-Tap Post-Download Deck Actions**:
-  - Completion card shortcuts `[⌨️ Send to ZenoTap]` to attach media to custom keyboard keys and `[🎧 Open in 8D Studio]` for spatial audio processing.
-- **🖥️ Desktop Workstation Top Bar Unification & Universal Mobile Responsive Overhaul**:
-  - Consolidated duplicate header controls, streamlined workstation ribbon, and eliminated mobile FAB button overlap.
-  - Scaled native ZenoTap keyboard across small phones (`values-sw320dp`), standard phones, tablets (`values-sw600dp`), and landscape mode (`values-land`).
-- **📦 Multi-Architecture Android APK Release Suite**:
-  - Optimized signed release APKs (`app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`, `app-universal-release.apk`) shrunk to `11.99 MB` with R8 and ProGuard.
+### 📄 Private Document & Image Suite
+- **100% Client-Side PDF Tools**: Merge, compress, extract pages, rotate, and sign PDFs directly in browser memory.
+- **Image Workstation**: Format conversion (WebP, PNG, JPEG, AVIF), bulk resizing, EXIF metadata scrubber, and OCR text extraction.
 
 ---
 
-## 🌟 What's New in v3.15.0
+## 🛠️ Tech Stack & Architecture
 
-- **⌨️ ZenoTap Native Keyboard Hardware Aesthetics & Keycap Engine**:
-  - **Tactile Keycaps**: Precision 1dp top specular highlight border, 8dp rounded corners, recessed bottom bezel depth shadow, and glowing pressed state.
-  - **50% Width Spacebar Deck**: True 50% width (`layout_weight="0.5"`) with a centered glowing LED trackpad indicator pill.
-  - **Horizontal Spacebar Cursor Scrubbing**: Smooth thumb-tracking across the 50% spacebar with horizontal delta cursor positioning and crisp `VibrationEffect.EFFECT_TICK` haptics.
-  - **Accelerate-on-Hold & Swipe Word Deletion**: Backspace accelerates hold-deletion and supports swiping left to delete entire words.
-  - **Morphing Utility Ribbon**: Mode switcher pills (`[⌨️ Keys]`, `[⚡ Vault]`) + Live host app MIME compatibility dot (`GIF • WebP Ready`) + animated smart clipboard action pills (`[⚡ Compress]`, `[🎞️ To GIF]`, `[✨ Sticker]`).
-  - **Glassmorphic Vault Cards**: 12dp glassmorphic framing, format badges (`GIF` / `STICKER`), file-size micro-labels, category strip filtering (`All`, `GIFs`, `Stickers`, `Pinned`), and long-press pinning/deletion.
-  - **Cross-Boundary Live Theme Sync**: Dynamic theme switching between `"obsidian"` (OKLCH dark cyber-violet/cyan) and `"terracotta"` (60/30/10 `#FAF5EE` / `#342A24` / `#C2652A`).
-- **🎉 Post-Update "What's New" Celebration Modal (`whats-new-modal.tsx`)**:
-  - Version-diff auto trigger (`zenodeck_last_seen_version`), 2×2 Bento showcase grid, sensory completion fanfare (`triggerSuccess()`), and direct 1-tap navigation to ZenoTap Studio.
-  - Manual replay capability triggered by clicking version badges in top bar or footer.
-- **🚀 3-Layer OTA Update Notification Pipeline (`updater.ts`, `notifications.ts`)**:
-  - Background GitHub release polling, Capacitor foreground resume listener (`appStateChange`), native Android local notification on high-importance channel `zenodeck_updates`, and in-app update status pills.
-- **🎛️ In-App ZenoTap Studio & Live Keyboard Simulator**:
-  - **1:1 Live Keyboard Simulator**: Interactive software deck preview in Next.js 16 featuring live key taps, mode switching, category filtering, and typing into an integrated sandbox.
-  - **Interactive Onboarding Sandbox**: 4-step progressive setup checklist with real-time status indicators.
-- **🎬 True 4K 60FPS Adaptive DASH Muxing & Zero Silent Fallback**:
-  - **Strict Resolution Lock**: Total ban on silent 360p fallback downgrades; strictly preserves requested 4K/2K/1080p resolution and output filename tags (`[4K 60FPS].mp4`).
-  - **YouTube CDN Range Chunking**: Automatically injects `&range=start-end` query parameters to prevent Google Video 403 socket drops on >64MB streams.
-  - **Android Native Disk-to-Disk `MediaMuxer`**: Zero-RAM sample muxing in `ZenoHeadlessMediaEngine.kt` merging 4K video and audio directly on flash storage (<5MB RAM, ~1.5s execution, 0% frame decode).
-  - **Public Gallery Indexing & WebView Playback**: Direct save to `Movies/ZenoDeck`, immediate `MediaScannerConnection` indexing into Google Photos, and `Capacitor.convertFileSrc()` for instant in-app playback.
-- **📦 Slimmed 11.98 MB Release APK**:
-  - Full ProGuard/R8 shrinking reducing the signed release APK to **11.98 MB**, far below the strict 25 MB limit.
-
----
-
-## 🌟 What's New in v3.14.0
-
-- **⚡ Android SharedArrayBuffer & Multi-Threaded WASM Acceleration**:
-  - Overrode `BridgeWebViewClient` in `MainActivity.java` with COOP (`same-origin`), COEP (`credentialless`), and CORP (`cross-origin`) injection for local APK assets (`https://localhost`), unlocking full SIMD multi-threading for `FFmpeg.wasm` and `onnxruntime-web`.
-  - Upgraded `public/sw.js` with declarative COOP/COEP isolation for static PWA web deployments.
-  - Deployed real-time hardware telemetry badge in `SystemStatusHud.tsx` exposing cross-origin isolation and multi-threading states.
-- **📱 Headless Native Media Engine for ZenoTap IME (`ZenoHeadlessMediaEngine.kt`)**:
-  - Standalone Kotlin coroutine singleton operating headlessly on `Dispatchers.IO` without waking `MainActivity` or WebView JavaScript.
-  - Hardware MediaCodec & Jetpack Media3 video transcoding and compression pipelines.
-  - 1-tap 512x512 WebP lossy sticker normalizer (<500 KB) for instant WhatsApp & Telegram messaging insertion.
-  - Strict IME memory protection (<30 MB RAM) via companion thumbnail generator (<15 KB `.thumb.webp`) eliminating LMK evictions.
-  - In-keyboard clipboard pill actions: `"Compress"`, `"To GIF"`, and `"Sticker"`.
-- **🔀 4-Tier Unified Media Engine Router (`engine-router.ts`)**:
-  - Hierarchical routing across Tier 1 (Native Web Audio/Canvas), Tier 2 (Web Workers & OPFS Storage), Tier 3 (Multi-Threaded WASM), and Tier 4 (Native Android Hardware).
-- **🌐 Multi-Provider AI Gateway (`api-gateway.ts`)**:
-  - Automated client/server fallback across Google Gemini, Cloudflare Workers AI, Groq, OpenRouter, and Ollama.
-- **🎧 Container-Safe Metadata Tagging & Studio 8D Audio Export (`spatial-engine.ts`)**:
-  - Container Header Guard protecting `.m4a`/`.aac` (`ftyp` at byte 4) and `.opus` (`OggS` at byte 0) from ID3 prepending, utilizing native FFmpeg `-metadata` muxing.
-  - Studio-grade compressed 8D spatial audio export (MP3, M4A, Opus, WAV) with calibrated orbit speed and swing intensity.
-  - Origin Private File System (OPFS) persistent model weight caching (`model-cache.ts`).
-- **⚡ ZenoMacros Batch Automation Engine (`zeno-macros.ts` & UI)**:
-  - Declarative multi-action workflows for automated batch media processing.
-- **🎨 OffscreenCanvas WebGL2 GLSL Shaders (`useOffscreenShader.ts`)**:
-  - High-performance GPU shader rendering off the main UI thread.
-- **📜 Permanent Architectural Constitution (`.antigravityrules`)**:
-  - Codified repository-wide standards for media routing, OPFS caching, 60-30-10 palette ratio, and IME RAM limits.
-
----
-
-## 🌟 What's New in v3.13.0
-
-- **📱 Universal Phone Form-Factor Layout Architecture**:
-  - **Screen Size & Density Scaling (`AndroidManifest.xml`)**: Configured `<supports-screens>` for `smallScreens`, `normalScreens`, `largeScreens`, and `xlargeScreens` with any-density and resizable scaling across all mobile devices.
-  - **Sub-380px Compact Breakpoint (`xs: 380px`)**: Fine-grained responsive breakpoint in `tailwind.config.ts` guaranteeing clean scaling on budget phones and compact displays.
-  - **Adaptive Quick Action Matrix (`ToolGrid.tsx`)**: Re-engineered to `grid-cols-2 xs:grid-cols-4 sm:grid-cols-4`. Compact displays (<380px) render a 2-column thumb-friendly layout; standard and flagship displays (≥380px) render a dense 4-column matrix with zero card blowout (`min-w-0`, `break-words`).
-  - **Zero-Overflow TopBar (`top-bar.tsx`)**: Rigid `shrink-0` bounds and responsive visibility for action pills (`hidden xs:flex`), eliminating horizontal scrolling and badge crowding on 320px viewports while preserving update alert visibility.
-  - **Touch-Optimized Hero Callouts (`dashboard-view.tsx`)**: Added `w-full min-[420px]:w-auto` to primary CTAs for single-thumb taps on narrow viewports.
-  - **Horizontal Overscroll Containment (`globals.css`)**: Enforced `overscroll-behavior-x: none` across root HTML and body, eliminating edge bounce displacement during touch swipes.
-- **🎨 Terracotta 60:30:10 Design System & Color Harmony Architecture**:
-  - **60% Raw Linen Canvas**: High-end parchment background (`#FAF5EE`) offering soothing eye comfort and organic warmth.
-  - **30% Timber & Sandstone Contours**: Deep espresso timber typography (`#342A24`), warm sandstone card surfaces (`#F3ECE0`, `#EDE3D4`), and crisp linen borders (`#DFD3C2`).
-  - **10% Fired Clay Hero Accent**: Radiant burnt sienna and clay hero buttons (`#C2652A`, `#964228`) with specular top rim highlight, tactile depression, and amber glow shadows.
-  - **Dynamic Harmony Swatch in Theme Toggle (`theme-toggle.tsx`)**: 3-swatch inline indicator visually communicating the 60:30:10 ratio with immediate theme switching.
-- **📦 Universal Signed Multi-Architecture Android APK**:
-  - Signed release binary bundling native Capacitor plugins and WebAssembly engines for `arm64-v8a`, `armeabi-v7a`, and `x86_64`.
-  - Android 7.0 (API 24) to Android 15 (API 36) compatibility.
-- **🧪 100% Automated Test Suite Verified**:
-  - Universal E2E Test Suite: **138/138 passing (100%)** across all 4 tiers.
-  - App Updater & Semver Test Suite: **12/12 passing (100%)**.
-  - ZenoTap Pairing Ease Suite: **5/5 passing (100%)**.
-  - TypeScript strict compilation: **0 Errors**.
-
-*(For detailed historical release logs, see [CHANGELOG.md](CHANGELOG.md), [RELEASE_NOTES_v3.15.0.md](RELEASE_NOTES_v3.15.0.md), [RELEASE_NOTES_v3.14.0.md](RELEASE_NOTES_v3.14.0.md), and [RELEASE_NOTES_v3.13.0.md](RELEASE_NOTES_v3.13.0.md)).*
-
----
-
-## 🏛️ System Architecture
-
-```mermaid
-flowchart TD
-    subgraph UI_Layer["Client Presentation & Interaction Layer"]
-        App["Next.js 16 App Router · Tailwind CSS · Framer Motion"]
-        Nav["Zustand Atomic NavStore · Hierarchical Back Guards"]
-        Theme["Glassmorphic Dark Mode · Tactile PCM Web Audio"]
-    end
-
-    subgraph Audio_DSP["Dual-Engine Audio Architecture"]
-        WA["Web Audio API (Real-Time DSP Node Chain)"]
-        WA --> EQ["10-Band ISO Equalizer (31Hz – 16kHz)"]
-        WA --> Bass["Dynamic Bass Boost + 8kHz Clarity Shelf"]
-        WA --> Spatial["Spherical 8D Orbit + Contralateral Reflections"]
-        WA --> Vocal["Center Vocal Isolation & OOPS Cancellation"]
-    end
-
-    subgraph WASM_Engine["WebAssembly Execution Sandbox (FFmpeg WASM)"]
-        Worker["Dedicated Web Worker Thread"]
-        VFS["Zero-Copy Virtual WORKERFS (Up to 20 GB)"]
-        Watchdog["120s Compilation Watchdog & IDB Cache Guard"]
-        Filter1["Slowed & Reverb (-af asetrate=44100*0.85,aresample=44100,aecho=...)"]
-        Filter2["8D Audio (-af apulsator=hz=0.08:amount=0.85,aecho=...)"]
-        Worker --> VFS
-        Worker --> Watchdog
-        VFS --> Filter1 & Filter2
-    end
-
-    subgraph Native_Bridge["Capacitor 8 Android Runtime"]
-        Cap["Capacitor Android Shell"]
-        Save["Chunked nativeSave (512 KB Slices · Android IPC Safe)"]
-        Cutout["Display Cutout (shortEdges Edge-to-Edge)"]
-        Scroll["120Hz Kinetic Touch Scrolling Momentum"]
-        Cap --> Save & Cutout & Scroll
-    end
-
-    App --> Audio_DSP
-    App --> WASM_Engine
-    App --> Native_Bridge
+```
+┌────────────────────────────────────────────────────────┐
+│             ZenoDeck Universal Frontend                │
+│       Next.js 16 (App Router) • React 19 • Tailwind v4  │
+└───────────────┬────────────────────────┬───────────────┘
+                │                        │
+       [Web / Desktop]            [Android Native]
+                │                        │
+┌───────────────▼────────┐      ┌────────▼───────────────┐
+│ Client-Side WebAssembly│      │ Native Android Engine  │
+│  • FFmpeg WASM (v0.12) │      │  • Kotlin Coroutines   │
+│  • WebCodecs & WebGL 2 │      │  • Hardware MediaCodec │
+│  • Web Audio API & OPFS│      │  • MediaMuxer (<5MB)   │
+└────────────────────────┘      │  • ZenoTap IME Service │
+                                └────────────────────────┘
 ```
 
 ---
 
-## 🧰 Comprehensive Tool Matrix
+## 💻 Developer Quickstart
 
-ZenoDeck provides 18+ client-side tools categorized into 6 specialized workstations:
-
-| Workstation | Tool Name | Engine / Technology | Supported Formats | Key Capabilities |
-| :--- | :--- | :--- | :--- | :--- |
-| **Audio** | **Audio Effects Suite** | FFmpeg WASM / Libavfilter | MP3, WAV, M4A, FLAC, OGG | Industry-standard Slowed & Reverb + 8D Spatial Audio. |
-| **Audio** | **Audio DSP Studio** | Web Audio API + FFmpeg | MP3, WAV, FLAC, M4A | 10-Band EQ, Bass Boost, 8D Orbit, Vocal Removal, 10 Presets. |
-| **Audio** | **Bass Booster** | Web Audio + FFmpeg | MP3, WAV, AAC, OGG | 5 progressive tiers (+3dB to +18dB) with anti-mud clarity shelves. |
-| **Audio** | **Slowed + Reverb** | FFmpeg WASM (`asetrate`) | MP3, WAV, M4A, FLAC | Vintage vinyl pitch-shift slow with tiered room echo tails. |
-| **Audio** | **3D / 8D Audio** | FFmpeg WASM (`apulsator`) | MP3, WAV, AAC, FLAC | 360° circular binaural panning with spatial dimension widening. |
-| **Audio** | **Equalizer Studio** | Web Audio BiquadFilter | MP3, WAV, OGG, AAC | Parametric graphic EQ with 6 studio curves and peak limiter. |
-| **Audio** | **Vocal Remover** | FFmpeg WASM (OOPS) | MP3, WAV, FLAC | Center-channel vocal removal with sub-bass preservation. |
-| **Audio** | **Trimmer & Slicer** | FFmpeg WASM (`atrim`) | MP3, WAV, M4A, AAC | Millisecond-precise cutting with linear fade-in and fade-out. |
-| **Video** | **Universal Downloader** | Multi-Platform Resolver | YouTube, TikTok, IG, X, Reddit | Watermark-free MP4, high-bitrate MP3, subtitles (.srt/.vtt). |
-| **Video** | **Media Converter** | FFmpeg WASM | MP4, MKV, WebM, AVI, MOV | Lossless stream copy (`-c copy`), transcode, audio extraction. |
-| **Video** | **Video Compressor** | FFmpeg WASM (CRF) | MP4, WebM, MOV, MKV | Multi-tier CRF size reduction with live bitrate estimation. |
-| **Video** | **Video Mute** | FFmpeg WASM (`-an`) | MP4, MOV, WebM, MKV | Instant audio stripping with `-movflags +faststart`. |
-| **Video** | **GIF Maker** | FFmpeg WASM (`palettegen`) | MP4, WebM, MOV ➔ GIF | Optimized 2-pass palette generation for crisp looping GIFs. |
-| **Documents** | **Image to PDF** | pdf-lib | PNG, JPG, WebP ➔ PDF | Multi-page document compilation with pagination layout. |
-| **Documents** | **Scan to PDF** | Camera + Canvas API | Camera / Gallery ➔ PDF | High-contrast receipt and whiteboard document scanning. |
-| **Documents** | **Lock PDF** | pdf-lib + WebCrypto | PDF ➔ Protected PDF | AES document encryption and password protection. |
-| **Documents** | **Text to PDF** | pdf-lib | Markdown / TXT ➔ PDF | Formatted typography, custom margins, and page splitting. |
-| **Imaging** | **Palette Extractor** | Canvas 2D + ColorThief | PNG, JPG, WebP | Dominant color swatches, hex codes, and CSS variables. |
-| **Imaging** | **ASCII Art Studio** | Canvas 2D Web Worker | PNG, JPG, WebP ➔ ASCII | Monospaced terminal typography generator with copy/export. |
-| **Imaging** | **QR Studio** | qrcode + Canvas | Text, URL, WiFi, vCard | SVG & PNG QR generation with error correction levels. |
-| **System** | **Local Vault** | IndexedDB (`idb-keyval`) | Any processed media | Persistent client-side storage ledger with zero quota leaks. |
-| **System** | **Studio Recorder** | MediaRecorder API | Screen, Cam, Mic ➔ WebM/MP4 | Hardware-accelerated recording with zero-latency preview. |
-
----
-
-## 🎛️ Exact Audio Filter Specifications
-
-### 1. Slowed & Reverb
-```text
--af "asetrate=44100*0.85,aresample=44100,aecho=0.8:0.9:1000:0.3"
-```
-- **Speed & Pitch Scaling**: `asetrate=44100*0.85` drops the audio sample clock to 37.485 kHz, simultaneously lowering playback speed and musical pitch to **85%**.
-- **DAC Normalization**: `aresample=44100` resamples back to standard 44.1 kHz output clock.
-- **Room Reverb Simulation**: `aecho=0.8:0.9:1000:0.3` creates 1000ms delay with 0.8 in-gain, 0.9 out-gain, and 0.3 decay factor for deep spatial resonance.
-
-### 2. 8D Audio Spatial Engine
-```text
--af "apulsator=mode=sine:hz=0.08:amount=0.85,aecho=0.8:0.9:1000:0.3"
-```
-- **Sinusoidal Orbital Panning**: `apulsator=mode=sine:hz=0.08:amount=0.85` oscillates stereo channels on a **12.5-second rotation cycle** (`1 / 0.08 Hz = 12.5s`) with **85% stereo depth**.
-- **Cavernous Distance Echo**: `aecho=0.8:0.9:1000:0.3` adds acoustic reflections simulating room distance around the listener.
-
----
-
-## 🛠️ Development & Build Quickstart
-
-### Prerequisites
-- **Node.js**: `v22.x` (LTS recommended)
-- **npm**: `v10.x+`
-- **Java JDK**: `21` (for Android APK compilation)
-- **Android SDK**: API 34+
-
-### 1. Installation
 ```bash
+# 1. Clone repository
 git clone https://github.com/lagtastic-legends/zenodeck.git
 cd zenodeck
-npm install --legacy-peer-deps
-```
 
-### 2. Run Local Development Server
-```bash
+# 2. Install dependencies
+npm install
+
+# 3. Start local development server
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Run Verification Suite (167 Tests)
+### Build for Android
+
 ```bash
-# TypeScript strict type checking
-npm run typecheck
-
-# Full CI offline test suite (E2E, Audio Effects, Muxing, Updater, AI routes)
-npm run test:ci
-```
-
-### 4. Build Production Web Application
-```bash
-npm run build
-```
-
-### 5. Build Android Release APKs
-```bash
-# Export static mobile bundle
+# Export static production bundle & sync Capacitor
 npm run build:mobile
-
-# Sync Capacitor assets
 npx cap sync android
 
-# Compile signed production APKs (ABI split)
+# Compile signed release APKs
 cd android
-./gradlew assembleRelease --no-daemon
+./gradlew assembleRelease
 ```
-Binaries will be generated in `android/app/build/outputs/apk/release/`:
-- `app-universal-release.apk` (Universal)
-- `app-arm64-v8a-release.apk` (ARM64)
-- `app-armeabi-v7a-release.apk` (ARMv7)
-- `app-x86_64-release.apk` (x86_64)
 
 ---
 
-## 🛡️ Security, Privacy & Compliance
+## 📜 License
 
-ZenoDeck enforces a strict **Zero-Upload Privacy Guarantee**:
-1. **Zero Server Ingestion**: We do not maintain or deploy media processing servers. All transformations execute in browser WebAssembly memory or Android native sandboxes.
-2. **Local Cryptography**: File encryption, hashing, and password management use the native WebCrypto API.
-3. **Zero Secret Leakage**: No telemetry, tracking beacons, or behavioral logging payloads are transmitted.
-
-For coordinated disclosures, see [SECURITY.md](.github/SECURITY.md).
-
----
-
-## 🤝 Community & Contributing
-
-Contributions are welcomed! Before opening pull requests, please review:
-- [CONTRIBUTING.md](.github/CONTRIBUTING.md) — Workflow guidelines and code standards.
-- [CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md) — Community expectations.
-- [CHANGELOG.md](CHANGELOG.md) — Version history and release notes.
-
----
-
-## 📄 License & Contact
-
-- **License**: Open-source software licensed under the [MIT License](LICENSE).
-- **GitHub Repository**: [https://github.com/lagtastic-legends/zenodeck](https://github.com/lagtastic-legends/zenodeck)
-- **Official Support**: [support.zenodeck@gmail.com](mailto:support.zenodeck@gmail.com)
+ZenoDeck is open-source software licensed under the **[MIT License](LICENSE)**.
+Built with ❤️ by **Lagtastic Legends**.
