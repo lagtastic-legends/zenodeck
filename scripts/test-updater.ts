@@ -18,16 +18,16 @@ function runTests() {
   console.log("✓ parseSemver passed");
 
   // 2. Test isNewerVersion
-  assert(isNewerVersion("v1.0.2", "1.0.1") === true, "1.0.2 > 1.0.1");
-  assert(isNewerVersion("1.1.0", "1.0.1") === true, "1.1.0 > 1.0.1");
-  assert(isNewerVersion("2.0.0", "1.0.1") === true, "2.0.0 > 1.0.1");
-  assert(isNewerVersion("1.0.1", "1.0.1") === false, "1.0.1 not > 1.0.1");
-  assert(isNewerVersion("1.0.0", "1.0.1") === false, "1.0.0 not > 1.0.1");
-  assert(isNewerVersion("0.9.9", "1.0.1") === false, "0.9.9 not > 1.0.1");
+  assert(isNewerVersion("v1.0.3", "1.0.2") === true, "1.0.3 > 1.0.2");
+  assert(isNewerVersion("1.1.0", "1.0.2") === true, "1.1.0 > 1.0.2");
+  assert(isNewerVersion("2.0.0", "1.0.2") === true, "2.0.0 > 1.0.2");
+  assert(isNewerVersion("1.0.2", "1.0.2") === false, "1.0.2 not > 1.0.2");
+  assert(isNewerVersion("1.0.1", "1.0.2") === false, "1.0.1 not > 1.0.2");
+  assert(isNewerVersion("0.9.9", "1.0.2") === false, "0.9.9 not > 1.0.2");
   console.log("✓ isNewerVersion comparisons passed");
 
   // 3. Test current version
-  assert(APP_VERSION === "1.0.1", "APP_VERSION must be 1.0.1");
+  assert(APP_VERSION === "1.0.2", "APP_VERSION must be 1.0.2");
   console.log("✓ APP_VERSION config constant verified: " + APP_VERSION);
 
   // 4. Test dismissUpdateNotification logic & mock storage

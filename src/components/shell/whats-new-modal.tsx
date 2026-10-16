@@ -152,37 +152,37 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Keyboard className="size-4.5 text-violet-400" />}
-          title="ZenoTap 3D Keycaps & Trackpad"
-          badge="Native IME"
-          description="12dp horizontal thumb-scrubbing spacebar trackpad, tactile 3D hardware keycaps, and synchronized Obsidian/Terracotta themes."
+          icon={<Sliders className="size-4.5 text-violet-400" />}
+          title="Adaptive ZenoModal & Bottom Sheets"
+          badge="UI/UX v1.0.2"
+          description="Responsive mobile swipe-to-dismiss sheets with safe-area insets and centered floating desktop HUDs with sticky footers."
           accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
           badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
         />
 
         <FeatureCard
-          icon={<Zap className="size-4.5 text-amber-400" />}
-          title="81.8% Smaller APK (11.98 MB)"
-          badge="Ultra-Slim"
-          description="ProGuard/R8 shrinking and dynamic OPFS WASM caching reducing the APK footprint under 12 MB with zero binary bloat."
-          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
-          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        />
-
-        <FeatureCard
           icon={<Cpu className="size-4.5 text-cyan-400" />}
-          title="Headless Media3 & IME RAM Safety"
-          badge="<30MB RAM"
-          description="Standalone Kotlin coroutines operating headlessly on Dispatchers.IO with smart clipboard actions for WhatsApp and Discord."
+          title="Hardware Execution Tier Presets"
+          badge="Multi-Tier"
+          description="Instant profiles for FastCopy, Media3 HW, WebCodecs, and Wasm MT with persistent custom user presets across all tools."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />
 
         <FeatureCard
-          icon={<Headphones className="size-4.5 text-emerald-400" />}
-          title="Compressed 8D Audio & DSP Suite"
-          badge="DSP Suite"
-          description="Studio binaural 8D spatial audio rendering with container header guards isolating MP3, M4A, and Opus formats."
+          icon={<Keyboard className="size-4.5 text-amber-400" />}
+          title="Native IME Canvas Overlay"
+          badge="Zero Crash"
+          description="Long-press vault actions rendered directly on the keyboard surface, permanently eliminating Android BadTokenException."
+          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
+        />
+
+        <FeatureCard
+          icon={<Zap className="size-4.5 text-emerald-400" />}
+          title="1-Tap Pipeline Handoffs & Shield"
+          badge="Workflows"
+          description="Instant post-download transfers to ZenoTap Vault, 8D Studio, or Trimmer; live permission manager with 1-tap cache purge."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
