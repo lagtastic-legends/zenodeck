@@ -319,6 +319,28 @@ export async function getVisitorData(): Promise<string | undefined> {
 
 const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
   {
+    name: "IOS_MODERN",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": IOS_MODERN_USER_AGENT,
+      "X-YouTube-Client-Name": "5",
+      "X-YouTube-Client-Version": IOS_MODERN_CLIENT_VERSION,
+    },
+    context: {
+      client: {
+        clientName: "IOS",
+        clientVersion: IOS_MODERN_CLIENT_VERSION,
+        deviceMake: "Apple",
+        deviceModel: "iPhone16,2",
+        osName: "iPhone",
+        osVersion: "18.3.1",
+        hl: "en",
+        gl: "US",
+        userAgent: IOS_MODERN_USER_AGENT,
+      },
+    },
+  },
+  {
     name: "ANDROID_VR",
     headers: {
       "Content-Type": "application/json",
@@ -381,28 +403,6 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
         osVersion: "18.1.0.22B83",
         hl: "en",
         userAgent: IOS_USER_AGENT,
-      },
-    },
-  },
-  {
-    name: "IOS_MODERN",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": IOS_MODERN_USER_AGENT,
-      "X-YouTube-Client-Name": "5",
-      "X-YouTube-Client-Version": IOS_MODERN_CLIENT_VERSION,
-    },
-    context: {
-      client: {
-        clientName: "IOS",
-        clientVersion: IOS_MODERN_CLIENT_VERSION,
-        deviceMake: "Apple",
-        deviceModel: "iPhone16,2",
-        osName: "iPhone",
-        osVersion: "18.3.1",
-        hl: "en",
-        gl: "US",
-        userAgent: IOS_MODERN_USER_AGENT,
       },
     },
   },

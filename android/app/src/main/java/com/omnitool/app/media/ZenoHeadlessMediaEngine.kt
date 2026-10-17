@@ -673,8 +673,14 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         // Candidate URLs for edge failover
         val candidateUrls = getCandidateUrls(streamUrl)
 
-        // Bounded 2MB Chunk Loop
-        val CHUNK_SIZE = 2L * 1024L * 1024L // 2MB bounded chunks
+        // High-Throughput Adaptive Chunking:
+        // Use 8MB for large streams (>40MB), 4MB for medium streams (>10MB), and 2MB for smaller streams
+        fun getOptimalChunkSize(knownTotal: Long): Long = when {
+            knownTotal > 40L * 1024L * 1024L -> 8L * 1024L * 1024L
+            knownTotal > 10L * 1024L * 1024L -> 4L * 1024L * 1024L
+            else -> 2L * 1024L * 1024L
+        }
+
         var bytesDownloaded = if (destinationFile.exists()) destinationFile.length() else 0L
 
         // If file already exists and is fully downloaded:
@@ -683,7 +689,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             return Result.success(destinationFile)
         }
 
-        val buffer = ByteArray(65536) // 64KB read buffer
+        val buffer = ByteArray(131072) // 128KB read buffer for maximum line-speed throughput
         var lastProgressUpdate = 0L
 
         // Initial progress callback
@@ -701,11 +707,12 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 break
             }
 
+            val currentChunkSize = getOptimalChunkSize(totalBytes)
             val chunkStart = bytesDownloaded
             val chunkEnd = if (totalBytes > 0) {
-                minOf(chunkStart + CHUNK_SIZE - 1, totalBytes - 1)
+                minOf(chunkStart + currentChunkSize - 1, totalBytes - 1)
             } else {
-                chunkStart + CHUNK_SIZE - 1
+                chunkStart + currentChunkSize - 1
             }
 
             val chunkRangeHeader = "bytes=$chunkStart-$chunkEnd"
@@ -766,14 +773,46 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                         }
                     }
 
-                    // For non-range progressive streams returning HTTP 200 OK, stream directly in a single pass
+                    // For non-range progressive streams returning HTTP 200 OK, stream directly in a single pass with 128KB buffering
                     if (responseCode == 200) {
                         if (totalBytes <= 0L && conn.contentLengthLong > 0L) {
                             totalBytes = conn.contentLengthLong
                         }
                         bytesDownloaded = 0L
-                        conn.inputStream.use { input ->
-                            FileOutputStream(destinationFile, false).use { output ->
+                        java.io.BufferedInputStream(conn.inputStream, 131072).use { input ->
+                            FileOutputStream(destinationFile, false).use { fos ->
+                                java.io.BufferedOutputStream(fos, 131072).use { output ->
+                                    while (true) {
+                                        if (isCancelled()) {
+                                            destinationFile.delete()
+                                            return Result.failure(Exception("Download cancelled"))
+                                        }
+                                        val read = input.read(buffer)
+                                        if (read == -1) break
+                                        output.write(buffer, 0, read)
+                                        bytesDownloaded += read
+
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastProgressUpdate >= 120 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
+                                            lastProgressUpdate = now
+                                            onProgress(bytesDownloaded, totalBytes)
+                                        }
+                                    }
+                                    output.flush()
+                                }
+                            }
+                        }
+                        if (totalBytes <= 0L) {
+                            totalBytes = bytesDownloaded
+                        }
+                        chunkSuccess = true
+                        break@chunkLoop
+                    }
+
+                    // Standard chunked Range transfer (HTTP 206 Partial Content) with 128KB buffered I/O
+                    java.io.BufferedInputStream(conn.inputStream, 131072).use { input ->
+                        FileOutputStream(destinationFile, true).use { fos ->
+                            java.io.BufferedOutputStream(fos, 131072).use { output ->
                                 while (true) {
                                     if (isCancelled()) {
                                         destinationFile.delete()
@@ -792,34 +831,6 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                                 }
                                 output.flush()
                             }
-                        }
-                        if (totalBytes <= 0L) {
-                            totalBytes = bytesDownloaded
-                        }
-                        chunkSuccess = true
-                        break@chunkLoop
-                    }
-
-                    // Standard chunked Range transfer (HTTP 206 Partial Content)
-                    conn.inputStream.use { input ->
-                        FileOutputStream(destinationFile, true).use { output ->
-                            while (true) {
-                                if (isCancelled()) {
-                                    destinationFile.delete()
-                                    return Result.failure(Exception("Download cancelled"))
-                                }
-                                val read = input.read(buffer)
-                                if (read == -1) break
-                                output.write(buffer, 0, read)
-                                bytesDownloaded += read
-
-                                val now = System.currentTimeMillis()
-                                if (now - lastProgressUpdate >= 120 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
-                                    lastProgressUpdate = now
-                                    onProgress(bytesDownloaded, totalBytes)
-                                }
-                            }
-                            output.flush()
                         }
                     }
 
@@ -846,9 +857,12 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                         return Result.failure(Exception("Download interrupted"))
                     }
                 } finally {
-                    try {
-                        connection?.disconnect()
-                    } catch (_: Throwable) {}
+                    // Retain socket in OkHttp keep-alive pool on successful chunk; disconnect only on error
+                    if (!chunkSuccess) {
+                        try {
+                            connection?.disconnect()
+                        } catch (_: Throwable) {}
+                    }
                 }
             }
 
@@ -933,71 +947,66 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         }
 
         try {
-            // Stage 1: Download Video Stream
-            progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
-            val videoResult = downloadStreamDirectToFile(
-                streamUrl = videoUrl,
-                userAgent = userAgent,
-                destinationFile = vTempFile,
-                isCancelled = isCancelled,
-                onProgress = { downloaded, total ->
-                    totalDownloaded = downloaded
-                    val now = System.currentTimeMillis()
-                    if (now - lastCallbackTime >= 150 || (total > 0 && downloaded >= total)) {
-                        lastCallbackTime = now
-                        val maxStagePct = if (audioUrl.isNullOrEmpty()) 95 else 70
-                        val finalPct = if (total > 0) {
-                            val pct = ((downloaded * maxStagePct) / total).toInt()
-                            if (downloaded > 0) minOf(maxStagePct, maxOf(10, pct)) else 5
-                        } else {
-                            if (downloaded > 0) {
-                                val synthetic = minOf(90, 10 + ((downloaded / (1024 * 512)).toInt() * 5))
-                                minOf(maxStagePct, synthetic)
-                            } else {
-                                5
+            val isSeparateAudio = !audioUrl.isNullOrEmpty() && aTempFile != null
+
+            if (isSeparateAudio) {
+                // High-Speed Concurrent Dual-Stream Acceleration: Download Video & Audio in Parallel
+                progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
+                val pool = Executors.newFixedThreadPool(2)
+                var vBytes = 0L
+                var aBytes = 0L
+                var vTotal = 0L
+                var aTotal = 0L
+
+                val vTask = pool.submit<Result<File>> {
+                    downloadStreamDirectToFile(
+                        streamUrl = videoUrl,
+                        userAgent = userAgent,
+                        destinationFile = vTempFile,
+                        isCancelled = isCancelled,
+                        onProgress = { downloaded, total ->
+                            vBytes = downloaded
+                            vTotal = total
+                            totalDownloaded = vBytes + aBytes
+                            val now = System.currentTimeMillis()
+                            if (now - lastCallbackTime >= 150) {
+                                lastCallbackTime = now
+                                val tot = if (vTotal > 0L) (vTotal + if (aTotal > 0L) aTotal else (vTotal / 10L)) else approxSizeBytes
+                                val pct = if (tot > 0L) minOf(90, maxOf(10, ((totalDownloaded * 90L) / tot).toInt())) else minOf(90, 10 + ((totalDownloaded / (1024 * 512)).toInt() * 5))
+                                progressCallback(pct, totalDownloaded, tot, calculateSpeed(), "downloading_video")
                             }
                         }
-                        val tot = if (total > 0) total else approxSizeBytes
-                        progressCallback(finalPct, downloaded, tot, calculateSpeed(), "downloading_video")
-                    }
+                    )
                 }
-            )
 
-            if (videoResult.isFailure) {
-                return Result.failure(videoResult.exceptionOrNull() ?: Exception("Video stream download failed"))
-            }
-
-            val videoTotalBytes = vTempFile.length()
-
-            // Stage 2: Download Audio Stream if separate
-            if (!audioUrl.isNullOrEmpty() && aTempFile != null) {
-                progressCallback(70, videoTotalBytes, approxSizeBytes, calculateSpeed(), "downloading_audio")
-                val audioResult = downloadStreamDirectToFile(
-                    streamUrl = audioUrl,
-                    userAgent = userAgent,
-                    destinationFile = aTempFile,
-                    isCancelled = isCancelled,
-                    onProgress = { downloaded, total ->
-                        totalDownloaded = videoTotalBytes + downloaded
-                        val now = System.currentTimeMillis()
-                        if (now - lastCallbackTime >= 150 || (total > 0 && downloaded >= total)) {
-                            lastCallbackTime = now
-                            val finalPct = if (total > 0) {
-                                val pct = (70 + ((downloaded * 20) / total)).toInt()
-                                minOf(90, maxOf(70, pct))
-                            } else {
-                                if (downloaded > 0) {
-                                    minOf(90, 70 + ((downloaded / (1024 * 512)).toInt() * 5))
-                                } else {
-                                    70
-                                }
+                val aTask = pool.submit<Result<File>> {
+                    downloadStreamDirectToFile(
+                        streamUrl = audioUrl,
+                        userAgent = userAgent,
+                        destinationFile = aTempFile,
+                        isCancelled = isCancelled,
+                        onProgress = { downloaded, total ->
+                            aBytes = downloaded
+                            aTotal = total
+                            totalDownloaded = vBytes + aBytes
+                            val now = System.currentTimeMillis()
+                            if (now - lastCallbackTime >= 150) {
+                                lastCallbackTime = now
+                                val tot = if (vTotal > 0L) (vTotal + if (aTotal > 0L) aTotal else (vTotal / 10L)) else approxSizeBytes
+                                val pct = if (tot > 0L) minOf(90, maxOf(10, ((totalDownloaded * 90L) / tot).toInt())) else minOf(90, 10 + ((totalDownloaded / (1024 * 512)).toInt() * 5))
+                                progressCallback(pct, totalDownloaded, tot, calculateSpeed(), "downloading_audio")
                             }
-                            val tot = if (total > 0) videoTotalBytes + total else approxSizeBytes
-                            progressCallback(finalPct, totalDownloaded, tot, calculateSpeed(), "downloading_audio")
                         }
-                    }
-                )
+                    )
+                }
 
+                val videoResult = vTask.get()
+                val audioResult = aTask.get()
+                pool.shutdown()
+
+                if (videoResult.isFailure) {
+                    return Result.failure(videoResult.exceptionOrNull() ?: Exception("Video stream download failed"))
+                }
                 if (audioResult.isFailure) {
                     return Result.failure(audioResult.exceptionOrNull() ?: Exception("Audio stream download failed"))
                 }
@@ -1010,6 +1019,38 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 }
                 finalFile = muxResult.getOrNull() ?: destinationFile
             } else {
+                // Single stream (audio-only or pre-muxed video)
+                progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
+                val videoResult = downloadStreamDirectToFile(
+                    streamUrl = videoUrl,
+                    userAgent = userAgent,
+                    destinationFile = vTempFile,
+                    isCancelled = isCancelled,
+                    onProgress = { downloaded, total ->
+                        totalDownloaded = downloaded
+                        val now = System.currentTimeMillis()
+                        if (now - lastCallbackTime >= 150 || (total > 0 && downloaded >= total)) {
+                            lastCallbackTime = now
+                            val finalPct = if (total > 0) {
+                                val pct = ((downloaded * 95) / total).toInt()
+                                if (downloaded > 0) minOf(95, maxOf(10, pct)) else 5
+                            } else {
+                                if (downloaded > 0) {
+                                    minOf(90, 10 + ((downloaded / (1024 * 512)).toInt() * 5))
+                                } else {
+                                    5
+                                }
+                            }
+                            val tot = if (total > 0) total else approxSizeBytes
+                            progressCallback(finalPct, downloaded, tot, calculateSpeed(), "downloading_video")
+                        }
+                    }
+                )
+
+                if (videoResult.isFailure) {
+                    return Result.failure(videoResult.exceptionOrNull() ?: Exception("Stream download failed"))
+                }
+
                 // Pre-muxed stream (itag 18) or audio-only: move directly to destination
                 progressCallback(95, totalDownloaded, totalDownloaded, calculateSpeed(), "finalizing")
                 if (destinationFile.exists()) {

@@ -442,21 +442,18 @@ async function downloadStreamResilient({
   }
 
   // 2. Progressive Sized Chunk Partitioning
-  // For streams with ratebypass=yes or itag 18, use larger 2MB chunks for max throughput.
-  // Otherwise, use 1MB for >10MB or 512KB for smaller files to keep UI responsive.
-  const isRateBypass = streamUrl.includes("ratebypass=yes") || streamUrl.includes("itag=18");
-  const CHUNK_SIZE = isRateBypass
-    ? totalSize > 20 * 1024 * 1024
-      ? 2 * 1024 * 1024
-      : 1024 * 1024
-    : totalSize > 10 * 1024 * 1024
-      ? 1024 * 1024
-      : 512 * 1024;
+  // Dynamic high-throughput chunk partitioning:
+  // Use 4MB for large streams (>30MB), 2MB for medium streams (>8MB), and 1MB for small files.
+  const CHUNK_SIZE = totalSize > 30 * 1024 * 1024
+    ? 4 * 1024 * 1024
+    : totalSize > 8 * 1024 * 1024
+    ? 2 * 1024 * 1024
+    : 1024 * 1024;
   const numChunks = Math.ceil(totalSize / CHUNK_SIZE);
   const outputBuffer = new Uint8Array(totalSize);
 
-  // Use 2–4 workers for optimal mobile network saturation without throttling
-  const concurrency = Math.max(1, Math.min(maxWorkers, 4, numChunks));
+  // Allow up to 6 concurrent range workers to saturate available network bandwidth
+  const concurrency = Math.max(1, Math.min(maxWorkers, 6, numChunks));
   let nextChunkIndex = 0;
   let activeCandidateIndex = 0;
 
