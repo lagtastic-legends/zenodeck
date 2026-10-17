@@ -196,6 +196,10 @@ function getProxiedStreamUrl(directUrl: string): string {
  */
 export function injectYouTubeRangeParam(url: string, rangeHeader?: string): string {
   if (!rangeHeader) return url;
+  // Pre-muxed streams (like legacy itag=18) must never have &range= query parameter appended
+  if (/[?&]itag=18(&|$)/.test(url)) {
+    return url;
+  }
   const match = rangeHeader.match(/bytes=(\d+)-(\d+)?/);
   if (!match) return url;
   const start = match[1];
@@ -203,15 +207,11 @@ export function injectYouTubeRangeParam(url: string, rangeHeader?: string): stri
   const rangeVal = end ? `${start}-${end}` : `${start}-`;
 
   if (url.includes("googlevideo.com") || url.includes("youtube.com") || url.includes("sparams=")) {
-    try {
-      const urlObj = new URL(url);
-      urlObj.searchParams.set("range", rangeVal);
-      return urlObj.toString();
-    } catch {
-      const stripped = url.replace(/([?&])range=[^&]*/g, "");
-      const separator = stripped.includes("?") ? "&" : "?";
-      return `${stripped}${separator}range=${rangeVal}`;
+    if (/[?&]range=/.test(url)) {
+      return url.replace(/([?&])range=[^&]*/, (_, sep) => `${sep}range=${rangeVal}`);
     }
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}range=${rangeVal}`;
   }
   return url;
 }

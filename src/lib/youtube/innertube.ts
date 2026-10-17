@@ -118,6 +118,8 @@ export interface YouTubeQualityOption {
   videoFormat?: YouTubeFormatMeta;
   audioFormat?: YouTubeFormatMeta;
   userAgent?: string;
+  videoUrl?: string;
+  audioUrl?: string;
 }
 
 export interface YouTubeVideoInfo {
@@ -130,6 +132,7 @@ export interface YouTubeVideoInfo {
   thumbnailUrl: string;
   viewCount?: string;
   qualities: YouTubeQualityOption[];
+  adaptiveFormats?: YouTubeFormatMeta[];
   subtitles?: YouTubeSubtitleTrack[];
 }
 
@@ -262,6 +265,10 @@ const IOS_CLIENT_VERSION = "19.45.4";
 const IOS_USER_AGENT =
   "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)";
 
+const IOS_MODERN_CLIENT_VERSION = "20.10.4";
+const IOS_MODERN_USER_AGENT =
+  "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_1 like Mac OS X;)";
+
 const ANDROID_TESTSUITE_USER_AGENT =
   "com.google.android.youtube/1.9 (Linux; U; Android 11) gzip";
 
@@ -378,6 +385,28 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
     },
   },
   {
+    name: "IOS_MODERN",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": IOS_MODERN_USER_AGENT,
+      "X-YouTube-Client-Name": "5",
+      "X-YouTube-Client-Version": IOS_MODERN_CLIENT_VERSION,
+    },
+    context: {
+      client: {
+        clientName: "IOS",
+        clientVersion: IOS_MODERN_CLIENT_VERSION,
+        deviceMake: "Apple",
+        deviceModel: "iPhone16,2",
+        osName: "iPhone",
+        osVersion: "18.3.1",
+        hl: "en",
+        gl: "US",
+        userAgent: IOS_MODERN_USER_AGENT,
+      },
+    },
+  },
+  {
     name: "ANDROID_TESTSUITE",
     headers: {
       "Content-Type": "application/json",
@@ -464,6 +493,9 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   })();
 
   const clientPromise = (async (): Promise<{ data: any; userAgent: string } | null> => {
+    let fallbackCandidate: { data: any; userAgent: string } | null = null;
+    let fallbackScore = -1;
+
     for (const clientConfig of INNERTUBE_CLIENTS) {
       try {
         const reqHeaders: Record<string, string> = {
@@ -524,6 +556,29 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         });
 
         if (status === "OK" && (data.streamingData?.formats || data.streamingData?.adaptiveFormats)) {
+          const adaptives: any[] = data.streamingData?.adaptiveFormats || [];
+          const videoAdaptives = adaptives.filter((f: any) => f.url && f.mimeType?.startsWith("video/"));
+          const maxHeight = videoAdaptives.reduce((max: number, f: any) => {
+            const h = f.height || (f.qualityLabel ? parseInt(f.qualityLabel, 10) : 0);
+            return Math.max(max, isNaN(h) ? 0 : h);
+          }, 0);
+          const hasClen = adaptives.some((f: any) => (f.url && f.url.includes("clen=")) || !!f.contentLength);
+
+          // R1: Reject 360p-only responses (adaptiveFormats.length === 0 or max video height <= 360)
+          // during the client iteration loop; continue looping to subsequent clients until adaptive HD/4K
+          // formats with clen= (Content-Length) are retrieved.
+          if (adaptives.length === 0 || maxHeight <= 360 || !hasClen) {
+            const candidateScore = (maxHeight * 100) + (hasClen ? 50 : 0) + adaptives.length;
+            if (!fallbackCandidate || candidateScore > fallbackScore) {
+              fallbackCandidate = {
+                data,
+                userAgent: clientConfig.headers["User-Agent"] || ANDROID_VR_USER_AGENT,
+              };
+              fallbackScore = candidateScore;
+            }
+            continue;
+          }
+
           return {
             data,
             userAgent: clientConfig.headers["User-Agent"] || ANDROID_VR_USER_AGENT,
@@ -536,7 +591,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         });
       }
     }
-    return null;
+    return fallbackCandidate;
   })();
 
   const [androidResult, clientResult] = await Promise.all([androidPromise, clientPromise]);
@@ -585,12 +640,15 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   const thumbnailUrl =
     thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
-  const rawAdaptive: any[] = playerResponse.streamingData?.adaptiveFormats || [];
+  const rawAdaptive: any[] = [
+    ...(playerResponse.streamingData?.adaptiveFormats || []),
+    ...(androidResult?.data?.streamingData?.adaptiveFormats || []),
+  ];
   const rawCombined: any[] = playerResponse.streamingData?.formats || [];
 
-  // Parse all formats, merging androidFormats (e.g. itag 18 with ratebypass) and deduplicating
+  // Parse all formats, prioritizing ANDROID_VR and IOS over generic ANDROID, and merging androidFormats as fallback
   const parsedFormats: YouTubeFormatMeta[] = [];
-  const allRawFormats = [...androidFormats, ...rawCombined, ...rawAdaptive];
+  const allRawFormats = [...rawCombined, ...rawAdaptive, ...androidFormats];
   const seenItags = new Set<number>();
 
   for (const f of allRawFormats) {
@@ -995,16 +1053,48 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     });
   }
 
-  // Ensure all quality options and nested formats carry the winning User-Agent
+  // Helper to extract numeric video resolution height from YouTubeQualityOption
+  const getQualityHeight = (q: YouTubeQualityOption): number => {
+    if (q.videoFormat?.height) return q.videoFormat.height;
+    if (q.videoFormat?.qualityLabel) {
+      const match = q.videoFormat.qualityLabel.match(/(\d+)p?/);
+      if (match) return parseInt(match[1], 10);
+    }
+    const idMatch = q.id.match(/^(\d+)p/);
+    if (idMatch) return parseInt(idMatch[1], 10);
+    return 0;
+  };
+
+  // Ensure qualities is always sorted descending by video resolution height (2160p -> 1440p -> 1080p -> 720p -> 480p -> 360p),
+  // ensuring qualities[0] is the top available HD/4K format.
+  const videoQualities = qualities.filter((q) => !q.isAudioOnly);
+  const audioQualities = qualities.filter((q) => q.isAudioOnly);
+
+  videoQualities.sort((a, b) => {
+    const hDiff = getQualityHeight(b) - getQualityHeight(a);
+    if (hDiff !== 0) return hDiff;
+    return (b.fps || 0) - (a.fps || 0);
+  });
+
+  qualities.length = 0;
+  qualities.push(...videoQualities, ...audioQualities);
+
+  // Ensure all quality options and nested formats carry winning User-Agent, videoUrl, and audioUrl
   qualities.forEach((q) => {
+    if (!q.videoUrl && q.videoFormat?.url) {
+      q.videoUrl = q.videoFormat.url;
+    }
+    if (!q.audioUrl && q.audioFormat?.url) {
+      q.audioUrl = q.audioFormat.url;
+    }
     if (!q.userAgent) {
-      q.userAgent = winningUserAgent || ANDROID_VR_USER_AGENT;
+      q.userAgent = q.videoFormat?.userAgent || q.audioFormat?.userAgent || winningUserAgent || ANDROID_VR_USER_AGENT;
     }
     if (q.videoFormat && !q.videoFormat.userAgent) {
-      q.videoFormat.userAgent = q.videoFormat.userAgent || winningUserAgent || ANDROID_VR_USER_AGENT;
+      q.videoFormat.userAgent = winningUserAgent || ANDROID_VR_USER_AGENT;
     }
     if (q.audioFormat && !q.audioFormat.userAgent) {
-      q.audioFormat.userAgent = q.audioFormat.userAgent || winningUserAgent || ANDROID_VR_USER_AGENT;
+      q.audioFormat.userAgent = winningUserAgent || ANDROID_VR_USER_AGENT;
     }
   });
 
@@ -1021,6 +1111,11 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       vssId: c.vssId,
     }));
 
+  const adaptiveItags = new Set(rawAdaptive.map((f: any) => f.itag));
+  const adaptiveFormats = parsedFormats.filter(
+    (f) => f.url && adaptiveItags.has(f.itag) && (f.mimeType.startsWith("video/") || f.mimeType.startsWith("audio/"))
+  );
+
   return {
     videoId,
     title,
@@ -1031,6 +1126,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     thumbnailUrl,
     viewCount,
     qualities,
+    adaptiveFormats: adaptiveFormats.length > 0 ? adaptiveFormats : undefined,
     subtitles: subtitles.length > 0 ? subtitles : undefined,
   };
 }

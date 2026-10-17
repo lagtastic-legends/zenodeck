@@ -558,9 +558,21 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         val fallbackUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
         val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else fallbackUa
 
+        // Helper: Check if stream is a confirmed DASH adaptive stream on googlevideo.com
+        fun isAdaptiveDashStream(url: String): Boolean {
+            val isGoogleVideo = url.contains("googlevideo.com", ignoreCase = true)
+            val hasAdaptiveIndicators = url.contains("clen=") || url.contains("gir=yes")
+            val isPreMuxed18 = Regex("[?&]itag=18(&|$)").containsMatchIn(url)
+            return isGoogleVideo && hasAdaptiveIndicators && !isPreMuxed18
+        }
+
         // Helper: Inject &range= query parameter into candidate stream URLs WITHOUT mutating other parameters
+        // Only injects into confirmed DASH adaptive streams (googlevideo.com with clen= or gir=yes, not itag=18).
         // Never clear or decode/re-encode existing query parameters, preserving YouTube HMAC signatures 100% intact.
         fun injectRangeQueryParam(url: String, startByte: Long, endByte: Long?): String {
+            if (!isAdaptiveDashStream(url)) {
+                return url
+            }
             val rangeVal = if (endByte != null) "$startByte-$endByte" else "$startByte-"
             return if (url.contains("range=")) {
                 url.replace(Regex("([?&])range=[^&]*"), "$1range=$rangeVal")
@@ -617,8 +629,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 val urlObj = URL(currentUrl)
                 val conn = (urlObj.openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = false
-                    connectTimeout = 8000
-                    readTimeout = 15000
+                    connectTimeout = 2500 // fast 2.5s connect timeout for edge failover (connectTimeout = 8000)
+                    readTimeout = 12000 // fast 12s read timeout (readTimeout = 15000)
                     requestMethod = "GET"
                     setRequestProperty("User-Agent", effectiveUa)
                     setRequestProperty("Accept", "*/*")
@@ -677,7 +689,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         // Initial progress callback
         onProgress(bytesDownloaded, totalBytes)
 
-        while (true) {
+        var preferredHostIndex = 0
+
+        chunkLoop@ while (true) {
             if (isCancelled()) {
                 if (destinationFile.exists()) destinationFile.delete()
                 return Result.failure(Exception("Download cancelled"))
@@ -709,8 +723,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 chunkAttempt++
                 var connection: HttpURLConnection? = null
 
-                // Failover between CDN candidate hosts across retry attempts
-                val baseCandidate = candidateUrls[(chunkAttempt - 1) % candidateUrls.size]
+                // Failover between CDN candidate hosts across retry attempts with sticky preferredHostIndex
+                val candidateIdx = (preferredHostIndex + chunkAttempt - 1) % candidateUrls.size
+                val baseCandidate = candidateUrls[candidateIdx]
                 val targetUrl = injectRangeQueryParam(baseCandidate, chunkStart, chunkEnd)
 
                 try {
@@ -720,16 +735,21 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     val responseCode = conn.responseCode
                     if (responseCode == 416) {
                         // Range Not Satisfiable: Stream has reached EOF
+                        preferredHostIndex = candidateIdx
+                        totalBytes = bytesDownloaded
                         chunkSuccess = true
-                        break
+                        break@chunkLoop
                     }
 
                     if (responseCode !in 200..299) {
                         throw IOException("HTTP $responseCode: ${conn.responseMessage} for chunk $chunkRangeHeader")
                     }
 
-                    // Dynamically parse total stream size from Content-Range on the fly
-                    if (totalBytes <= 0L) {
+                    // Successful connection: lock sticky preferredHostIndex for subsequent chunks
+                    preferredHostIndex = candidateIdx
+
+                    // Dynamically extract totalBytes from Chunk #0 (chunkStart == 0L) using Content-Range or contentLengthLong
+                    if (chunkStart == 0L || totalBytes <= 0L) {
                         val contentRange = conn.getHeaderField("Content-Range")
                         if (!contentRange.isNullOrEmpty()) {
                             val slashIdx = contentRange.lastIndexOf('/')
@@ -741,14 +761,46 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                                 }
                             }
                         }
-                        if (totalBytes <= 0L && responseCode == 200) {
-                            val clHeader = conn.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L
-                            if (clHeader > 0L) {
-                                totalBytes = clHeader
-                            }
+                        if (totalBytes <= 0L && responseCode == 200 && conn.contentLengthLong > 0L) {
+                            totalBytes = conn.contentLengthLong
                         }
                     }
 
+                    // For non-range progressive streams returning HTTP 200 OK, stream directly in a single pass
+                    if (responseCode == 200) {
+                        if (totalBytes <= 0L && conn.contentLengthLong > 0L) {
+                            totalBytes = conn.contentLengthLong
+                        }
+                        bytesDownloaded = 0L
+                        conn.inputStream.use { input ->
+                            FileOutputStream(destinationFile, false).use { output ->
+                                while (true) {
+                                    if (isCancelled()) {
+                                        destinationFile.delete()
+                                        return Result.failure(Exception("Download cancelled"))
+                                    }
+                                    val read = input.read(buffer)
+                                    if (read == -1) break
+                                    output.write(buffer, 0, read)
+                                    bytesDownloaded += read
+
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastProgressUpdate >= 120 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
+                                        lastProgressUpdate = now
+                                        onProgress(bytesDownloaded, totalBytes)
+                                    }
+                                }
+                                output.flush()
+                            }
+                        }
+                        if (totalBytes <= 0L) {
+                            totalBytes = bytesDownloaded
+                        }
+                        chunkSuccess = true
+                        break@chunkLoop
+                    }
+
+                    // Standard chunked Range transfer (HTTP 206 Partial Content)
                     conn.inputStream.use { input ->
                         FileOutputStream(destinationFile, true).use { output ->
                             while (true) {
@@ -773,14 +825,21 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                     chunkSuccess = true
                 } catch (chunkErr: Exception) {
-                    val candidateIdx = (chunkAttempt - 1) % candidateUrls.size
+                    val candidateIdx = (preferredHostIndex + chunkAttempt - 1) % candidateUrls.size
                     Log.w(TAG, "Chunk download error ($chunkRangeHeader, attempt $chunkAttempt/$maxChunkRetries from candidate $candidateIdx): ${chunkErr.message}")
                     if (chunkAttempt >= maxChunkRetries) {
                         if (destinationFile.exists()) destinationFile.delete()
                         return Result.failure(chunkErr)
                     }
-                    // Rewind to actual bytes written on disk before retry
-                    bytesDownloaded = destinationFile.length()
+                    // Rewind destinationFile back to chunkStart, discarding any partial writes from failed attempt
+                    if (destinationFile.exists()) {
+                        try {
+                            java.io.RandomAccessFile(destinationFile, "rw").use { raf ->
+                                raf.setLength(chunkStart)
+                            }
+                        } catch (_: Throwable) {}
+                    }
+                    bytesDownloaded = chunkStart
                     try {
                         Thread.sleep(250L * chunkAttempt)
                     } catch (_: InterruptedException) {
@@ -793,8 +852,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 }
             }
 
-            // If totalBytes was not known beforehand, and this chunk produced no bytes or was 416, we're done
-            if (totalBytes <= 0 && (!chunkSuccess || bytesDownloaded == chunkStart)) {
+            // If EOF reached (no new bytes received in this chunk) or progressive stream finished:
+            if (bytesDownloaded == chunkStart) {
+                totalBytes = bytesDownloaded
                 break
             }
         }
@@ -883,15 +943,21 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 onProgress = { downloaded, total ->
                     totalDownloaded = downloaded
                     val now = System.currentTimeMillis()
-                    if (now - lastCallbackTime >= 150) {
+                    if (now - lastCallbackTime >= 150 || (total > 0 && downloaded >= total)) {
                         lastCallbackTime = now
-                        val pct = if (audioUrl.isNullOrEmpty()) {
-                            if (total > 0) ((downloaded * 95) / total).toInt() else 50
+                        val maxStagePct = if (audioUrl.isNullOrEmpty()) 95 else 70
+                        val finalPct = if (total > 0) {
+                            val pct = ((downloaded * maxStagePct) / total).toInt()
+                            if (downloaded > 0) minOf(maxStagePct, maxOf(10, pct)) else 5
                         } else {
-                            if (total > 0) ((downloaded * 70) / total).toInt() else 35
+                            if (downloaded > 0) {
+                                val synthetic = minOf(90, 10 + ((downloaded / (1024 * 512)).toInt() * 5))
+                                minOf(maxStagePct, synthetic)
+                            } else {
+                                5
+                            }
                         }
                         val tot = if (total > 0) total else approxSizeBytes
-                        val finalPct = if (downloaded > 0) minOf(95, maxOf(10, pct)) else 5
                         progressCallback(finalPct, downloaded, tot, calculateSpeed(), "downloading_video")
                     }
                 }
@@ -914,11 +980,20 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     onProgress = { downloaded, total ->
                         totalDownloaded = videoTotalBytes + downloaded
                         val now = System.currentTimeMillis()
-                        if (now - lastCallbackTime >= 150) {
+                        if (now - lastCallbackTime >= 150 || (total > 0 && downloaded >= total)) {
                             lastCallbackTime = now
-                            val pct = if (total > 0) (70 + ((downloaded * 20) / total)).toInt() else 80
+                            val finalPct = if (total > 0) {
+                                val pct = (70 + ((downloaded * 20) / total)).toInt()
+                                minOf(90, maxOf(70, pct))
+                            } else {
+                                if (downloaded > 0) {
+                                    minOf(90, 70 + ((downloaded / (1024 * 512)).toInt() * 5))
+                                } else {
+                                    70
+                                }
+                            }
                             val tot = if (total > 0) videoTotalBytes + total else approxSizeBytes
-                            progressCallback(minOf(90, maxOf(70, pct)), totalDownloaded, tot, calculateSpeed(), "downloading_audio")
+                            progressCallback(finalPct, totalDownloaded, tot, calculateSpeed(), "downloading_audio")
                         }
                     }
                 )

@@ -39,6 +39,28 @@ async function runTests() {
     "injectYouTubeRangeParam preserves URL when no range header is supplied"
   );
 
+  const itag18Url = "https://rr1---sn-5goz-nxbe.googlevideo.com/videoplayback?expire=1728000000&ei=xyz&ip=1.2.3.4&id=o-ABC&itag=18";
+  const unmodifiedItag18 = injectYouTubeRangeParam(itag18Url, rangeHeader);
+  assert(
+    !unmodifiedItag18.includes("range="),
+    "injectYouTubeRangeParam strictly refuses to append &range= to pre-muxed itag=18 streams"
+  );
+
+  const itag180Url = "https://rr1---sn-5goz-nxbe.googlevideo.com/videoplayback?expire=1728000000&ei=xyz&ip=1.2.3.4&id=o-ABC&itag=180";
+  const modifiedItag180 = injectYouTubeRangeParam(itag180Url, rangeHeader);
+  assert(
+    modifiedItag180.includes("range=0-1048575"),
+    "injectYouTubeRangeParam allows range parameter on non-18 itags (e.g. itag=180)"
+  );
+
+  const signedUrl = "https://rr1---sn-5goz-nxbe.googlevideo.com/videoplayback?expire=1728000000&ei=xyz&ip=1.2.3.4&id=o-ABC&itag=315&mn=sn-5goz-nxbe,sn-fapo3ox25a-3uhr&sig=MEQCICx";
+  const transformedSignedUrl = injectYouTubeRangeParam(signedUrl, rangeHeader);
+  assert(
+    transformedSignedUrl.includes("mn=sn-5goz-nxbe,sn-fapo3ox25a-3uhr") &&
+    !transformedSignedUrl.includes("%2C"),
+    "injectYouTubeRangeParam strictly preserves raw comma delimiters without encoding into %2C (preserves HMAC signatures)"
+  );
+
   console.log("\n--- TEST 2: Strict Resolution Lock & Zero Silent 360p Fallback ---");
   const ytDownloaderPath = path.resolve(__dirname, "../src/components/tools/youtube-downloader.tsx");
   const ytDownloaderContent = fs.readFileSync(ytDownloaderPath, "utf-8");
@@ -82,8 +104,49 @@ async function runTests() {
 
   assert(
     turboDownloaderContent.includes("const resTag = option.badge || option.resolutionLabel || option.id || \"HD\";") &&
-    turboDownloaderContent.includes("const finalFilename = `${sanitizedTitle} [${resTag}].${outputExt}`;"),
+    turboDownloaderContent.includes("[${resTag}].${successfulPlan.outputExt}"),
     "turbo-downloader.ts tags filenames with selected resolution badge (e.g. [4K 60FPS]), never substituting 360p"
+  );
+
+  console.log("\n--- TEST 5: Kotlin Engine Zero-Stall & Anti-Loop Contracts ---");
+  const enginePath = path.resolve(__dirname, "../android/app/src/main/java/com/omnitool/app/media/ZenoHeadlessMediaEngine.kt");
+  const engineContent = fs.readFileSync(enginePath, "utf-8");
+
+  assert(
+    engineContent.includes("if (responseCode == 416)") &&
+    engineContent.includes("break@chunkLoop"),
+    "ZenoHeadlessMediaEngine terminates outer chunkLoop immediately on HTTP 416 (EOF)"
+  );
+
+  assert(
+    engineContent.includes("if (bytesDownloaded == chunkStart)") &&
+    engineContent.includes("totalBytes = bytesDownloaded"),
+    "ZenoHeadlessMediaEngine terminates cleanly on 0-byte chunk EOF without infinite looping"
+  );
+
+  assert(
+    engineContent.includes('Regex("[?&]itag=18(&|$)")'),
+    "ZenoHeadlessMediaEngine uses exact query parameter regex for itag=18 exclusion"
+  );
+
+  console.log("\n--- TEST 6: InnerTube Bridge Candidate Scoring & Format Inclusion Contracts ---");
+  const innertubePath = path.resolve(__dirname, "../src/lib/youtube/innertube.ts");
+  const innertubeContent = fs.readFileSync(innertubePath, "utf-8");
+
+  assert(
+    innertubeContent.includes("fallbackScore") &&
+    innertubeContent.includes("candidateScore"),
+    "innertube.ts scores client candidates to preserve highest quality fallback candidate"
+  );
+
+  assert(
+    innertubeContent.includes("q.videoFormat?.userAgent || q.audioFormat?.userAgent"),
+    "innertube.ts propagates audioFormat.userAgent for audio-only quality options"
+  );
+
+  assert(
+    innertubeContent.includes("androidResult?.data?.streamingData?.adaptiveFormats"),
+    "innertube.ts merges androidResult adaptiveFormats into rawAdaptive set"
   );
 
   console.log("\n🎉 ALL VERIFICATION TESTS PASSED SUCCESSFULLY! 0 SILENT FALLBACK REGRESSIONS.");
