@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.3">
-    <img src="https://img.shields.io/badge/Release-v1.0.3-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.3" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.4">
+    <img src="https://img.shields.io/badge/Release-v1.0.4-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.4" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,28 +46,28 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.3 (Short & Sweet)
+## 💎 What's New in v1.0.4 (Short & Sweet)
 
-ZenoDeck v1.0.3 hardens the Universal Media Downloader engine with cryptographic signature protection, CDN failover, and zero-stall streaming:
+ZenoDeck v1.0.4 completely resolves the 5% downloader stall with sticky CDN failover, true 4K adaptive resolution, and anti-stall engine resilience:
 
-- ⚡ **Universal Downloader Hardening (5% Stall Fix)**: Replaced destructive query parameter re-encoding with non-destructive regex slicing. YouTube HMAC signatures (`sig`, `sparams`) remain 100% byte-identical, permanently eliminating 403 Forbidden rejection and analysis stalls.
-- 🌐 **CDN Node Failover & IPv4 Priority**: Automated multi-candidate edge routing (`mn` parameter and `fallback_host`) with prioritized IPv4 sockets, preventing network timeouts when regional ISP caches or IPv6 routes drop packets.
-- 📦 **Dynamic Content-Range Streaming**: Bypasses slow preliminary 2-byte probes; streams directly on request #1 and parses total stream size on the fly from HTTP 206 `Content-Range` headers.
-- 🛡️ **Scoped Storage Crash Guard**: Intelligent fallback from public media directories to app-specific external storage (`context.getExternalFilesDir`), guaranteeing zero `EACCES` permission crashes on Android 11+.
-- 🎬 **Multi-Platform Native Resolution**: Enhanced direct-to-disk video and audio streaming with instant Google Photos / Gallery indexing and valid web view preview URLs.
+- 🚀 **Sticky CDN Edge Failover (`preferredHostIndex`)**: Discovers responsive edge nodes in <150ms and locks onto them across all subsequent 2MB chunks. Bypasses packet-dropping Google CDN edge nodes with a fast 2.5-second connect timeout.
+- 🎯 **True 4K60 & 1080p Adaptive Streams**: Prioritized modern mobile client profiles (`IOS_MODERN` 20.10.4, `ANDROID_VR` 1.56.21, `IOS` 19.45.4). Rejects degraded 360p-only responses without `clen=` during resolution to guarantee top-tier UHD quality.
+- 📊 **Dynamic Stream Sizing & Anti-Stall Progress**: Extracts stream size dynamically from Chunk #0 (`Content-Range` or `Content-Length`) and provides synthetic 5% step progression every 512KB for streams with unannounced size, permanently eliminating freezes at 5%.
+- 🛡️ **Selective Range Query Parameter Injection**: Restricts `&range=start-end` strictly to confirmed DASH adaptive streams (`clen=` or `gir=yes`), preserving pre-muxed streams (like `itag=18`) and protecting HMAC URL signatures.
+- 🧪 **Hardware Engine Truncation Guard**: Rewinds file length to `chunkStart` on retry in `ZenoHeadlessMediaEngine.kt`, eliminating partial stream corruption during cellular-to-Wi-Fi handoffs.
 
 ---
 
-## 🚀 Download & Installation (v1.0.3)
+## 🚀 Download & Installation (v1.0.4)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 
