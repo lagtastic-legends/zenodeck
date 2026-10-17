@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.2">
-    <img src="https://img.shields.io/badge/Release-v1.0.2-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.2" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.3">
+    <img src="https://img.shields.io/badge/Release-v1.0.3-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.3" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.2/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,33 +46,28 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.2 (Short & Sweet)
+## 💎 What's New in v1.0.3 (Short & Sweet)
 
-ZenoDeck v1.0.2 introduces a complete UI/UX overhaul for all dialogs, bottom sheets, preset selectors, and the native Android IME keyboard:
+ZenoDeck v1.0.3 hardens the Universal Media Downloader engine with cryptographic signature protection, CDN failover, and zero-stall streaming:
 
-- 🪟 **Universal Adaptive Modals (`ZenoModal`)**: Smooth swipe-down bottom sheets on mobile devices (`<640px`) with safe-area padding (`env(safe-area-inset-bottom)`), body scroll lock, and Android back button interception; transforms into a floating glassmorphic HUD on desktop (`>=640px`) with sticky headers and pinned action footers.
-- ⚡ **Multi-Tier Execution Preset Catalog (`PresetSelectorModal`)**: One-tap speed & quality profiles mapped to 4 hardware execution tiers:
-  - **Tier 1: FastCopy** (Stream Copy — Zero Re-encoding)
-  - **Tier 2: Media3 HW** (Native Android Hardware Acceleration)
-  - **Tier 3: WebCodecs** (Browser Hardware Acceleration)
-  - **Tier 4: Wasm MT** (Multi-Threaded WebAssembly CPU Fallback)
-  - *Custom Preset Persistence*: Save, pin, and manage custom user parameter profiles in `localStorage` across Downloader, Video Compressor, Converter, Audio Studio, and ZenoTap Vault.
-- ⌨️ **Native IME Canvas Overlay (`@+id/ime_popup_overlay`)**: Long-press card actions (`Inject Now`, `Pin / Unpin`, `Delete`) are now rendered directly on the keyboard view surface, permanently eliminating Android `BadTokenException` window token crashes.
-- 🔄 **1-Tap Workflow Pipeline Handoffs**: Transfer newly downloaded media directly into ZenoTap Vault, 8D Spatial Studio, or Video Trimmer with zero manual file management.
-- 🛡️ **Interactive Permission Shield**: Tap `🛡️` in the top bar to inspect live storage, microphone, notifications, and IME permissions with 1-tap cache purging.
+- ⚡ **Universal Downloader Hardening (5% Stall Fix)**: Replaced destructive query parameter re-encoding with non-destructive regex slicing. YouTube HMAC signatures (`sig`, `sparams`) remain 100% byte-identical, permanently eliminating 403 Forbidden rejection and analysis stalls.
+- 🌐 **CDN Node Failover & IPv4 Priority**: Automated multi-candidate edge routing (`mn` parameter and `fallback_host`) with prioritized IPv4 sockets, preventing network timeouts when regional ISP caches or IPv6 routes drop packets.
+- 📦 **Dynamic Content-Range Streaming**: Bypasses slow preliminary 2-byte probes; streams directly on request #1 and parses total stream size on the fly from HTTP 206 `Content-Range` headers.
+- 🛡️ **Scoped Storage Crash Guard**: Intelligent fallback from public media directories to app-specific external storage (`context.getExternalFilesDir`), guaranteeing zero `EACCES` permission crashes on Android 11+.
+- 🎬 **Multi-Platform Native Resolution**: Enhanced direct-to-disk video and audio streaming with instant Google Photos / Gallery indexing and valid web view preview URLs.
 
 ---
 
-## 🚀 Download & Installation (v1.0.2)
+## 🚀 Download & Installation (v1.0.3)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.2/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.2/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.2/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.2/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.3/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 

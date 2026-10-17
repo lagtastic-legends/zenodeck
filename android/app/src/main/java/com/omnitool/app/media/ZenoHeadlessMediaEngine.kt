@@ -549,30 +549,59 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
     ): Result<File> {
         destinationFile.parentFile?.mkdirs()
 
+        // Prioritize IPv4 stack to prevent hanging on mobile networks with broken/unroutable IPv6
+        try {
+            System.setProperty("java.net.preferIPv4Stack", "true")
+            System.setProperty("java.net.preferIPv6Addresses", "false")
+        } catch (_: Throwable) {}
+
         val fallbackUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
         val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else fallbackUa
 
-        // Helper: Inject &range= query parameter into candidate stream URLs
+        // Helper: Inject &range= query parameter into candidate stream URLs WITHOUT mutating other parameters
+        // Never clear or decode/re-encode existing query parameters, preserving YouTube HMAC signatures 100% intact.
         fun injectRangeQueryParam(url: String, startByte: Long, endByte: Long?): String {
             val rangeVal = if (endByte != null) "$startByte-$endByte" else "$startByte-"
-            return try {
+            return if (url.contains("range=")) {
+                url.replace(Regex("([?&])range=[^&]*"), "$1range=$rangeVal")
+            } else {
+                val separator = if (url.contains("?")) "&" else "?"
+                "$url${separator}range=$rangeVal"
+            }
+        }
+
+        // Helper: Generate fallback CDN candidate URLs from embedded YouTube parameters (mn, fallback_host)
+        fun getCandidateUrls(url: String): List<String> {
+            val candidates = mutableListOf(url)
+            try {
                 val uri = Uri.parse(url)
-                val builder = uri.buildUpon()
-                builder.clearQuery()
-                for (paramName in uri.queryParameterNames) {
-                    if (paramName != "range") {
-                        for (value in uri.getQueryParameters(paramName)) {
-                            builder.appendQueryParameter(paramName, value)
+                val host = uri.host ?: return candidates
+                val mnParam = uri.getQueryParameter("mn")
+                if (!mnParam.isNullOrBlank()) {
+                    val nodes = mnParam.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    if (nodes.size > 1) {
+                        val primaryNode = nodes[0]
+                        for (i in 1 until nodes.size) {
+                            val altNode = nodes[i]
+                            if (host.contains(primaryNode)) {
+                                val altHost = host.replace(primaryNode, altNode)
+                                val altUrl = url.replace("://$host", "://$altHost")
+                                if (!candidates.contains(altUrl)) {
+                                    candidates.add(altUrl)
+                                }
+                            }
                         }
                     }
                 }
-                builder.appendQueryParameter("range", rangeVal)
-                builder.build().toString()
-            } catch (_: Throwable) {
-                val stripped = url.replace(Regex("([?&])range=[^&]*"), "")
-                val separator = if (stripped.contains("?")) "&" else "?"
-                "$stripped${separator}range=$rangeVal"
-            }
+                val fallbackHost = uri.getQueryParameter("fallback_host")
+                if (!fallbackHost.isNullOrBlank()) {
+                    val fbUrl = url.replace("://$host", "://$fallbackHost")
+                    if (!candidates.contains(fbUrl)) {
+                        candidates.add(fbUrl)
+                    }
+                }
+            } catch (_: Throwable) {}
+            return candidates
         }
 
         // Helper: Open connection with manual redirect following
@@ -588,8 +617,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 val urlObj = URL(currentUrl)
                 val conn = (urlObj.openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = false
-                    connectTimeout = 20000
-                    readTimeout = 30000
+                    connectTimeout = 8000
+                    readTimeout = 15000
                     requestMethod = "GET"
                     setRequestProperty("User-Agent", effectiveUa)
                     setRequestProperty("Accept", "*/*")
@@ -629,33 +658,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             totalBytes = clenMatch.groupValues[1].toLongOrNull() ?: -1L
         }
 
-        // If clen wasn't found in URL, probe with a 2-byte Range request (0-1)
-        if (totalBytes <= 0L) {
-            try {
-                val probeUrl = injectRangeQueryParam(streamUrl, 0, 1)
-                val (probeConn, _) = openConnectionWithRedirects(probeUrl, "bytes=0-1")
-                try {
-                    val contentRange = probeConn.getHeaderField("Content-Range")
-                    if (!contentRange.isNullOrEmpty()) {
-                        val slashIdx = contentRange.lastIndexOf('/')
-                        if (slashIdx >= 0) {
-                            val totalStr = contentRange.substring(slashIdx + 1).trim()
-                            totalBytes = totalStr.toLongOrNull() ?: -1L
-                        }
-                    }
-                    if (totalBytes <= 0L) {
-                        val clHeader = probeConn.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L
-                        if (probeConn.responseCode == 200 && clHeader > 2L) {
-                            totalBytes = clHeader
-                        }
-                    }
-                } finally {
-                    probeConn.disconnect()
-                }
-            } catch (probeErr: Throwable) {
-                Log.w(TAG, "Probing total stream size failed: ${probeErr.message}")
-            }
-        }
+        // Candidate URLs for edge failover
+        val candidateUrls = getCandidateUrls(streamUrl)
 
         // Bounded 2MB Chunk Loop
         val CHUNK_SIZE = 2L * 1024L * 1024L // 2MB bounded chunks
@@ -691,7 +695,6 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             }
 
             val chunkRangeHeader = "bytes=$chunkStart-$chunkEnd"
-            val targetUrl = injectRangeQueryParam(streamUrl, chunkStart, chunkEnd)
 
             var chunkSuccess = false
             var chunkAttempt = 0
@@ -706,6 +709,10 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 chunkAttempt++
                 var connection: HttpURLConnection? = null
 
+                // Failover between CDN candidate hosts across retry attempts
+                val baseCandidate = candidateUrls[(chunkAttempt - 1) % candidateUrls.size]
+                val targetUrl = injectRangeQueryParam(baseCandidate, chunkStart, chunkEnd)
+
                 try {
                     val (conn, _) = openConnectionWithRedirects(targetUrl, chunkRangeHeader)
                     connection = conn
@@ -719,6 +726,27 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                     if (responseCode !in 200..299) {
                         throw IOException("HTTP $responseCode: ${conn.responseMessage} for chunk $chunkRangeHeader")
+                    }
+
+                    // Dynamically parse total stream size from Content-Range on the fly
+                    if (totalBytes <= 0L) {
+                        val contentRange = conn.getHeaderField("Content-Range")
+                        if (!contentRange.isNullOrEmpty()) {
+                            val slashIdx = contentRange.lastIndexOf('/')
+                            if (slashIdx >= 0) {
+                                val totalStr = contentRange.substring(slashIdx + 1).trim()
+                                val parsedTotal = totalStr.toLongOrNull() ?: -1L
+                                if (parsedTotal > 0) {
+                                    totalBytes = parsedTotal
+                                }
+                            }
+                        }
+                        if (totalBytes <= 0L && responseCode == 200) {
+                            val clHeader = conn.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L
+                            if (clHeader > 0L) {
+                                totalBytes = clHeader
+                            }
+                        }
                     }
 
                     conn.inputStream.use { input ->
@@ -745,7 +773,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                     chunkSuccess = true
                 } catch (chunkErr: Exception) {
-                    Log.w(TAG, "Chunk download error ($chunkRangeHeader, attempt $chunkAttempt/$maxChunkRetries): ${chunkErr.message}")
+                    val candidateIdx = (chunkAttempt - 1) % candidateUrls.size
+                    Log.w(TAG, "Chunk download error ($chunkRangeHeader, attempt $chunkAttempt/$maxChunkRetries from candidate $candidateIdx): ${chunkErr.message}")
                     if (chunkAttempt >= maxChunkRetries) {
                         if (destinationFile.exists()) destinationFile.delete()
                         return Result.failure(chunkErr)
@@ -753,7 +782,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     // Rewind to actual bytes written on disk before retry
                     bytesDownloaded = destinationFile.length()
                     try {
-                        Thread.sleep(300L * chunkAttempt)
+                        Thread.sleep(250L * chunkAttempt)
                     } catch (_: InterruptedException) {
                         return Result.failure(Exception("Download interrupted"))
                     }
@@ -816,7 +845,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             if (musicDir.exists() && musicDir.canWrite()) musicDir else {
                 val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
                 if (!downloadsDir.exists()) downloadsDir.mkdirs()
-                downloadsDir
+                if (downloadsDir.exists() && downloadsDir.canWrite()) downloadsDir else {
+                    context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
+                }
             }
         } else {
             val moviesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ZenoDeck")
@@ -824,7 +855,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             if (moviesDir.exists() && moviesDir.canWrite()) moviesDir else {
                 val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
                 if (!downloadsDir.exists()) downloadsDir.mkdirs()
-                downloadsDir
+                if (downloadsDir.exists() && downloadsDir.canWrite()) downloadsDir else {
+                    context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+                }
             }
         }
         val destinationFile = File(targetDir, outputFileName)
@@ -858,7 +891,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                             if (total > 0) ((downloaded * 70) / total).toInt() else 35
                         }
                         val tot = if (total > 0) total else approxSizeBytes
-                        progressCallback(minOf(95, maxOf(5, pct)), downloaded, tot, calculateSpeed(), "downloading_video")
+                        val finalPct = if (downloaded > 0) minOf(95, maxOf(10, pct)) else 5
+                        progressCallback(finalPct, downloaded, tot, calculateSpeed(), "downloading_video")
                     }
                 }
             )

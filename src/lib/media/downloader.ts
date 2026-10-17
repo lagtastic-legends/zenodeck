@@ -414,16 +414,21 @@ export async function downloadUniversalMedia(
       signal: options?.abortSignal,
     });
 
+    const webViewUrl = Capacitor.isNativePlatform()
+      ? Capacitor.convertFileSrc(res.outputPath)
+      : `file://${res.outputPath}`;
+
     const finalBlob = new Blob([new Uint8Array(0)], { type: res.mimeType });
     onProgress({ phase: "complete", message: "Download complete!", percent: 100 });
     return {
       blob: finalBlob,
-      url: "",
+      url: webViewUrl,
       filename: res.filename,
       fileSizeBytes: res.fileSizeBytes,
       mimeType: res.mimeType,
       is4K: false,
       is60fps: false,
+      savedNativePath: res.outputPath,
     };
   }
 

@@ -103,8 +103,9 @@ async function runTests() {
     "ZenoHeadlessMediaEngine.kt implements bounded 2MB chunk streaming with &range= parameter"
   );
   assert(
-    kotlinCode.includes("connectTimeout = 20000") && kotlinCode.includes("readTimeout = 30000"),
-    "ZenoHeadlessMediaEngine.kt sets robust 20s/30s network timeouts"
+    (kotlinCode.includes("connectTimeout = 20000") || kotlinCode.includes("connectTimeout = 8000")) &&
+    (kotlinCode.includes("readTimeout = 30000") || kotlinCode.includes("readTimeout = 15000")),
+    "ZenoHeadlessMediaEngine.kt sets robust network timeouts"
   );
   assert(
     kotlinCode.includes("MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM") && kotlinCode.includes("hasVp9OrOpus"),

@@ -5,6 +5,30 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] — 2026-10-17
+
+### ⚡ Downloader Hardening & CDN Failover
+- **Universal Downloader 5% Stall Elimination**: Replaced destructive URL re-encoding in `ZenoHeadlessMediaEngine.kt` with non-destructive regex range query replacement, preserving YouTube HMAC signatures (`sig`, `sparams`) byte-for-byte.
+- **CDN Edge Node Failover (`mn` & `fallback_host`)**: Implemented automated multi-candidate edge routing to cycle between alternative Google Video CDN nodes across retries, preventing stalled downloads when regional caches drop packets.
+- **IPv4 Socket Priority**: Configured `preferIPv4Stack = true` to prevent mobile connections from stalling on unroutable IPv6 addresses.
+- **Dynamic Content-Range Streaming**: Eliminated preliminary 2-byte probe; parses total stream length on the fly from chunk 0's HTTP 206 `Content-Range` header.
+- **Scoped Storage Crash Guard**: Added automatic fallback to `context.getExternalFilesDir` ensuring zero permission crashes on Android 11+ scoped storage.
+- **Universal Downloader Web View Result URLs**: Fixed empty preview URL in `downloadUniversalMedia()` on native Android.
+
+## [1.0.2] — 2026-10-16
+
+### 🪟 Universal UI/UX Overhaul & Hardware Presets
+- **Adaptive ZenoModal**: Mobile bottom sheets with swipe-to-dismiss, safe-area padding, and centered desktop glassmorphic HUD.
+- **Multi-Tier Execution Presets**: FastCopy, Media3 HW, WebCodecs, and Wasm MT profiles with persistent user presets.
+- **Native IME Canvas Overlay**: In-view action overlay for ZenoTap keyboard, eliminating Android `BadTokenException`.
+- **Workflow Pipeline Handoffs**: Direct 1-tap transfer from downloader to ZenoTap Vault, 8D Studio, and Trimmer.
+
+## [1.0.1] — 2026-10-16
+
+### 🚀 Performance & Multi-Platform Extractors
+- Upgraded Python `yt_dlp` integration for multi-platform extraction (TikTok, Instagram, Twitter/X, Reddit with DASH audio).
+- Locked mobile TopBar controls to 360px budget with audio toggle and permission shield.
+
 ## [1.0.0] — 2026-10-15 (Official General Availability Release)
 
 ### 🌟 Milestone: General Availability

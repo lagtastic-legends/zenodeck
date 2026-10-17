@@ -152,37 +152,37 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-violet-400" />}
-          title="Adaptive ZenoModal & Bottom Sheets"
-          badge="UI/UX v1.0.2"
-          description="Responsive mobile swipe-to-dismiss sheets with safe-area insets and centered floating desktop HUDs with sticky footers."
+          icon={<Zap className="size-4.5 text-violet-400" />}
+          title="Downloader Engine Hardening"
+          badge="Engine v1.0.3"
+          description="Non-destructive range query slicing preserves YouTube HMAC signatures byte-for-byte, permanently resolving 5% analysis stalls."
           accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
           badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
         />
 
         <FeatureCard
           icon={<Cpu className="size-4.5 text-cyan-400" />}
-          title="Hardware Execution Tier Presets"
-          badge="Multi-Tier"
-          description="Instant profiles for FastCopy, Media3 HW, WebCodecs, and Wasm MT with persistent custom user presets across all tools."
+          title="CDN Edge Failover & IPv4 Priority"
+          badge="Resilience"
+          description="Automated multi-candidate edge failover (mn & fallback_host) with prioritized IPv4 sockets, eliminating mobile network timeouts."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />
 
         <FeatureCard
-          icon={<Keyboard className="size-4.5 text-amber-400" />}
-          title="Native IME Canvas Overlay"
-          badge="Zero Crash"
-          description="Long-press vault actions rendered directly on the keyboard surface, permanently eliminating Android BadTokenException."
+          icon={<Sliders className="size-4.5 text-amber-400" />}
+          title="Dynamic Content-Range Streaming"
+          badge="Zero-Latency"
+          description="Eliminated blocking pre-probes; streams immediately on request #1 and parses total size dynamically from Content-Range headers."
           accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
           badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
         />
 
         <FeatureCard
-          icon={<Zap className="size-4.5 text-emerald-400" />}
-          title="1-Tap Pipeline Handoffs & Shield"
-          badge="Workflows"
-          description="Instant post-download transfers to ZenoTap Vault, 8D Studio, or Trimmer; live permission manager with 1-tap cache purge."
+          icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
+          title="Scoped Storage Crash Guard"
+          badge="Android 11+"
+          description="Seamless fallback to app-specific external storage directories, guaranteeing zero permission crashes on strictly scoped storage."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
