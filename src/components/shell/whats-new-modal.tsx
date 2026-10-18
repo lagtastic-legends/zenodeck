@@ -152,37 +152,37 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Zap className="size-4.5 text-violet-400" />}
-          title="Downloader Engine Hardening"
-          badge="Engine v1.0.3"
-          description="Non-destructive range query slicing preserves YouTube HMAC signatures byte-for-byte, permanently resolving 5% analysis stalls."
-          accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
-          badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
+          icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
+          title="Glacier — Glassmorphism UI"
+          badge="Stitch Design"
+          description="Ethereal 'Frozen Light' glassmorphism with ice-blue radiant accents, translucent frosted surfaces, and ambient glitch backdrops."
+          accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
+          badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
-          icon={<Cpu className="size-4.5 text-cyan-400" />}
-          title="CDN Edge Failover & IPv4 Priority"
-          badge="Resilience"
-          description="Automated multi-candidate edge failover (mn & fallback_host) with prioritized IPv4 sockets, eliminating mobile network timeouts."
-          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+          icon={<Cpu className="size-4.5 text-[#c8a0f0]" />}
+          title="Active Media Inspector Popover"
+          badge="Direct Inject"
+          description="Interactive playback scrubber, speed pills (0.5x–2.0x), auto-caption editor, and 1-tap Commit to Chat via CommitContent v2."
+          accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
+          badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-amber-400" />}
-          title="Dynamic Content-Range Streaming"
-          badge="Zero-Latency"
-          description="Eliminated blocking pre-probes; streams immediately on request #1 and parses total size dynamically from Content-Range headers."
-          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
-          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
+          icon={<Sliders className="size-4.5 text-[#88b4cc]" />}
+          title="Trending Cyber Feed & Smart Filters"
+          badge="Slot Presets"
+          description="Responsive reaction feed with format and duration tags, category filter pills (Cyber, Gaming, AI, Memes), and DnD sortable vault."
+          accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
+          badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />
 
         <FeatureCard
           icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Scoped Storage Crash Guard"
-          badge="Android 11+"
-          description="Seamless fallback to app-specific external storage directories, guaranteeing zero permission crashes on strictly scoped storage."
+          title="Multi-Platform Native IME Theme"
+          badge="Android IME"
+          description="Native Kotlin IME runtime theme engine with full Glacier palette skinning, tactile spacebar trackpad scrubbing, and zero-RAM dispatch."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />

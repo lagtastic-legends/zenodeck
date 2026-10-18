@@ -122,6 +122,20 @@ const config: Config = {
           amber: "#D97736",
           glow: "rgba(194, 101, 42, 0.45)",
         },
+        glacier: {
+          primary: "#7dd3fc", // Ice Blue
+          bg: "#0a0e1a",      // Deep Navy-Black
+          surface: "#0f1524",
+          surfaceContainer: "#141c2e",
+          surfaceLow: "#111828",
+          surfaceHigh: "#1a2438",
+          surfaceBright: "#1a2438",
+          tertiary: "#c8a0f0", // Soft Lavender
+          secondary: "#88b4cc", // Glacier Slate
+          outline: "rgba(125, 211, 252, 0.12)",
+          onSurface: "#e0e8f0",
+          onSurfaceVariant: "#a0b4c4",
+        },
       },
 
       /* ------------------------------------------------------------------ */
@@ -139,6 +153,8 @@ const config: Config = {
         glowCyan: "0 0 24px -4px oklch(0.84 0.14 202 / 0.45), 0 6px 16px -2px oklch(0.84 0.14 202 / 0.25)",
         glowPlasma: "0 0 24px -4px oklch(0.70 0.29 332 / 0.45), 0 6px 16px -2px oklch(0.70 0.29 332 / 0.25)",
         glowTerracotta: "0 0 24px -4px rgba(194, 101, 42, 0.45), 0 6px 16px -2px rgba(194, 101, 42, 0.28)",
+        glowGlacier: "0 0 30px rgba(125, 211, 252, 0.15), 0 6px 20px -2px rgba(125, 211, 252, 0.1)",
+        glacierCard: "0 8px 32px rgba(10, 14, 26, 0.6)",
       },
 
       /* ------------------------------------------------------------------ */

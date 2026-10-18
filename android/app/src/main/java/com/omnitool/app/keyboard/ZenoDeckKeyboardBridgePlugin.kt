@@ -38,6 +38,7 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         const val PREF_KEY_THEME = "keyboard_theme"
         const val THEME_OBSIDIAN = "obsidian"
         const val THEME_TERRACOTTA = "terracotta"
+        const val THEME_GLACIER = "glacier"
     }
 
     private fun getDeckDirectory(): File {
@@ -274,9 +275,9 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
      */
     @PluginMethod
     fun setKeyboardTheme(call: PluginCall) {
-        val theme = call.getString("theme") ?: THEME_OBSIDIAN
-        if (theme != THEME_OBSIDIAN && theme != THEME_TERRACOTTA) {
-            call.reject("Invalid theme: $theme. Supported values: '$THEME_OBSIDIAN', '$THEME_TERRACOTTA'")
+        val theme = call.getString("theme") ?: THEME_GLACIER
+        if (theme != THEME_OBSIDIAN && theme != THEME_TERRACOTTA && theme != THEME_GLACIER) {
+            call.reject("Invalid theme: $theme. Supported values: '$THEME_GLACIER', '$THEME_OBSIDIAN', '$THEME_TERRACOTTA'")
             return
         }
 
@@ -309,7 +310,7 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
     fun getKeyboardTheme(call: PluginCall) {
         try {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val theme = prefs.getString(PREF_KEY_THEME, THEME_OBSIDIAN) ?: THEME_OBSIDIAN
+            val theme = prefs.getString(PREF_KEY_THEME, THEME_GLACIER) ?: THEME_GLACIER
             val ret = JSObject().apply {
                 put("theme", theme)
             }

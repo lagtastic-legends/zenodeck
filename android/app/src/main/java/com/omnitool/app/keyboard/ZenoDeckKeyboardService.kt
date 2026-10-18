@@ -624,21 +624,23 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private fun loadSavedTheme(): String {
         return try {
             val prefs = getSharedPreferences(ZenoDeckKeyboardBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.getString(ZenoDeckKeyboardBridgePlugin.PREF_KEY_THEME, ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN)
-                ?: ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN
+            prefs.getString(ZenoDeckKeyboardBridgePlugin.PREF_KEY_THEME, ZenoDeckKeyboardBridgePlugin.THEME_GLACIER)
+                ?: ZenoDeckKeyboardBridgePlugin.THEME_GLACIER
         } catch (e: Exception) {
-            ZenoDeckKeyboardBridgePlugin.THEME_OBSIDIAN
+            ZenoDeckKeyboardBridgePlugin.THEME_GLACIER
         }
     }
 
     /**
      * Dynamically skins the native keyboard view hierarchy based on the active theme:
+     * - "glacier": Stitch Frozen Light (#0A0E1A deep base, #0F1524 container, #7DD3FC ice blue, #C8A0F0 lavender)
      * - "obsidian": OKLCH dark cyber-violet/cyan (#0E0F14 base, #22D3EE accent)
      * - "terracotta": 60/30/10 rule (#FAF5EE 60% warm clay paper, #342A24 30% structural, #C2652A 10% baked clay accent)
      */
     fun applyKeyboardTheme(theme: String) {
         currentTheme = theme
         val isTerracotta = theme.equals(ZenoDeckKeyboardBridgePlugin.THEME_TERRACOTTA, ignoreCase = true)
+        val isGlacier = theme.equals(ZenoDeckKeyboardBridgePlugin.THEME_GLACIER, ignoreCase = true)
 
         keyboardRootView?.let { root ->
             if (isTerracotta) {
@@ -651,6 +653,16 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 root.findViewById<Button>(R.id.btn_spacebar)?.setTextColor(0xFF342A24.toInt())
                 root.findViewById<Button>(R.id.btn_switch_input)?.setTextColor(0xFF79695F.toInt())
                 root.findViewById<Button>(R.id.btn_backspace)?.setTextColor(0xFFC2652A.toInt())
+            } else if (isGlacier) {
+                root.setBackgroundColor(0xFF0A0E1A.toInt())
+                root.findViewById<View>(R.id.media_container)?.setBackgroundColor(0xFF0F1524.toInt())
+                deckTitleTextView?.setTextColor(0xFFE0E8F0.toInt())
+                statusTextView?.setTextColor(0xFFA0B4C4.toInt())
+                root.findViewById<TextView>(R.id.tv_deck_subtitle)?.setTextColor(0xFFA0B4C4.toInt())
+                root.findViewById<Button>(R.id.btn_open_app)?.setTextColor(0xFFE0E8F0.toInt())
+                root.findViewById<Button>(R.id.btn_spacebar)?.setTextColor(0xFF7DD3FC.toInt())
+                root.findViewById<Button>(R.id.btn_switch_input)?.setTextColor(0xFF88B4CC.toInt())
+                root.findViewById<Button>(R.id.btn_backspace)?.setTextColor(0xFFC8A0F0.toInt())
             } else {
                 root.setBackgroundColor(0xFF0E0F14.toInt())
                 root.findViewById<View>(R.id.media_container)?.setBackgroundColor(0xFF12131A.toInt())
@@ -669,8 +681,9 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private fun filterDeckByCategory(category: String) {
         selectedCategory = category
         val isTerracotta = currentTheme.equals(ZenoDeckKeyboardBridgePlugin.THEME_TERRACOTTA, ignoreCase = true)
-        val activeColor = if (isTerracotta) 0xFFC2652A.toInt() else 0xFF22D3EE.toInt()
-        val inactiveColor = if (isTerracotta) 0xFF79695F.toInt() else 0xFF94A3B8.toInt()
+        val isGlacier = currentTheme.equals(ZenoDeckKeyboardBridgePlugin.THEME_GLACIER, ignoreCase = true)
+        val activeColor = if (isGlacier) 0xFF7DD3FC.toInt() else if (isTerracotta) 0xFFC2652A.toInt() else 0xFF22D3EE.toInt()
+        val inactiveColor = if (isGlacier) 0xFFA0B4C4.toInt() else if (isTerracotta) 0xFF79695F.toInt() else 0xFF94A3B8.toInt()
 
         btnCatAll?.setTextColor(if (category == "all") activeColor else inactiveColor)
         btnCatGifs?.setTextColor(if (category == "gifs") activeColor else inactiveColor)

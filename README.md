@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.4">
-    <img src="https://img.shields.io/badge/Release-v1.0.4-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.4" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.5">
+    <img src="https://img.shields.io/badge/Release-v1.0.5-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.5" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.5/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,28 +46,29 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.4 (Short & Sweet)
+## 💎 What's New in v1.0.5 (Short & Sweet — ZenoTap Glacier UI/UX)
 
-ZenoDeck v1.0.4 completely resolves the 5% downloader stall with sticky CDN failover, true 4K adaptive resolution, and anti-stall engine resilience:
+ZenoDeck v1.0.5 brings the flagship **Google Stitch "Glacier — Glassmorphism" ("Frozen Light")** UI/UX adaptation to **ZenoTap**, unifying ultra-fast rich media chat insertion with ethereal depth:
 
-- 🚀 **Sticky CDN Edge Failover (`preferredHostIndex`)**: Discovers responsive edge nodes in <150ms and locks onto them across all subsequent 2MB chunks. Bypasses packet-dropping Google CDN edge nodes with a fast 2.5-second connect timeout.
-- 🎯 **True 4K60 & 1080p Adaptive Streams**: Prioritized modern mobile client profiles (`IOS_MODERN` 20.10.4, `ANDROID_VR` 1.56.21, `IOS` 19.45.4). Rejects degraded 360p-only responses without `clen=` during resolution to guarantee top-tier UHD quality.
-- 📊 **Dynamic Stream Sizing & Anti-Stall Progress**: Extracts stream size dynamically from Chunk #0 (`Content-Range` or `Content-Length`) and provides synthetic 5% step progression every 512KB for streams with unannounced size, permanently eliminating freezes at 5%.
-- 🛡️ **Selective Range Query Parameter Injection**: Restricts `&range=start-end` strictly to confirmed DASH adaptive streams (`clen=` or `gir=yes`), preserving pre-muxed streams (like `itag=18`) and protecting HMAC URL signatures.
-- 🧪 **Hardware Engine Truncation Guard**: Rewinds file length to `chunkStart` on retry in `ZenoHeadlessMediaEngine.kt`, eliminating partial stream corruption during cellular-to-Wi-Fi handoffs.
+- ❄️ **Glacier "Frozen Light" Glassmorphism**: Translucent frosted panels (`#0f1524`, `#141c2e`), radiant Ice-Blue accents (`#7dd3fc`), soft lavender loops (`#c8a0f0`), and luminous borders with ambient glitch backdrops.
+- 🎛️ **Active Media Inspector Popover Card**: Complete inspector featuring an interactive playback scrubber, speed selector (`0.5x`, `1.0x`, `2.0x`), full-cycle loop range, auto-caption editor, and 1-tap **"Commit to Chat [DIRECT INJECT]"** via Android `CommitContent` v2.
+- ⚡ **Trending Cyber Feed & Smart Filter Pills**: Responsive reaction feed with duration and format tags, multi-slot category filter pills (Cyber Reactions, Gaming Clutches, AI Gens, Memes, Vaporwave), and DnD sortable vault deck.
+- ⌨️ **1:1 Live ZenoTap Studio & Spacebar Trackpad**: Real-time interactive IME simulator with tactile spacebar cursor scrubbing, live chat sandbox injection, and 3-way theme switching (Glacier, Obsidian Dark, Terracotta Warm).
+- 🔊 **Mechanical Sensory Audio Switch**: Tactile SFX toggle in the search bar wired into `useSensoryFeedback` for synchronized mechanical click sound and haptic actuation.
+- 🤖 **Native Android Kotlin IME Skinning**: Integrated `THEME_GLACIER` into `ZenoDeckKeyboardService.kt` and `ZenoDeckKeyboardBridgePlugin.kt`, ensuring 100% visual parity across web and native Android keyboards.
 
 ---
 
-## 🚀 Download & Installation (v1.0.4)
+## 🚀 Download & Installation (v1.0.5)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.4/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.5/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.5/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.5/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.5/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 

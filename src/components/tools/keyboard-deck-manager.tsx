@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Keyboard,
   Settings,
@@ -27,9 +27,26 @@ import {
   ArrowRight,
   ShieldCheck,
   Sliders,
+  Search,
+  X,
+  Volume2,
+  VolumeX,
+  Star,
+  AudioWaveform,
+  Subtitles,
+  Repeat,
+  Send,
+  Link2,
+  Copy,
+  Info,
+  Smile,
+  Layers,
+  Play,
+  Pause,
+  SlidersHorizontal,
 } from "lucide-react";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
-import { useEffect, useState, useCallback, useId } from "react";
+import { useEffect, useState, useCallback, useId, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
   DndContext,
@@ -55,8 +72,11 @@ import {
   getKeyboardStatus,
   openKeyboardSettings,
   openKeyboardPicker,
+  setKeyboardTheme,
+  getKeyboardTheme,
   type DeckGifItem,
   type KeyboardStatus,
+  type KeyboardTheme,
 } from "@/lib/zenodeck-bridge";
 import {
   zenoTapClient,
@@ -70,9 +90,13 @@ import {
 } from "@/lib/zenotap/client-sdk";
 import { PinCodeInput } from "@/components/zenotap/PinCodeInput";
 import { ZenoTapPairScanner } from "@/components/zenotap/ZenoTapPairScanner";
-import { ZenoTapKeyboardSimulator } from "@/components/zenotap/ZenoTapKeyboardSimulator";
+import {
+  ZenoTapKeyboardSimulator,
+  type ZenoTapInjectedItem,
+} from "@/components/zenotap/ZenoTapKeyboardSimulator";
 import { formatBytes } from "@/lib/format";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -86,14 +110,104 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+export interface CyberReactionItem {
+  id: string;
+  title: string;
+  category: "cyber" | "gaming" | "ai" | "memes" | "vaporwave";
+  fps: string;
+  duration: string;
+  size: string;
+  format: string;
+  hasAudio: boolean;
+  image: string;
+  caption: string;
+}
+
+export const CYBER_REACTIONS: CyberReactionItem[] = [
+  {
+    id: "glitch-overload",
+    title: "Glitch Overload 60FPS",
+    category: "cyber",
+    fps: "60 FPS",
+    duration: "1.8s",
+    size: "3.2MB",
+    format: "WEBP 60FPS",
+    hasAudio: true,
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBiWJ6JTSO-mhxtoMtkxtjBoedy2EyThFvuBsEptkqmchF-0MDjCbpROUE2aKnlgJuRaZovwfhoFBlkQdKL8bIzOpbAEm2ge3waAgCqrN0yM5Cx1wj3nnj5xewN8cDkPBugqAlLBzpPbSe8IY-YgQiQ5aBEJgp1EYESQP0lagavgIH9tYO6dc9TN4p2uICASzZOJbpWX52HyZGO--1Gi2Se2bWmQ-mdWkdlE7-qcIuV_KTNMYLPbkit4g",
+    caption: "When the code compiles on first try...",
+  },
+  {
+    id: "neon-speed-run",
+    title: "Neon Speed Run",
+    category: "gaming",
+    fps: "60 FPS",
+    duration: "2.1s",
+    size: "2.8MB",
+    format: "WEBP 60FPS",
+    hasAudio: false,
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBfYboh5WNMg5a9scI0za3QWvkT08isNQQR9d60vtOpX1VllIr-xdG5GwEeN1neszPt3MT7fQJxmmBg02QN4sT1Xi9V2HeQCmkU__kx4tkSTNF84JLXElSk6SM52-R0lKfS9X7jy-lYeumCvYGurbs71MB4lpR_LYjieDv0BNys02utAPvjSTY-4Y4WfA0KwQ3HzCobtNQyGCkrd75WOS6jNED6fX1EMKl-r_g9971G0I3_7u5odEFo8g",
+    caption: "Maximum overdrive engaged",
+  },
+  {
+    id: "mech-emergency-lock",
+    title: "Mech Emergency Lock",
+    category: "cyber",
+    fps: "HQ WEBM",
+    duration: "0.9s",
+    size: "1.4MB",
+    format: "HQ WEBM",
+    hasAudio: true,
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBb98_6qxsFMvTu1D_R9Zd8ZODznF1_Pe0xeIU8rGACSOpNs4Z8sjATjNGBxmTkfHnViTV13k0-Qd6CQHPNBvUaLmA0YIcP5eQguaspZHqLCdOOJ1BoB1jlIEt1kqQT7xnMb6TXhZGzCyJnWkz-q1kfa8v8-mmXIPmgTa0BKOHaDZfZvGZMp7kyhlSnugxVOYZnSUrlAw273ZWexu35sZN3BMc6hmRFwCxLGxdxcEjgbTvUQ4oQAd-IcQ",
+    caption: "CRITICAL ALERT: Target locked",
+  },
+  {
+    id: "terminal-flow-state",
+    title: "Terminal Flow State",
+    category: "ai",
+    fps: "1080p",
+    duration: "3.4s",
+    size: "4.1MB",
+    format: "1080p 60FPS",
+    hasAudio: false,
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCVtN7jHKCMz04uIQVDGcLJFUkn7xp8zunVZFA8ZTn3mdMM4-tR3D27ev2euNQ8rM0BiVLz8rAmaqVfoMApRAZUlyXwzyFF3vyyq6uoslgYAZN9ERKGgDkSEOuOs0W62Z5slJiRtfzq6a_f7iEz4ZpaPWvWkkZ950SfRBY5JgEwnWnudPB8EEWsboboSqoIZpIN8WUUbArRzjIXPhKocE01gh7KMr9pRmrBOr1NhQCxK-rJA_OsM1jeKw",
+    caption: "Entering deep terminal flow...",
+  },
+  {
+    id: "vapor-wave-motion",
+    title: "Vapor Wave Motion",
+    category: "vaporwave",
+    fps: "48 FPS",
+    duration: "1.5s",
+    size: "2.1MB",
+    format: "48 FPS",
+    hasAudio: true,
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuC53G9LsjTgUu3fQxa5mehJdphyg648a7VIucxCniNfGEYmaUFJmxG8s7Pc8psq6bCWt7x-FN3wst75GX2wLhyZvB6_5P7U_rZeHqi9-CfYFkpELIFf2ezLrenFCFr-tDAcP8VdQfkUU_xMvR0_8D7u96hSn7hhNDlEU9TsN6nkg3p6c84X0T6hlwEuQ-8hqvUTqkQDPN_NuNv5TO1nbrYBF_sskH4qSvzXO0VlMvODWYSDPO0Kafn0XQ",
+    caption: "A e s t h e t i c  w a v e s",
+  },
+];
+
 interface SortableDeckItemProps {
   item: DeckGifItem;
   resolveImageSrc: (path: string) => string;
   onDelete: (filename: string) => void;
   onTogglePin: (filename: string) => void;
+  onSelect: (item: DeckGifItem) => void;
+  isSelected?: boolean;
 }
 
-function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: SortableDeckItemProps) {
+function SortableDeckItem({
+  item,
+  resolveImageSrc,
+  onDelete,
+  onTogglePin,
+  onSelect,
+  isSelected = false,
+}: SortableDeckItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.filename,
   });
@@ -112,16 +226,24 @@ function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: Sort
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 p-2.5 transition-all hover:border-primary/50 hover:bg-card/80 shadow-sm"
+      onClick={() => onSelect(item)}
+      className={`group relative overflow-hidden rounded-xl border p-2.5 transition-all shadow-md cursor-pointer ${
+        isSelected
+          ? "border-[#7dd3fc] bg-[#141c2e]/90 shadow-[0_0_20px_rgba(125,211,252,0.25)] ring-1 ring-[#7dd3fc]"
+          : "border-sky-400/20 bg-[#141c2e]/70 backdrop-blur-md hover:border-sky-400/50 hover:bg-[#1a2438]/80 hover:-translate-y-0.5"
+      }`}
     >
       {/* Top Action Bar: Drag Grip, Pin Button, Delete Button */}
-      <div className="flex items-center justify-between mb-1.5 px-0.5">
+      <div
+        className="flex items-center justify-between mb-1.5 px-0.5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           {...attributes}
           {...listeners}
           type="button"
           aria-label="Drag to reorder"
-          className="text-muted-foreground/60 hover:text-foreground cursor-grab active:cursor-grabbing p-0.5"
+          className="text-muted-foreground/60 hover:text-[#7dd3fc] cursor-grab active:cursor-grabbing p-0.5 transition-colors"
         >
           <GripVertical className="size-3.5" />
         </button>
@@ -174,7 +296,7 @@ function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: Sort
       </div>
 
       {/* Media Thumbnail Container with Format Badge */}
-      <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/50 relative flex items-center justify-center border border-border/30">
+      <div className="aspect-square w-full overflow-hidden rounded-lg bg-black/60 relative flex items-center justify-center border border-sky-400/20">
         <img
           src={resolveImageSrc(item.path)}
           alt={item.filename}
@@ -202,10 +324,13 @@ function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: Sort
         )}
       </div>
 
-      {/* Bottom Metadata & RAM Protection Telemetry */}
+      {/* Bottom Metadata & Telemetry */}
       <div className="mt-2 space-y-1">
         <div className="flex items-center justify-between gap-1">
-          <span className="truncate font-mono text-[11px] font-medium text-foreground" title={item.filename}>
+          <span
+            className="truncate font-mono text-[11px] font-medium text-[#e0e8f0]"
+            title={item.filename}
+          >
             {item.filename.replace(/^pinned_/, "").replace(/\.gif$/i, "").replace(/_/g, " ")}
           </span>
           <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
@@ -215,11 +340,11 @@ function SortableDeckItem({ item, resolveImageSrc, onDelete, onTogglePin }: Sort
 
         {/* RAM Telemetry Badge (<15KB WebP Companion) */}
         <div className="flex items-center justify-between text-[9px] font-mono text-muted-foreground/70">
-          <span className="text-emerald-400/80 flex items-center gap-1">
-            <span className="size-1 rounded-full bg-emerald-400" />
+          <span className="text-[#7dd3fc]/80 flex items-center gap-1">
+            <span className="size-1 rounded-full bg-[#7dd3fc]" />
             &lt;15KB WebP
           </span>
-          <span>&lt;30MB RSS</span>
+          <Zap className="size-2.5 text-[#7dd3fc] opacity-60 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
     </div>
@@ -248,34 +373,26 @@ const VAULT_DECK_PRESETS: PresetItem[] = [
   {
     id: "whatsapp-sticker",
     name: "WhatsApp Sticker Profile",
-    description: "512x512 square transparent WebP format compliant with WhatsApp sticker tray specifications.",
-    category: "recommended",
-    engineTier: "Tier 3: WebCodecs",
-    chips: ["512x512", "Animated WebP", "Alpha", "16px Safe"],
-    params: { format: "webp", width: 512, height: 512, alpha: true },
-  },
-  {
-    id: "micro-vault-loop",
-    name: "Micro Vault Card Loop",
-    description: "Ultra-low memory footprint for rapid IME caching and zero-lag keyboard drawer rendering.",
-    category: "recommended",
+    description: "Strict 512x512 WebP sticker format complying with official WhatsApp specifications.",
+    category: "social",
     engineTier: "Tier 1: FastCopy",
-    chips: ["160x160", "GIF / WebP", "15 fps", "<250 KB"],
-    params: { format: "webp", width: 160, height: 160, fps: 15 },
+    chips: ["512x512", "WebP", "Transparent", "<100 KB"],
+    params: { format: "webp", width: 512, height: 512, transparent: true },
   },
   {
-    id: "studio-master-loop",
-    name: "Lossless Studio Master Loop",
-    description: "Full dynamic color range and 60fps loop timing for flagship device keyboards.",
+    id: "high-fps-cyber",
+    name: "Cyberpunk 60FPS Glacier Loop",
+    description: "High-definition 60FPS looped reaction tuned for modern OLED smartphone displays.",
     category: "studio",
     engineTier: "Tier 4: Wasm MT",
-    chips: ["480x480", "GIF High-DPI", "30-60 fps", "Floyd-Steinberg"],
-    params: { format: "gif", width: 480, height: 480, dither: true },
+    chips: ["480x480", "GIF High-DPI", "60 fps", "Glacier Glass"],
+    params: { format: "gif", width: 480, height: 480, fps: 60 },
   },
 ];
 
 export function KeyboardDeckManager() {
   const haptics = useHaptics();
+  const sensory = useSensoryFeedback();
   const [gifs, setGifs] = useState<DeckGifItem[]>([]);
   const [status, setStatus] = useState<KeyboardStatus>({ enabled: false, selected: false });
   const [loading, setLoading] = useState(true);
@@ -295,6 +412,24 @@ export function KeyboardDeckManager() {
   const [lastSyncedTime, setLastSyncedTime] = useState<number | null>(null);
   const [clipboardCode, setClipboardCode] = useState<string | null>(null);
 
+  // Active Media Inspector Popover State (Stitch Hero Feature)
+  const [activeInspectItem, setActiveInspectItem] = useState<CyberReactionItem>(CYBER_REACTIONS[0]);
+  const [activeInspectCaption, setActiveInspectCaption] = useState<string>(CYBER_REACTIONS[0].caption);
+  const [activeInspectSpeed, setActiveInspectSpeed] = useState<number>(1.0);
+  const [activeInspectScrubber, setActiveInspectScrubber] = useState<number>(66);
+  const [isEditingCaption, setIsEditingCaption] = useState<boolean>(false);
+  const [isCommitting, setIsCommitting] = useState<boolean>(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
+  const [isStarred, setIsStarred] = useState<boolean>(true);
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedFilterPill, setSelectedFilterPill] = useState<string>("all");
+
+  // Bridge to ZenoTapKeyboardSimulator
+  const [injectedItem, setInjectedItem] = useState<ZenoTapInjectedItem | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<KeyboardTheme>("glacier");
+
   const dndId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -310,12 +445,14 @@ export function KeyboardDeckManager() {
   const loadDeck = useCallback(async () => {
     setLoading(true);
     try {
-      const [deckItems, imeStatus] = await Promise.all([
+      const [deckItems, imeStatus, savedTheme] = await Promise.all([
         getKeyboardDeckGifs(),
         getKeyboardStatus(),
+        getKeyboardTheme(),
       ]);
       setGifs(deckItems);
       setStatus(imeStatus);
+      setCurrentTheme(savedTheme);
       setSyncToken(getStoredSyncToken());
       setPairedDeviceName(getStoredDeviceName());
       setAutoSync(getStoredAutoSync());
@@ -525,37 +662,478 @@ export function KeyboardDeckManager() {
     return path.startsWith("web://") ? "" : path;
   };
 
+  // Convert DeckGifItem to CyberReactionItem format for inspector preview
+  const selectVaultItemForInspection = (vaultItem: DeckGifItem) => {
+    sensory.triggerTap();
+    const isSticker = vaultItem.filename.includes("sticker");
+    const cleanTitle = vaultItem.filename
+      .replace(/^pinned_/, "")
+      .replace(/\.(gif|webp)$/i, "")
+      .replace(/_/g, " ");
+
+    const adapted: CyberReactionItem = {
+      id: vaultItem.filename,
+      title: cleanTitle,
+      category: isSticker ? "memes" : "cyber",
+      fps: vaultItem.filename.endsWith(".webp") ? "WEBP 60FPS" : "GIF 60FPS",
+      duration: "1.8s",
+      size: formatBytes(vaultItem.size),
+      format: isSticker ? "WEBP STICKER" : "HQ GIF",
+      hasAudio: false,
+      image: resolveImageSrc(vaultItem.path) || CYBER_REACTIONS[0].image,
+      caption: `React: ${cleanTitle}`,
+    };
+    setActiveInspectItem(adapted);
+    setActiveInspectCaption(adapted.caption);
+    setIsInspectorOpen(true);
+  };
+
+  // Primary Action: Commit to Chat [DIRECT INJECT]
+  const handleCommitToChat = async () => {
+    setIsCommitting(true);
+    sensory.triggerSuccess();
+    void haptics.success();
+
+    // Transmit to Chat Sandbox
+    setInjectedItem({
+      filename: activeInspectItem.title,
+      caption: activeInspectCaption || activeInspectItem.title,
+      speed: activeInspectSpeed,
+      url: activeInspectItem.image,
+      timestamp: Date.now(),
+    });
+
+    // Copy to clipboard fallback if browser supports it
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(activeInspectItem.image);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    setTimeout(() => {
+      setIsCommitting(false);
+      toast.success(`Injected "${activeInspectItem.title}" via CommitContent v2!`);
+    }, 1200);
+  };
+
+  // Filter items based on pill and search query
+  const filteredCyberReactions = CYBER_REACTIONS.filter((item) => {
+    const matchesSearch =
+      searchQuery.trim() === "" ||
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.caption.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+    if (selectedFilterPill === "all") return true;
+    if (selectedFilterPill === "cyber") return item.category === "cyber";
+    if (selectedFilterPill === "gaming") return item.category === "gaming";
+    if (selectedFilterPill === "ai") return item.category === "ai";
+    if (selectedFilterPill === "memes") return item.category === "memes";
+    if (selectedFilterPill === "vaporwave") return item.category === "vaporwave";
+    return true;
+  });
+
+  const filteredVaultGifs = gifs.filter((item) => {
+    const matchesSearch =
+      searchQuery.trim() === "" ||
+      item.filename.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+    if (selectedFilterPill === "stickers") return item.filename.includes("sticker");
+    if (selectedFilterPill === "pinned") return item.filename.startsWith("pinned_");
+    return true;
+  });
+
+  const FILTER_PILLS = [
+    { id: "all", label: "All Decks" },
+    { id: "cyber", label: "Cyber Reactions (Slot 1)", dotColor: "#c8a0f0" },
+    { id: "gaming", label: "Gaming Clutches (Slot 2)", dotColor: "#88b4cc" },
+    { id: "ai", label: "AI Gens" },
+    { id: "memes", label: "Memes" },
+    { id: "vaporwave", label: "Vaporwave" },
+    { id: "stickers", label: "Stickers" },
+    { id: "pinned", label: "Pinned" },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden box-border space-y-6 p-3 sm:p-6">
-      {/* 3-Step Interactive Onboarding Connection Banner */}
-      <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-card/80 via-card/50 to-cyan-950/20 p-4 sm:p-5 backdrop-blur-xl shadow-lg space-y-4">
+    <div className="mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden box-border space-y-5 p-3 sm:p-6 bg-[#0a0e1a] text-[#e0e8f0] selection:bg-[#7dd3fc]/20 selection:text-[#7dd3fc]">
+      {/* 1. Glacier Glassmorphism Header Bar */}
+      <div className="rounded-2xl border border-sky-400/20 bg-[#0f1524]/75 backdrop-blur-2xl p-4 sm:p-5 shadow-[0_1px_16px_rgba(125,211,252,0.06)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-[#7dd3fc] shadow-[0_0_20px_rgba(125,211,252,0.2)]">
+            <Keyboard className="size-5" />
+          </div>
+          <div>
+            <h1 className="font-headline text-base font-semibold tracking-tight text-[#e0e8f0] flex items-center gap-2">
+              ZenoTap Studio &amp; Keyboard Deck
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#7dd3fc]/15 text-[#7dd3fc] border border-[#7dd3fc]/30 font-bold">
+                Glacier v3.16.0
+              </span>
+            </h1>
+            <p className="text-xs text-[#a0b4c4]">
+              Frozen Light glassmorphic IME with instant CommitContent v2 direct chat injection.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* SFX Sound Toggle Button */}
+          <button
+            type="button"
+            onClick={() => {
+              sensory.triggerToggle(!sensory.isMuted);
+              sensory.setMuted(!sensory.isMuted);
+              toast.info(sensory.isMuted ? "Mechanical SFX Unmuted" : "Mechanical SFX Muted");
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+              !sensory.isMuted
+                ? "bg-[#7dd3fc]/15 text-[#7dd3fc] border-[#7dd3fc]/40 shadow-[0_0_12px_rgba(125,211,252,0.2)]"
+                : "bg-[#141c2e] text-[#a0b4c4] border-sky-400/20 hover:text-[#e0e8f0]"
+            }`}
+            title="Toggle Sensory SFX"
+          >
+            {!sensory.isMuted ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
+            <span>SFX: {!sensory.isMuted ? "ON" : "OFF"}</span>
+          </button>
+
+          {/* Refresh Button */}
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => void loadDeck()}
+            className="flex items-center gap-1.5 rounded-xl border border-sky-400/20 bg-[#141c2e] px-3 py-1.5 text-xs font-semibold text-[#a0b4c4] hover:text-[#7dd3fc] hover:border-sky-400/40 transition-colors cursor-pointer"
+          >
+            <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </motion.button>
+        </div>
+      </div>
+
+      {/* 2. Frosted Search & Filter Controls (Stitch Lines 16-32) */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2.5 bg-[#141c2e]/70 backdrop-blur-xl border border-sky-400/20 px-3.5 py-2.5 rounded-2xl shadow-lg">
+          <Search className="size-4 text-[#7dd3fc] shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search cyber reactions, memes, vault clips..."
+            className="bg-transparent flex-1 text-sm font-medium text-[#e0e8f0] focus:outline-none placeholder:text-[#a0b4c4]/50"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="size-7 flex items-center justify-center rounded-lg bg-[#1a2438]/60 text-[#a0b4c4] hover:text-[#7dd3fc] transition-colors cursor-pointer"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+          <div className="w-px h-5 bg-[#1a2438]" />
+
+          {/* Preset Shortcuts */}
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              sensory.triggerTap();
+              setShowPresetModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#c8a0f0]/15 text-[#c8a0f0] border border-[#c8a0f0]/30 text-xs font-semibold hover:bg-[#c8a0f0]/25 transition-all cursor-pointer"
+          >
+            <Sliders className="size-3.5" />
+            <span className="hidden sm:inline">Presets</span>
+          </button>
+        </div>
+
+        {/* 3. Insertion API Status Banner (Stitch Lines 33-48) */}
+        <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-[#111828]/90 border border-sky-400/15 backdrop-blur-md shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative flex size-2">
+              <span className="animate-ping absolute inline-flex size-full rounded-full bg-[#7dd3fc] opacity-75" />
+              <span className="relative inline-flex rounded-full size-2 bg-[#7dd3fc]" />
+            </div>
+            <p className="text-[11px] font-medium text-[#e0e8f0] truncate">
+              <span className="text-[#7dd3fc] font-semibold">Target: Discord • WhatsApp • Telegram</span> • CommitContent v2 Supported
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1a3a4e]/60 border border-sky-400/20 text-[10px] font-medium text-[#c0d8e8] shrink-0">
+            <ShieldCheck className="size-3 text-[#88b4cc]" />
+            <span>Auto-Copy Ready</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Filter Pills (Stitch Lines 50-72) */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 -mx-3 px-3 sm:-mx-6 sm:px-6">
+        {FILTER_PILLS.map((pill) => {
+          const isActive = selectedFilterPill === pill.id;
+          return (
+            <button
+              key={pill.id}
+              type="button"
+              onClick={() => {
+                sensory.triggerTap({ hapticOnly: true });
+                setSelectedFilterPill(pill.id);
+              }}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                isActive
+                  ? "bg-[#7dd3fc] text-[#001f2e] font-semibold shadow-md shadow-[#7dd3fc]/25 scale-102"
+                  : "bg-[#141c2e]/70 border border-sky-400/15 text-[#e0e8f0] hover:bg-[#1a2438] hover:border-sky-400/30"
+              }`}
+            >
+              {pill.dotColor && (
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: pill.dotColor }}
+                />
+              )}
+              <span>{pill.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 5. Active Media Inspector Popover Card (Hero Stitch Component - Lines 73-155) */}
+      <AnimatePresence>
+        {isInspectorOpen && activeInspectItem && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="relative overflow-hidden rounded-2xl bg-[#141c2e]/85 backdrop-blur-2xl border border-sky-400/25 shadow-2xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-[0_0_30px_rgba(125,211,252,0.06)]"
+          >
+            {/* Ambient Glitch Backdrop Glow (Stitch Lines 75-77) */}
+            <div className="absolute -right-10 -top-10 size-44 rounded-full bg-[#7dd3fc]/10 blur-3xl pointer-events-none" />
+            <div className="absolute -left-10 -bottom-10 size-44 rounded-full bg-[#c8a0f0]/10 blur-3xl pointer-events-none" />
+
+            {/* Inspector Header Meta (Stitch Lines 79-93) */}
+            <div className="flex items-center justify-between z-10">
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-[#7dd3fc] animate-pulse" />
+                <span className="text-xs font-headline font-semibold text-[#e0e8f0] tracking-wide">
+                  {activeInspectItem.title}
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#3d2060]/70 text-[#e8d0ff] border border-[#c8a0f0]/30 font-mono">
+                  {activeInspectItem.duration} loop
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStarred(!isStarred);
+                    sensory.triggerTap();
+                    toast.success(isStarred ? "Removed from favorites" : "Saved to favorite slot ⭐");
+                  }}
+                  className={`size-7 flex items-center justify-center rounded-lg bg-[#1a2438]/70 transition-colors cursor-pointer ${
+                    isStarred ? "text-[#c8a0f0]" : "text-[#a0b4c4] hover:text-[#e0e8f0]"
+                  }`}
+                  title="Save to slot"
+                >
+                  <Star className="size-4" fill={isStarred ? "currentColor" : "none"} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsInspectorOpen(false)}
+                  className="size-7 flex items-center justify-center rounded-lg bg-[#1a2438]/70 text-[#a0b4c4] hover:text-[#e0e8f0] transition-colors cursor-pointer"
+                  title="Close inspector"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Live Preview Display Canvas (Stitch Lines 94-121) */}
+            <div className="relative w-full h-52 sm:h-60 rounded-xl overflow-hidden bg-[#0a0e1a] flex items-center justify-center group shadow-inner border border-sky-400/20">
+              <img
+                src={activeInspectItem.image}
+                alt={activeInspectItem.title}
+                className="size-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e1a]/90 via-transparent to-[#0a0e1a]/20 pointer-events-none" />
+
+              {/* Format Overlay Badges */}
+              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded-md bg-[#0f1524]/80 backdrop-blur-md text-[10px] font-mono text-[#e0e8f0] tracking-wider border border-sky-400/20">
+                  {activeInspectItem.format}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-[#0f1524]/80 backdrop-blur-md text-[10px] font-mono text-[#7dd3fc] font-semibold border border-sky-400/20">
+                  {activeInspectItem.size}
+                </span>
+              </div>
+
+              {/* Synced Audio Badge */}
+              <div className="absolute top-2.5 right-2.5">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#0f1524]/80 backdrop-blur-md text-[10px] font-medium text-[#c8a0f0] border border-[#c8a0f0]/30 hover:bg-[#0f1524] transition-colors"
+                >
+                  <AudioWaveform className="size-3.5" />
+                  <span>{activeInspectItem.hasAudio ? "Synced" : "Audio Ready"}</span>
+                </button>
+              </div>
+
+              {/* Interactive Playback Scrubber & Progress (Stitch Lines 109-120) */}
+              <div className="absolute bottom-2.5 inset-x-3 flex flex-col gap-1.5 z-10">
+                <div className="flex items-center justify-between text-[10px] font-mono text-[#a0b4c4]">
+                  <span className="text-[#7dd3fc] font-medium">
+                    {((activeInspectScrubber / 100) * parseFloat(activeInspectItem.duration)).toFixed(1)}s
+                  </span>
+                  <span>{activeInspectItem.duration}</span>
+                </div>
+                <div
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percent = Math.max(0, Math.min(100, Math.round((clickX / rect.width) * 100)));
+                    setActiveInspectScrubber(percent);
+                    sensory.triggerTap({ hapticOnly: true });
+                  }}
+                  className="w-full h-2 bg-[#1a2438]/80 rounded-full overflow-hidden flex cursor-pointer relative"
+                >
+                  <div
+                    style={{ width: `${activeInspectScrubber}%` }}
+                    className="h-full bg-gradient-to-r from-[#88b4cc] to-[#7dd3fc] rounded-full relative transition-all"
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 size-2.5 rounded-full bg-white shadow-md shadow-[#7dd3fc]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Inspector Customization Controls (Stitch Lines 122-154) */}
+            <div className="flex flex-col gap-2.5 z-10">
+              {/* Auto Caption Input Box */}
+              <div className="flex items-center gap-2 bg-[#111828]/80 border border-sky-400/20 backdrop-blur-sm px-3 py-1.5 rounded-xl">
+                <Subtitles className="size-4 text-[#c8a0f0] shrink-0" />
+                <input
+                  type="text"
+                  value={activeInspectCaption}
+                  onChange={(e) => setActiveInspectCaption(e.target.value)}
+                  placeholder="Caption this reaction..."
+                  className="bg-transparent flex-1 text-xs text-[#e0e8f0] focus:outline-none placeholder:text-[#a0b4c4]/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    sensory.triggerTap();
+                    toast.success("Reaction caption updated!");
+                  }}
+                  className="text-[10px] uppercase font-bold text-[#7dd3fc] tracking-wider px-2 py-0.5 rounded bg-[#7dd3fc]/10 hover:bg-[#7dd3fc]/20 border border-[#7dd3fc]/30 cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+
+              {/* Speed Selector & Loop Adjustment */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center bg-[#111828]/80 border border-sky-400/20 rounded-xl p-1 gap-1">
+                  {[0.5, 1.0, 2.0].map((spd) => (
+                    <button
+                      key={spd}
+                      type="button"
+                      onClick={() => {
+                        sensory.triggerTap({ hapticOnly: true });
+                        setActiveInspectSpeed(spd);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+                        activeInspectSpeed === spd
+                          ? "bg-[#7dd3fc] text-[#001f2e] shadow-sm font-bold"
+                          : "text-[#a0b4c4] hover:text-[#e0e8f0]"
+                      }`}
+                    >
+                      {spd.toFixed(1)}x
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#111828]/80 border border-sky-400/20 text-[11px] text-[#e0e8f0] font-medium flex-1 justify-center">
+                  <Repeat className="size-3.5 text-[#88b4cc]" />
+                  <span className="text-[#a0b4c4]">Loop Range:</span>
+                  <span className="text-[#7dd3fc] font-mono font-semibold">Full Cycle</span>
+                </div>
+              </div>
+
+              {/* Primary Action: Commit to Chat Button (Stitch Lines 144-153) */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => void handleCommitToChat()}
+                  disabled={isCommitting}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#7dd3fc] hover:bg-[#7dd3fc]/90 text-[#001f2e] font-semibold text-xs py-2.5 rounded-xl shadow-lg shadow-[#7dd3fc]/25 transition-all transform active:scale-[0.98] cursor-pointer"
+                >
+                  {isCommitting ? (
+                    <>
+                      <RefreshCw className="size-4 animate-spin" />
+                      <span>Transmitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-4" />
+                      <span>Commit to Chat</span>
+                      <span className="ml-1 px-1.5 py-0.5 rounded bg-[#001f2e]/15 text-[9px] font-bold tracking-wider">
+                        DIRECT INJECT
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    sensory.triggerTap();
+                    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                      await navigator.clipboard.writeText(activeInspectItem.image);
+                      toast.success("Media link copied to clipboard!");
+                    }
+                  }}
+                  className="size-10 flex items-center justify-center rounded-xl bg-[#1a2438]/80 hover:bg-[#1a2438] text-[#a0b4c4] hover:text-[#7dd3fc] border border-sky-400/20 transition-colors cursor-pointer"
+                  title="Export Raw Link"
+                >
+                  <Link2 className="size-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 6. Bottom Feedback Toast (Stitch Lines 156-162) */}
+      <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#111828]/80 border border-sky-400/15 backdrop-blur-md">
+        <Info className="size-4 text-[#7dd3fc] shrink-0" />
+        <p className="text-[11px] text-[#a0b4c4] leading-tight">
+          Rich media ready for insertion • Press{" "}
+          <span className="text-[#7dd3fc] font-medium">Commit to Chat</span> or click any card below to preview.
+        </p>
+      </div>
+
+      {/* 7. Embedded 1:1 Live Keyboard Preview & Chat Injection Sandbox */}
+      <ZenoTapKeyboardSimulator
+        vaultItems={gifs}
+        injectedItem={injectedItem}
+        onSelectInspectItem={selectVaultItemForInspection}
+      />
+
+      {/* 8. 3-Step Connection & IME Setup Banner */}
+      <div className="rounded-2xl border border-sky-400/20 bg-[#141c2e]/60 p-4 sm:p-5 backdrop-blur-xl shadow-lg space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="size-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <div className="size-9 rounded-xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-[#7dd3fc]">
               <Zap className="size-5" />
             </div>
             <div>
-              <h2 className="font-display text-base font-bold text-foreground flex items-center gap-2">
-                ZenoTap Setup &amp; Live Studio
+              <h2 className="font-headline text-sm font-bold text-[#e0e8f0] flex items-center gap-2">
+                Android IME Setup &amp; Status
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  v3.15.0 Flagship
+                  Ready
                 </span>
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-[#a0b4c4]">
                 3-step status check for direct media insertion across WhatsApp, Discord, Messages &amp; Telegram.
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => void loadDeck()}
-              className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </motion.button>
           </div>
         </div>
 
@@ -570,7 +1148,7 @@ export function KeyboardDeckManager() {
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#a0b4c4]">
                 Step 1: Settings
               </span>
               {status.enabled ? (
@@ -585,7 +1163,7 @@ export function KeyboardDeckManager() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-[#a0b4c4] mb-3">
               {status.enabled
                 ? "ZenoTap input method is active in Android system."
                 : "Enable ZenoTap in Android On-Screen Keyboard settings."}
@@ -595,7 +1173,7 @@ export function KeyboardDeckManager() {
               onClick={() => void openKeyboardSettings()}
               className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                 status.enabled
-                  ? "bg-secondary text-foreground hover:bg-secondary/80"
+                  ? "bg-[#1a2438] text-[#e0e8f0] hover:bg-[#202c42] border border-sky-400/20"
                   : "bg-amber-500 hover:bg-amber-400 text-black shadow"
               }`}
             >
@@ -610,11 +1188,11 @@ export function KeyboardDeckManager() {
             className={`rounded-xl border p-3 flex flex-col justify-between transition-all ${
               status.selected
                 ? "bg-emerald-950/20 border-emerald-500/30"
-                : "bg-indigo-950/20 border-indigo-500/40"
+                : "bg-[#0e4d6e]/20 border-sky-400/30"
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#a0b4c4]">
                 Step 2: Active IME
               </span>
               {status.selected ? (
@@ -623,13 +1201,13 @@ export function KeyboardDeckManager() {
                   Active Default
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-400">
+                <span className="flex items-center gap-1 text-[11px] font-bold text-[#7dd3fc]">
                   <Keyboard className="size-3.5" />
                   Select Deck
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-[#a0b4c4] mb-3">
               {status.selected
                 ? "ZenoTap is currently chosen as the active input method."
                 : "Switch input method picker to ZenoTap when typing."}
@@ -639,8 +1217,8 @@ export function KeyboardDeckManager() {
               onClick={() => void openKeyboardPicker()}
               className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                 status.selected
-                  ? "bg-secondary text-foreground hover:bg-secondary/80"
-                  : "bg-indigo-600 hover:bg-indigo-500 text-white shadow"
+                  ? "bg-[#1a2438] text-[#e0e8f0] hover:bg-[#202c42] border border-sky-400/20"
+                  : "bg-[#7dd3fc] hover:bg-[#7dd3fc]/90 text-[#001f2e] shadow-md shadow-sky-400/20"
               }`}
             >
               <Keyboard className="size-3.5" />
@@ -653,11 +1231,11 @@ export function KeyboardDeckManager() {
             className={`rounded-xl border p-3 flex flex-col justify-between transition-all ${
               gifs.length > 0
                 ? "bg-emerald-950/20 border-emerald-500/30"
-                : "bg-sky-950/20 border-sky-500/40"
+                : "bg-[#0e4d6e]/20 border-sky-400/30"
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#a0b4c4]">
                 Step 3: Vault Deck
               </span>
               <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
@@ -665,7 +1243,7 @@ export function KeyboardDeckManager() {
                 {gifs.length} Items
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-[#a0b4c4] mb-3">
               {gifs.length > 0
                 ? "Media is synced to internal keyboard filesDir sandbox."
                 : "No media in deck. Upload or sync cloud GIFs."}
@@ -674,7 +1252,7 @@ export function KeyboardDeckManager() {
               type="button"
               onClick={() => void handleSyncCloud()}
               disabled={isSyncing}
-              className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 transition-colors cursor-pointer"
+              className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 bg-[#7dd3fc]/20 hover:bg-[#7dd3fc]/30 text-[#7dd3fc] border border-[#7dd3fc]/40 transition-colors cursor-pointer"
             >
               <CloudDownload className={`size-3.5 ${isSyncing ? "animate-bounce" : ""}`} />
               {isSyncing ? "Syncing..." : "Sync Cloud Deck"}
@@ -683,15 +1261,12 @@ export function KeyboardDeckManager() {
         </div>
       </div>
 
-      {/* Embedded 1:1 Live Keyboard Preview & Chat Injection Sandbox */}
-      <ZenoTapKeyboardSimulator vaultItems={gifs} />
-
-      {/* Cloud Sync & Device Pairing Section */}
-      <div className="rounded-2xl border border-border/60 bg-card/40 p-5 space-y-3.5 backdrop-blur-xl">
+      {/* 9. Cloud Sync & Device Pairing Section */}
+      <div className="rounded-2xl border border-sky-400/20 bg-[#141c2e]/60 p-5 space-y-3.5 backdrop-blur-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Cloud className="size-4 text-primary" />
-            <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+            <Cloud className="size-4 text-[#7dd3fc]" />
+            <span className="font-mono text-xs uppercase tracking-wider text-[#a0b4c4]">
               Encrypted Cloud Deck Sync
             </span>
           </div>
@@ -705,7 +1280,7 @@ export function KeyboardDeckManager() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <button
-                    className="size-7 grid place-items-center rounded-lg border border-border/70 bg-card text-muted-foreground hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all cursor-pointer"
+                    className="size-7 grid place-items-center rounded-lg border border-sky-400/20 bg-[#141c2e] text-[#a0b4c4] hover:border-destructive/40 hover:text-destructive active:scale-95 transition-all cursor-pointer"
                     title="Unlink device"
                     aria-label="Unlink device"
                   >
@@ -732,24 +1307,24 @@ export function KeyboardDeckManager() {
               </AlertDialog>
             </div>
           ) : (
-            <span className="font-mono text-[11px] text-muted-foreground">Not paired to cloud</span>
+            <span className="font-mono text-[11px] text-[#a0b4c4]">Not paired to cloud</span>
           )}
         </div>
 
         {syncToken ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/40">
-            <div className="text-[11px] text-muted-foreground">
-              Last synced: <strong className="text-foreground">{formatRelativeTime(lastSyncedTime)}</strong>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-sky-400/15">
+            <div className="text-[11px] text-[#a0b4c4]">
+              Last synced: <strong className="text-[#e0e8f0]">{formatRelativeTime(lastSyncedTime)}</strong>
             </div>
             <button
               onClick={handleToggleAutoSync}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
                 autoSync
-                  ? "bg-primary/10 border-primary/30 text-primary"
-                  : "bg-muted/40 border-border/60 text-muted-foreground"
+                  ? "bg-[#7dd3fc]/15 border-[#7dd3fc]/30 text-[#7dd3fc]"
+                  : "bg-[#111828] border-sky-400/20 text-[#a0b4c4]"
               }`}
             >
-              <Zap className={`size-3 ${autoSync ? "text-primary" : "text-muted-foreground"}`} />
+              <Zap className={`size-3 ${autoSync ? "text-[#7dd3fc]" : "text-[#a0b4c4]"}`} />
               Auto-Sync: {autoSync ? "ON" : "OFF"}
             </button>
           </div>
@@ -760,7 +1335,7 @@ export function KeyboardDeckManager() {
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowScanner(true)}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 font-display text-xs font-bold text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+                  className="flex items-center gap-2 rounded-xl bg-[#7dd3fc] px-4 py-2 font-display text-xs font-bold text-[#001f2e] shadow hover:bg-[#7dd3fc]/90 transition-colors"
                 >
                   <Camera className="size-4" />
                   SCAN QR TO PAIR
@@ -768,20 +1343,20 @@ export function KeyboardDeckManager() {
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setShowPairDialog(true)}
-                  className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-card/80 px-3.5 py-2 font-display text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 rounded-xl border border-sky-400/25 bg-[#141c2e] px-3.5 py-2 font-display text-xs font-semibold text-[#e0e8f0] hover:border-sky-400/50 transition-colors"
                 >
-                  <LinkIcon className="size-3.5" />
+                  <LinkIcon className="size-3.5 text-[#7dd3fc]" />
                   Enter 6-Digit PIN
                 </motion.button>
               </div>
             ) : (
-              <div className="p-4 rounded-xl bg-background/60 border border-border/70 space-y-3">
+              <div className="p-4 rounded-xl bg-[#0a0e1a]/80 border border-sky-400/25 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground font-medium">Enter 6-digit PIN from desktop ZenoDeck:</p>
+                  <p className="text-xs text-[#a0b4c4] font-medium">Enter 6-digit PIN from desktop ZenoDeck:</p>
                   <button
                     type="button"
                     onClick={() => setShowPairDialog(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
+                    className="text-xs text-[#a0b4c4] hover:text-[#e0e8f0]"
                   >
                     Cancel
                   </button>
@@ -798,7 +1373,7 @@ export function KeyboardDeckManager() {
                     type="button"
                     onClick={() => void handlePairWithCode(pairCodeInput)}
                     disabled={isPairing || pairCodeInput.length !== 6}
-                    className="rounded-xl bg-primary px-4 py-2.5 font-display text-xs font-bold text-primary-foreground disabled:opacity-50 h-12 w-full sm:w-auto cursor-pointer"
+                    className="rounded-xl bg-[#7dd3fc] px-4 py-2.5 font-display text-xs font-bold text-[#001f2e] disabled:opacity-50 h-12 w-full sm:w-auto cursor-pointer"
                   >
                     {isPairing ? "Linking..." : "Connect"}
                   </button>
@@ -815,35 +1390,85 @@ export function KeyboardDeckManager() {
         onScanSuccess={(code) => void handlePairWithCode(code)}
       />
 
-      {/* Drag-and-Drop Sortable Vault Media Deck */}
+      {/* 10. Trending Cyber Feed (Stitch Lines 163-235) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-semibold text-[#a0b4c4] uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="size-3.5 text-[#7dd3fc]" />
+            Trending Cyber Feed
+          </span>
+          <span
+            onClick={() => {
+              sensory.triggerTap();
+              toast.info("Feed re-indexed with latest Glacier loops");
+            }}
+            className="text-[11px] text-[#7dd3fc] hover:underline cursor-pointer"
+          >
+            Re-index Feed
+          </span>
+        </div>
+
+        {/* 2-Column Responsive Card Grid (Stitch Lines 170-235) */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+          {filteredCyberReactions.map((card) => {
+            const isSelected = activeInspectItem.id === card.id;
+            return (
+              <div
+                key={card.id}
+                onClick={() => {
+                  sensory.triggerTap();
+                  setActiveInspectItem(card);
+                  setActiveInspectCaption(card.caption);
+                  setIsInspectorOpen(true);
+                }}
+                className={`group relative rounded-xl overflow-hidden backdrop-blur-md shadow-md cursor-pointer transition-all hover:-translate-y-0.5 border ${
+                  isSelected
+                    ? "border-[#7dd3fc] bg-[#141c2e]/90 shadow-[0_0_20px_rgba(125,211,252,0.25)] ring-1 ring-[#7dd3fc]"
+                    : "border-sky-400/20 bg-[#141c2e]/70 hover:border-sky-400/50 hover:bg-[#1a2438]/80"
+                }`}
+              >
+                <div className="relative h-28 w-full bg-[#0a0e1a]">
+                  <img
+                    src={card.image}
+                    alt={card.title}
+                    className="size-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  />
+                  <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-[#0a0e1a]/80 backdrop-blur-sm text-[9px] font-mono text-[#7dd3fc] font-bold border border-sky-400/30">
+                    {card.fps}
+                  </div>
+                  <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-[#0f1524]/90 text-[9px] font-mono text-[#e0e8f0] border border-sky-400/20">
+                    {card.duration}
+                  </div>
+                </div>
+                <div className="p-2 flex items-center justify-between bg-[#141c2e]/90 border-t border-sky-400/15">
+                  <span className="text-[11px] font-medium text-[#e0e8f0] truncate">
+                    {card.title}
+                  </span>
+                  <Zap className="size-3.5 text-[#a0b4c4] group-hover:text-[#7dd3fc] transition-colors shrink-0" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 11. Drag-and-Drop Sortable Vault Media Deck */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="font-display text-sm font-bold tracking-wide text-foreground flex items-center gap-2">
-              Keyboard Vault Deck ({gifs.length})
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+            <h3 className="font-headline text-sm font-bold tracking-wide text-[#e0e8f0] flex items-center gap-2">
+              Custom Keyboard Vault Deck ({gifs.length})
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#7dd3fc]/10 text-[#7dd3fc] border border-[#7dd3fc]/20 font-bold">
                 Drag to Reorder
               </span>
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#a0b4c4]">
               Directly loaded inside Android IME. Pin favorites to freeze them at the front of the keyboard drawer.
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => {
-                void haptics.light();
-                setShowPresetModal(true);
-              }}
-              className="flex items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 transition-colors cursor-pointer"
-            >
-              <Sliders className="size-3.5 text-violet-400" />
-              <span>Presets</span>
-            </button>
-
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-400/10 px-3 py-2 text-xs font-semibold text-[#7dd3fc] hover:bg-sky-400/20 transition-colors">
               <Upload className="size-3.5" />
               <span>{isUploading ? "Uploading..." : "Add Media Files"}</span>
               <input
@@ -858,10 +1483,10 @@ export function KeyboardDeckManager() {
         </div>
 
         {gifs.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 p-12 text-center bg-card/20">
-            <Keyboard className="size-10 text-muted-foreground/40 mb-3" />
-            <h4 className="font-display text-sm font-bold text-foreground">Vault Deck is Empty</h4>
-            <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-sky-400/25 p-12 text-center bg-[#141c2e]/40">
+            <Keyboard className="size-10 text-[#a0b4c4]/40 mb-3" />
+            <h4 className="font-headline text-sm font-bold text-[#e0e8f0]">Vault Deck is Empty</h4>
+            <p className="mt-1 max-w-sm text-xs text-[#a0b4c4]">
               Add GIFs or Stickers using the button above, or click Sync Cloud Deck to load your reactions.
             </p>
           </div>
@@ -874,20 +1499,97 @@ export function KeyboardDeckManager() {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={gifs.map((g) => g.filename)} strategy={rectSortingStrategy}>
+          <SortableContext items={filteredVaultGifs.map((g) => g.filename)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {gifs.map((item) => (
+              {filteredVaultGifs.map((item) => (
                 <SortableDeckItem
                   key={item.filename}
                   item={item}
                   resolveImageSrc={resolveImageSrc}
                   onDelete={handleDelete}
                   onTogglePin={handleTogglePin}
+                  onSelect={selectVaultItemForInspection}
+                  isSelected={activeInspectItem.id === item.filename}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
+      </div>
+
+      {/* 12. In-Keyboard Navigation Strip / Dock (Stitch Lines 237-264) */}
+      <div className="sticky bottom-0 z-20 -mx-3 sm:-mx-6 px-4 py-2.5 bg-[#0f1524]/90 backdrop-blur-2xl border-t border-sky-400/20 shadow-[0_-8px_20px_rgba(10,14,26,0.6)]">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <button
+            type="button"
+            onClick={() => {
+              sensory.triggerTap();
+              toast.info("ABC mode active in keyboard");
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-[#1a2438]/70 hover:bg-[#1a2438] text-xs font-bold text-[#e0e8f0] tracking-wider transition-colors border border-sky-400/20 cursor-pointer"
+          >
+            ABC
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                sensory.triggerTap();
+                setSelectedFilterPill("memes");
+              }}
+              className="p-2 rounded-xl text-[#a0b4c4] hover:text-[#7dd3fc] hover:bg-[#1a2438]/50 transition-colors cursor-pointer"
+              title="Emojis & Memes"
+            >
+              <Smile className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sensory.triggerTap();
+                setSelectedFilterPill("all");
+              }}
+              className="p-2 rounded-xl text-[#7dd3fc] bg-[#7dd3fc]/10 shadow-[0_0_12px_rgba(125,211,252,0.15)] border border-[#7dd3fc]/30 cursor-pointer"
+              title="GIFs"
+            >
+              <Film className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sensory.triggerTap();
+                setSelectedFilterPill("stickers");
+              }}
+              className="p-2 rounded-xl text-[#a0b4c4] hover:text-[#7dd3fc] hover:bg-[#1a2438]/50 transition-colors cursor-pointer"
+              title="Stickers"
+            >
+              <Layers className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sensory.triggerTap();
+                toast.info("Clipboard history loaded");
+              }}
+              className="p-2 rounded-xl text-[#a0b4c4] hover:text-[#7dd3fc] hover:bg-[#1a2438]/50 transition-colors cursor-pointer"
+              title="Clipboard History"
+            >
+              <ClipboardPaste className="size-5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                sensory.triggerTap();
+                toast.info("Backspace key pressed");
+              }}
+              className="p-2 rounded-xl text-[#a0b4c4] hover:text-[#c8a0f0] hover:bg-[#1a2438]/50 transition-colors cursor-pointer"
+              title="Backspace"
+            >
+              <Trash2 className="size-5" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <PresetSelectorModal

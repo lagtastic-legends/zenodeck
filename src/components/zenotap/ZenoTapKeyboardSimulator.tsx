@@ -16,8 +16,13 @@ import {
   Smile,
   Delete,
 } from "lucide-react";
+import {
+  setKeyboardTheme,
+  getKeyboardTheme,
+  type DeckGifItem,
+  type KeyboardTheme,
+} from "@/lib/zenodeck-bridge";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
-import { setKeyboardTheme, getKeyboardTheme, type DeckGifItem } from "@/lib/zenodeck-bridge";
 import { toast } from "sonner";
 
 interface ChatMessage {
@@ -29,10 +34,20 @@ interface ChatMessage {
   timestamp: string;
 }
 
+export interface ZenoTapInjectedItem {
+  filename: string;
+  caption?: string;
+  speed?: number;
+  url?: string;
+  timestamp?: number;
+}
+
 interface ZenoTapKeyboardSimulatorProps {
   vaultItems?: DeckGifItem[];
-  onThemeChanged?: (theme: "obsidian" | "terracotta") => void;
+  onThemeChanged?: (theme: KeyboardTheme) => void;
   className?: string;
+  injectedItem?: ZenoTapInjectedItem | null;
+  onSelectInspectItem?: (item: DeckGifItem) => void;
 }
 
 const DEFAULT_SAMPLE_ITEMS: DeckGifItem[] = [
@@ -46,9 +61,11 @@ export function ZenoTapKeyboardSimulator({
   vaultItems = [],
   onThemeChanged,
   className = "",
+  injectedItem = null,
+  onSelectInspectItem,
 }: ZenoTapKeyboardSimulatorProps) {
   const sensory = useSensoryFeedback();
-  const [theme, setTheme] = useState<"obsidian" | "terracotta">("obsidian");
+  const [theme, setTheme] = useState<KeyboardTheme>("glacier");
   const [activeMode, setActiveMode] = useState<"vault" | "keys">("vault");
   const [activeCategory, setActiveCategory] = useState<"all" | "gifs" | "stickers" | "pinned">("all");
   const [keyEcho, setKeyEcho] = useState<string | null>(null);
@@ -82,12 +99,41 @@ export function ZenoTapKeyboardSimulator({
     });
   }, []);
 
-  const handleSwitchTheme = async (newTheme: "obsidian" | "terracotta") => {
+  // Sync external direct injection from Active Media Inspector
+  useEffect(() => {
+    if (!injectedItem) return;
+    const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const isSticker = injectedItem.filename.includes("sticker");
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `inject-${Date.now()}`,
+        sender: "user",
+        text:
+          injectedItem.caption ||
+          injectedItem.filename.replace(/^pinned_/, "").replace(/\.(gif|webp)$/i, "").replace(/_/g, " "),
+        mediaUrl: injectedItem.url || "",
+        mediaType: isSticker ? "sticker" : "gif",
+        timestamp: now,
+      },
+    ]);
+    setKeyEcho("⚡ DIRECT INJECTED");
+    setTimeout(() => setKeyEcho(null), 1200);
+    sensory.triggerSuccess();
+  }, [injectedItem]);
+
+  const handleSwitchTheme = async (newTheme: KeyboardTheme) => {
     sensory.triggerSuccess();
     setTheme(newTheme);
     onThemeChanged?.(newTheme);
     await setKeyboardTheme(newTheme);
-    toast.success(`Theme updated to ${newTheme === "obsidian" ? "Obsidian Dark" : "Terracotta Warm"}`);
+    const label =
+      newTheme === "glacier"
+        ? "Glacier Frozen Light"
+        : newTheme === "terracotta"
+        ? "Terracotta Warm"
+        : "Obsidian Dark";
+    toast.success(`Theme updated to ${label}`);
   };
 
   const triggerEcho = (text: string, duration = 800) => {
@@ -183,21 +229,36 @@ export function ZenoTapKeyboardSimulator({
     return true;
   });
 
+  const isGlacier = theme === "glacier";
   const isTerracotta = theme === "terracotta";
 
   return (
-    <div className={`space-y-4 rounded-2xl border border-border/70 bg-card/60 p-4 sm:p-5 backdrop-blur-xl ${className}`}>
+    <div
+      className={`space-y-4 rounded-2xl border p-4 sm:p-5 backdrop-blur-xl transition-colors ${
+        isGlacier
+          ? "bg-[#0f1524]/60 border-sky-400/20 shadow-[0_0_30px_rgba(125,211,252,0.05)] text-[#e0e8f0]"
+          : "border-border/70 bg-card/60"
+      } ${className}`}
+    >
       {/* Simulator Header & Theme Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+          <div className={`size-8 rounded-xl border flex items-center justify-center ${
+            isGlacier
+              ? "bg-sky-400/10 border-sky-400/30 text-[#7dd3fc] shadow-[0_0_15px_rgba(125,211,252,0.2)]"
+              : "bg-primary/10 border-primary/20 text-primary"
+          }`}>
             <Eye className="size-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground font-display flex items-center gap-2">
+            <h3 className="text-sm font-bold font-display flex items-center gap-2">
               1:1 Live ZenoTap Keyboard Studio
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
-                Interactive IME
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-mono ${
+                isGlacier
+                  ? "bg-sky-400/10 text-[#7dd3fc] border-sky-400/30"
+                  : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+              }`}>
+                Glacier Glass IME
               </span>
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -206,19 +267,33 @@ export function ZenoTapKeyboardSimulator({
           </div>
         </div>
 
-        {/* Theme Segmented Switcher */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-background/80 border border-border/70 text-xs self-start sm:self-auto">
+        {/* Theme Segmented Switcher (Glacier / Obsidian / Terracotta) */}
+        <div className={`flex items-center gap-1.5 p-1 rounded-xl border text-xs self-start sm:self-auto ${
+          isGlacier ? "bg-[#0a0e1a]/80 border-sky-400/20" : "bg-background/80 border-border/70"
+        }`}>
+          <button
+            type="button"
+            onClick={() => void handleSwitchTheme("glacier")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              isGlacier
+                ? "bg-[#141c2e] text-[#7dd3fc] shadow-sm border border-sky-400/40 font-semibold shadow-[0_0_12px_rgba(125,211,252,0.2)]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <div className="size-2 rounded-full bg-[#7dd3fc] shadow-[0_0_8px_rgba(125,211,252,0.6)]" />
+            Glacier
+          </button>
           <button
             type="button"
             onClick={() => void handleSwitchTheme("obsidian")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
-              !isTerracotta
+              theme === "obsidian"
                 ? "bg-neutral-900 text-cyan-300 shadow-sm border border-cyan-500/30 font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <div className="size-2 rounded-full bg-cyan-400" />
-            Obsidian Dark
+            Obsidian
           </button>
           <button
             type="button"
@@ -230,7 +305,7 @@ export function ZenoTapKeyboardSimulator({
             }`}
           >
             <div className="size-2 rounded-full bg-[#C2652A]" />
-            Terracotta 60/30/10
+            Terracotta
           </button>
         </div>
       </div>
@@ -238,17 +313,45 @@ export function ZenoTapKeyboardSimulator({
       {/* Main Studio Grid: Mock Chat Sandbox on top, Live Hardware Deck below */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left/Top: Mock Messaging App Chat Sandbox (WhatsApp / Discord Simulator) */}
-        <div className="lg:col-span-5 flex flex-col h-72 rounded-xl border border-border/70 bg-neutral-950/70 p-3 relative overflow-hidden">
+        <div
+          className={`lg:col-span-5 flex flex-col h-72 rounded-xl border p-3 relative overflow-hidden transition-colors ${
+            isGlacier
+              ? "border-sky-400/25 bg-[#0a0e1a]/90 backdrop-blur-xl shadow-[0_0_30px_rgba(125,211,252,0.05)] text-[#e0e8f0]"
+              : isTerracotta
+              ? "border-[#C2652A]/30 bg-[#FAF5EE] text-[#342A24]"
+              : "border-border/70 bg-neutral-950/70 text-neutral-200"
+          }`}
+        >
           {/* Mock Chat Header */}
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/30 text-xs">
             <div className="flex items-center gap-2">
-              <div className="size-6 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-[10px] text-white">
+              <div
+                className={`size-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                  isGlacier
+                    ? "bg-[#7dd3fc] text-[#001f2e] shadow-[0_0_10px_rgba(125,211,252,0.3)]"
+                    : "bg-indigo-600 text-white"
+                }`}
+              >
                 Z
               </div>
-              <span className="font-semibold text-neutral-200">Chat Sandbox (WhatsApp / Discord)</span>
+              <span
+                className={`font-semibold ${
+                  isGlacier ? "text-[#e0e8f0]" : isTerracotta ? "text-[#342A24]" : "text-neutral-200"
+                }`}
+              >
+                Chat Sandbox (Discord / WhatsApp)
+              </span>
             </div>
-            <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span
+              className={`text-[10px] flex items-center gap-1 ${
+                isGlacier ? "text-[#7dd3fc]" : "text-emerald-400"
+              }`}
+            >
+              <span
+                className={`size-1.5 rounded-full animate-ping ${
+                  isGlacier ? "bg-[#7dd3fc]" : "bg-emerald-400"
+                }`}
+              />
               Online
             </span>
           </div>
@@ -263,14 +366,26 @@ export function ZenoTapKeyboardSimulator({
                 <div
                   className={`max-w-[85%] rounded-2xl px-3 py-1.5 shadow-sm ${
                     msg.sender === "user"
-                      ? "bg-indigo-600 text-white rounded-br-none"
+                      ? isGlacier
+                        ? "bg-[#7dd3fc] text-[#001f2e] font-medium shadow-md shadow-sky-400/20 rounded-br-none"
+                        : isTerracotta
+                        ? "bg-[#C2652A] text-white rounded-br-none"
+                        : "bg-indigo-600 text-white rounded-br-none"
+                      : isGlacier
+                      ? "bg-[#141c2e] text-[#e0e8f0] border border-sky-400/20 rounded-bl-none"
+                      : isTerracotta
+                      ? "bg-[#EFE7DC] text-[#342A24] rounded-bl-none"
                       : "bg-neutral-800 text-neutral-200 rounded-bl-none"
                   }`}
                 >
                   {msg.mediaUrl && (
-                    <div className="mb-1 rounded-lg overflow-hidden border border-white/10 bg-black/40 p-1 flex items-center gap-2">
-                      <Film className="size-4 text-cyan-300" />
-                      <span className="font-mono text-[10px] text-cyan-200">
+                    <div
+                      className={`mb-1 rounded-lg overflow-hidden border p-1 flex items-center gap-2 ${
+                        isGlacier ? "border-sky-400/30 bg-[#0a0e1a]/80" : "border-white/10 bg-black/40"
+                      }`}
+                    >
+                      <Film className={`size-4 ${isGlacier ? "text-[#7dd3fc]" : "text-cyan-300"}`} />
+                      <span className={`font-mono text-[10px] ${isGlacier ? "text-[#7dd3fc]" : "text-cyan-200"}`}>
                         [{msg.mediaType?.toUpperCase()}] {msg.text}
                       </span>
                     </div>
@@ -284,15 +399,33 @@ export function ZenoTapKeyboardSimulator({
 
           {/* Chat Mock Input Box */}
           <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-2">
-            <div className="flex-1 bg-neutral-900 border border-neutral-700/60 rounded-xl px-2.5 py-1.5 text-xs text-neutral-200 flex items-center overflow-x-auto font-mono">
+            <div
+              className={`flex-1 rounded-xl px-2.5 py-1.5 text-xs flex items-center overflow-x-auto font-mono ${
+                isGlacier
+                  ? "bg-[#0f1524] border border-sky-400/30 text-[#e0e8f0]"
+                  : isTerracotta
+                  ? "bg-[#EFE7DC] border border-[#342A24]/20 text-[#342A24]"
+                  : "bg-neutral-900 border border-neutral-700/60 text-neutral-200"
+              }`}
+            >
               <span>{inputText.slice(0, cursorPos)}</span>
-              <span className="w-1.5 h-3.5 bg-cyan-400 animate-pulse mx-0.5" />
+              <span
+                className={`w-1.5 h-3.5 animate-pulse mx-0.5 ${
+                  isGlacier ? "bg-[#7dd3fc]" : isTerracotta ? "bg-[#C2652A]" : "bg-cyan-400"
+                }`}
+              />
               <span className="opacity-70">{inputText.slice(cursorPos)}</span>
             </div>
             <button
               type="button"
               onClick={handleSendTextMessage}
-              className="size-7 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              className={`size-7 rounded-xl flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                isGlacier
+                  ? "bg-[#7dd3fc] hover:bg-[#7dd3fc]/90 text-[#001f2e] shadow-md shadow-sky-400/25"
+                  : isTerracotta
+                  ? "bg-[#C2652A] hover:bg-[#A8521C] text-white"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
+              }`}
               title="Send to chat"
             >
               <Send className="size-3" />
@@ -303,7 +436,9 @@ export function ZenoTapKeyboardSimulator({
         {/* Right/Bottom: Miniature Interactive 1:1 ZenoTap Native Keyboard Deck */}
         <div
           className={`lg:col-span-7 rounded-xl border p-3 flex flex-col justify-between transition-colors duration-300 shadow-xl ${
-            isTerracotta
+            isGlacier
+              ? "bg-[#0f1524]/90 border-sky-400/25 text-[#e0e8f0] backdrop-blur-2xl shadow-[0_0_30px_rgba(125,211,252,0.06)]"
+              : isTerracotta
               ? "bg-[#FAF5EE] border-[#C2652A]/30 text-[#342A24]"
               : "bg-[#0E0F14] border-neutral-800 text-neutral-200"
           }`}
@@ -320,7 +455,9 @@ export function ZenoTapKeyboardSimulator({
                 }}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                   activeMode === "vault"
-                    ? isTerracotta
+                    ? isGlacier
+                      ? "bg-[#7dd3fc]/15 text-[#7dd3fc] border border-[#7dd3fc]/40 shadow-[0_0_12px_rgba(125,211,252,0.2)]"
+                      : isTerracotta
                       ? "bg-[#342A24] text-[#FAF5EE]"
                       : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
                     : "opacity-60 hover:opacity-100"
@@ -337,7 +474,9 @@ export function ZenoTapKeyboardSimulator({
                 }}
                 className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                   activeMode === "keys"
-                    ? isTerracotta
+                    ? isGlacier
+                      ? "bg-[#7dd3fc]/15 text-[#7dd3fc] border border-[#7dd3fc]/40 shadow-[0_0_12px_rgba(125,211,252,0.2)]"
+                      : isTerracotta
                       ? "bg-[#342A24] text-[#FAF5EE]"
                       : "bg-neutral-800 text-white border border-neutral-700"
                     : "opacity-60 hover:opacity-100"
@@ -356,7 +495,11 @@ export function ZenoTapKeyboardSimulator({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.85 }}
                     className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      isTerracotta ? "bg-[#C2652A] text-white" : "bg-cyan-400 text-neutral-950"
+                      isGlacier
+                        ? "bg-[#7dd3fc] text-[#001f2e]"
+                        : isTerracotta
+                        ? "bg-[#C2652A] text-white"
+                        : "bg-cyan-400 text-neutral-950"
                     }`}
                   >
                     {keyEcho}
@@ -364,8 +507,12 @@ export function ZenoTapKeyboardSimulator({
                 )}
               </AnimatePresence>
               <div className="flex items-center gap-1 text-[10px] font-mono opacity-80">
-                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>GIF • WebP Ready</span>
+                <span
+                  className={`size-2 rounded-full animate-pulse ${
+                    isGlacier ? "bg-[#7dd3fc]" : "bg-emerald-400"
+                  }`}
+                />
+                <span>{isGlacier ? "Glacier • WebP 60FPS" : "GIF • WebP Ready"}</span>
               </div>
             </div>
           </div>
@@ -386,7 +533,9 @@ export function ZenoTapKeyboardSimulator({
                       }}
                       className={`px-2 py-0.5 rounded-md font-mono uppercase transition-colors cursor-pointer ${
                         activeCategory === cat
-                          ? isTerracotta
+                          ? isGlacier
+                            ? "bg-[#7dd3fc] text-[#001f2e] font-bold shadow-sm shadow-sky-400/20"
+                            : isTerracotta
                             ? "bg-[#C2652A] text-white font-bold"
                             : "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
                           : "opacity-60 hover:opacity-100"
@@ -406,7 +555,9 @@ export function ZenoTapKeyboardSimulator({
                       whileTap={{ scale: 0.94 }}
                       onClick={() => handleInjectMedia(item)}
                       className={`group relative rounded-xl border p-2 flex flex-col items-center justify-between text-center cursor-pointer transition-all ${
-                        isTerracotta
+                        isGlacier
+                          ? "bg-[#141c2e]/90 border-sky-400/20 hover:border-[#7dd3fc]/60 hover:-translate-y-0.5 shadow-sm"
+                          : isTerracotta
                           ? "bg-[#EFE7DC] border-[#342A24]/15 hover:border-[#C2652A]"
                           : "bg-neutral-900 border-neutral-800 hover:border-cyan-500/40"
                       }`}
@@ -418,7 +569,9 @@ export function ZenoTapKeyboardSimulator({
                         {item.filename.replace(/_/g, " ").replace(".gif", "")}
                       </p>
                       <div className="flex items-center justify-between w-full mt-1 text-[8px] font-mono opacity-70">
-                        <span>{item.filename.includes("sticker") ? "STICKER" : "GIF"}</span>
+                        <span className={isGlacier ? "text-[#7dd3fc]" : ""}>
+                          {item.filename.includes("sticker") ? "STICKER" : "GIF"}
+                        </span>
                         <span>{Math.round(item.size / 1024)}KB</span>
                       </div>
                     </motion.div>
@@ -443,7 +596,9 @@ export function ZenoTapKeyboardSimulator({
                           triggerEcho(char, 200);
                         }}
                         className={`flex-1 min-w-0 max-w-8 h-7 sm:h-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center p-0 ${
-                          isTerracotta
+                          isGlacier
+                            ? "bg-[#141c2e]/90 text-[#e0e8f0] border border-sky-400/20 hover:border-[#7dd3fc]/60 hover:bg-[#1a2438]"
+                            : isTerracotta
                             ? "bg-[#342A24] text-[#FAF5EE] hover:bg-[#43362E]"
                             : "bg-[#27272E] text-neutral-100 border border-neutral-700/60 hover:bg-neutral-800"
                         }`}
@@ -467,7 +622,9 @@ export function ZenoTapKeyboardSimulator({
                 toast.info("Navigates to main ZenoDeck studio");
               }}
               className={`w-[25%] h-8 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer truncate px-1 flex items-center justify-center ${
-                isTerracotta
+                isGlacier
+                  ? "bg-[#141c2e] border-sky-400/25 text-[#7dd3fc]"
+                  : isTerracotta
                   ? "bg-[#EFE7DC] border-[#342A24]/20 text-[#342A24]"
                   : "bg-neutral-900 border-neutral-800 text-neutral-300"
               }`}
@@ -484,9 +641,13 @@ export function ZenoTapKeyboardSimulator({
               onPointerCancel={handleSpacePointerUp}
               className={`w-[50%] h-8 rounded-lg flex flex-col items-center justify-center cursor-ew-resize select-none border transition-all ${
                 isScrubbing
-                  ? isTerracotta
+                  ? isGlacier
+                    ? "bg-sky-950/90 border-[#7dd3fc] text-[#7dd3fc] shadow-[0_0_15px_rgba(125,211,252,0.35)]"
+                    : isTerracotta
                     ? "bg-[#C2652A] text-white border-[#C2652A]"
                     : "bg-cyan-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                  : isGlacier
+                  ? "bg-[#141c2e] text-[#e0e8f0] border-sky-400/25"
                   : isTerracotta
                   ? "bg-[#342A24] text-[#FAF5EE] border-[#342A24]"
                   : "bg-[#282834] text-white border-neutral-700"
@@ -496,7 +657,11 @@ export function ZenoTapKeyboardSimulator({
               <div
                 className={`w-9 h-1 rounded-full mb-0.5 transition-colors ${
                   isScrubbing
-                    ? "bg-cyan-400 animate-pulse"
+                    ? isGlacier
+                      ? "bg-[#7dd3fc] animate-pulse"
+                      : "bg-cyan-400 animate-pulse"
+                    : isGlacier
+                    ? "bg-[#7dd3fc]"
                     : isTerracotta
                     ? "bg-[#C2652A]"
                     : "bg-slate-400"
@@ -515,7 +680,9 @@ export function ZenoTapKeyboardSimulator({
                 setActiveMode((m) => (m === "vault" ? "keys" : "vault"));
               }}
               className={`w-[12%] h-8 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer flex items-center justify-center ${
-                isTerracotta
+                isGlacier
+                  ? "bg-[#141c2e] border-sky-400/25 text-[#88b4cc]"
+                  : isTerracotta
                   ? "bg-[#EFE7DC] border-[#342A24]/20 text-[#342A24]"
                   : "bg-neutral-900 border-neutral-800 text-neutral-300"
               }`}
@@ -528,10 +695,12 @@ export function ZenoTapKeyboardSimulator({
             <button
               type="button"
               onClick={handleBackspace}
-              className={`w-[13%] h-8 rounded-lg text-[12px] font-bold border transition-colors cursor-pointer flex items-center justify-center text-red-400 ${
-                isTerracotta
-                  ? "bg-[#EFE7DC] border-[#342A24]/20 hover:bg-red-500/10"
-                  : "bg-neutral-900 border-neutral-800 hover:bg-red-500/10"
+              className={`w-[13%] h-8 rounded-lg text-[12px] font-bold border transition-colors cursor-pointer flex items-center justify-center ${
+                isGlacier
+                  ? "bg-[#141c2e] border-sky-400/25 text-[#c8a0f0] hover:bg-sky-500/10"
+                  : isTerracotta
+                  ? "bg-[#EFE7DC] border-[#342A24]/20 hover:bg-red-500/10 text-red-400"
+                  : "bg-neutral-900 border-neutral-800 hover:bg-red-500/10 text-red-400"
               }`}
               title="Backspace / Delete"
             >
