@@ -110,7 +110,7 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
     const defaultUa = isAndroidVrStream
       ? "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
       : isIosStream
-      ? "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)"
+      ? "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_1 like Mac OS X;)"
       : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
     const fetchHeaders: Record<string, string> = {
@@ -146,24 +146,10 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
 
     for (const urlToTry of candidateUrls) {
       try {
-        let finalUrl = urlToTry;
-        if (activeRange && (finalUrl.includes("googlevideo.com") || finalUrl.includes("youtube.com") || finalUrl.includes("sparams="))) {
-          const match = activeRange.match(/bytes=(\d+)-(\d+)?/);
-          if (match) {
-            const rangeParam = match[2] ? `${match[1]}-${match[2]}` : `${match[1]}-`;
-            try {
-              const u = new URL(finalUrl);
-              u.searchParams.set("range", rangeParam);
-              finalUrl = u.toString();
-            } catch {
-              const stripped = finalUrl.replace(/([?&])range=[^&]*/g, "");
-              finalUrl = `${stripped}${stripped.includes("?") ? "&" : "?"}range=${rangeParam}`;
-            }
-          }
-        }
+        const finalUrl = urlToTry;
 
         const controller = new AbortController();
-        const connectTimeoutMs = isHead ? 6000 : 18000;
+        const connectTimeoutMs = isHead ? 3000 : 5000;
         const connectTimer = setTimeout(() => controller.abort(), connectTimeoutMs);
 
         if (req.signal) {

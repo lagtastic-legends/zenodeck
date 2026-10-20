@@ -24,7 +24,22 @@ export async function OPTIONS() {
 }
 
 async function handleResolve(urlOrId: string, clientIp?: string) {
-  // 1. Try yt-dlp Python engine first (supports YouTube 4K, 1700+ social platforms)
+  const detected = detectPlatform(urlOrId);
+  const platform = detected?.platform || "youtube";
+
+  // 1. For YouTube URLs, query direct InnerTube resolver FIRST to get complete 4K 60fps/1080p adaptive tiers & direct URLs
+  if (platform === "youtube" || extractYouTubeId(urlOrId)) {
+    try {
+      const ytInfo = await resolveYouTubeVideo(urlOrId, clientIp);
+      if (ytInfo && Array.isArray(ytInfo.qualities) && ytInfo.qualities.length > 0) {
+        return ytInfo;
+      }
+    } catch (ytErr) {
+      console.warn("Direct InnerTube resolve error, falling back to Python engine:", ytErr);
+    }
+  }
+
+  // 2. Try yt-dlp Python engine (supports 1700+ social platforms & YouTube fallback)
   try {
     const pyResult = await resolveMediaWithPython(urlOrId);
     if (pyResult && Array.isArray(pyResult.qualities) && pyResult.qualities.length > 0) {
@@ -34,9 +49,7 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
     console.warn("Python engine resolve error, falling back to TypeScript extractors:", pyErr);
   }
 
-  // 2. Fallbacks based on detected platform
-  const detected = detectPlatform(urlOrId);
-  const platform = detected?.platform || "youtube";
+  // 3. Fallbacks based on detected platform
 
   switch (platform) {
     case "tiktok": {

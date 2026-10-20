@@ -261,13 +261,17 @@ const ANDROID_VR_CLIENT_VERSION = "1.56.21";
 const ANDROID_VR_USER_AGENT =
   "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
 
-const IOS_CLIENT_VERSION = "19.45.4";
-const IOS_USER_AGENT =
-  "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)";
-
 const IOS_MODERN_CLIENT_VERSION = "20.10.4";
 const IOS_MODERN_USER_AGENT =
   "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_1 like Mac OS X;)";
+
+const IOS_CLIENT_VERSION = "20.10.1";
+const IOS_USER_AGENT =
+  "com.google.ios.youtube/20.10.1 (iPhone16,2; U; CPU iOS 18_2 like Mac OS X;)";
+
+const IOS_FALLBACK_CLIENT_VERSION = "20.03.2";
+const IOS_FALLBACK_USER_AGENT =
+  "com.google.ios.youtube/20.03.2 (iPhone16,2; U; CPU iOS 18_0 like Mac OS X;)";
 
 const ANDROID_TESTSUITE_USER_AGENT =
   "com.google.android.youtube/1.9 (Linux; U; Android 11) gzip";
@@ -289,15 +293,15 @@ export async function getVisitorData(): Promise<string | undefined> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": IOS_USER_AGENT,
+        "User-Agent": IOS_MODERN_USER_AGENT,
         "X-YouTube-Client-Name": "5",
-        "X-YouTube-Client-Version": IOS_CLIENT_VERSION,
+        "X-YouTube-Client-Version": IOS_MODERN_CLIENT_VERSION,
       },
       body: JSON.stringify({
         context: {
           client: {
             clientName: "IOS",
-            clientVersion: IOS_CLIENT_VERSION,
+            clientVersion: IOS_MODERN_CLIENT_VERSION,
             deviceModel: "iPhone16,2",
             hl: "en",
           },
@@ -341,6 +345,49 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
     },
   },
   {
+    name: "IOS_PRIMARY",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": IOS_USER_AGENT,
+      "X-YouTube-Client-Name": "5",
+      "X-YouTube-Client-Version": IOS_CLIENT_VERSION,
+    },
+    context: {
+      client: {
+        clientName: "IOS",
+        clientVersion: IOS_CLIENT_VERSION,
+        deviceMake: "Apple",
+        deviceModel: "iPhone16,2",
+        osName: "iPhone",
+        osVersion: "18.2",
+        hl: "en",
+        gl: "US",
+        userAgent: IOS_USER_AGENT,
+      },
+    },
+  },
+  {
+    name: "IOS_FALLBACK",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": IOS_FALLBACK_USER_AGENT,
+      "X-YouTube-Client-Name": "5",
+      "X-YouTube-Client-Version": IOS_FALLBACK_CLIENT_VERSION,
+    },
+    context: {
+      client: {
+        clientName: "IOS",
+        clientVersion: IOS_FALLBACK_CLIENT_VERSION,
+        deviceMake: "Apple",
+        deviceModel: "iPhone16,2",
+        osName: "iPhone",
+        osVersion: "18.0",
+        hl: "en",
+        userAgent: IOS_FALLBACK_USER_AGENT,
+      },
+    },
+  },
+  {
     name: "ANDROID_VR",
     headers: {
       "Content-Type": "application/json",
@@ -360,49 +407,6 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
         hl: "en",
         gl: "US",
         userAgent: ANDROID_VR_USER_AGENT,
-      },
-    },
-  },
-  {
-    name: "IOS_PRIMARY",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": IOS_USER_AGENT,
-      "X-YouTube-Client-Name": "5",
-      "X-YouTube-Client-Version": IOS_CLIENT_VERSION,
-    },
-    context: {
-      client: {
-        clientName: "IOS",
-        clientVersion: IOS_CLIENT_VERSION,
-        deviceMake: "Apple",
-        deviceModel: "iPhone16,2",
-        osName: "iPhone",
-        osVersion: "18.1.0.22B83",
-        hl: "en",
-        gl: "US",
-        userAgent: IOS_USER_AGENT,
-      },
-    },
-  },
-  {
-    name: "IOS_NO_GL",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": IOS_USER_AGENT,
-      "X-YouTube-Client-Name": "5",
-      "X-YouTube-Client-Version": IOS_CLIENT_VERSION,
-    },
-    context: {
-      client: {
-        clientName: "IOS",
-        clientVersion: IOS_CLIENT_VERSION,
-        deviceMake: "Apple",
-        deviceModel: "iPhone16,2",
-        osName: "iPhone",
-        osVersion: "18.1.0.22B83",
-        hl: "en",
-        userAgent: IOS_USER_AGENT,
       },
     },
   },
@@ -428,18 +432,18 @@ const ANDROID_OFFICIAL_CONFIG: InnerTubeClientConfig = {
   name: "ANDROID_OFFICIAL",
   headers: {
     "Content-Type": "application/json",
-    "User-Agent": "com.google.android.youtube/21.26.364 (Linux; U; Android 11) gzip",
+    "User-Agent": "com.google.android.youtube/20.03.35 (Linux; U; Android 14) gzip",
     "X-YouTube-Client-Name": "3",
-    "X-YouTube-Client-Version": "21.26.364",
+    "X-YouTube-Client-Version": "20.03.35",
   },
   context: {
     client: {
       clientName: "ANDROID",
-      clientVersion: "21.26.364",
-      androidSdkVersion: 30,
-      userAgent: "com.google.android.youtube/21.26.364 (Linux; U; Android 11) gzip",
+      clientVersion: "20.03.35",
+      androidSdkVersion: 34,
+      userAgent: "com.google.android.youtube/20.03.35 (Linux; U; Android 14) gzip",
       osName: "Android",
-      osVersion: "11",
+      osVersion: "14",
       hl: "en",
     },
   },
@@ -476,6 +480,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
           videoId,
           context: ANDROID_OFFICIAL_CONFIG.context,
         }),
+        signal: AbortSignal.timeout(6000),
       });
       if (res.ok) {
         const data = await res.json();
@@ -533,6 +538,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
               },
             },
           }),
+          signal: AbortSignal.timeout(6000),
         });
 
         if (!res.ok) {

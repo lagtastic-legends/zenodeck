@@ -153,38 +153,38 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
-          title="Glacier — Glassmorphism UI"
-          badge="Stitch Design"
-          description="Ethereal 'Frozen Light' glassmorphism with ice-blue radiant accents, translucent frosted surfaces, and ambient glitch backdrops."
+          title="Zero-Stall Turbo Downloader"
+          badge="High-Speed CDN"
+          description="InnerTube 20.10.4 pipeline with 2-second candidate edge node failover, persistent socket keep-alive, and anti-freeze progress formula."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
           icon={<Cpu className="size-4.5 text-[#c8a0f0]" />}
-          title="Active Media Inspector Popover"
-          badge="Direct Inject"
-          description="Interactive playback scrubber, speed pills (0.5x–2.0x), auto-caption editor, and 1-tap Commit to Chat via CommitContent v2."
+          title="4K 60fps & 12 Adaptive Tiers"
+          badge="Full Fidelity"
+          description="Complete 4K UHD, 2K QHD, 1080p60 down to 360p, 320k Studio MP3, and Native AAC without 360p downranking or quality loss."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-[#88b4cc]" />}
-          title="Trending Cyber Feed & Smart Filters"
-          badge="Slot Presets"
-          description="Responsive reaction feed with format and duration tags, category filter pills (Cyber, Gaming, AI, Memes), and DnD sortable vault."
-          accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
-          badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
+          icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
+          title="Android MediaStore Auto-Index"
+          badge="Scoped Storage"
+          description="Downloads & muxed streams save directly to Movies/ZenoDeck & Music/ZenoDeck with immediate Google Photos, Gallery & VLC indexing."
+          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Multi-Platform Native IME Theme"
-          badge="Android IME"
-          description="Native Kotlin IME runtime theme engine with full Glacier palette skinning, tactile spacebar trackpad scrubbing, and zero-RAM dispatch."
-          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+          icon={<Sliders className="size-4.5 text-[#88b4cc]" />}
+          title="Glacier UI & ZenoTap Deck"
+          badge="Stitch Design"
+          description="Ethereal 'Frozen Light' glassmorphism with ice-blue radiant accents, CommitContent v2 direct chat inject, and reactive soundscapes."
+          accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
+          badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />
       </div>
     </ZenoModal>

@@ -31,6 +31,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import android.content.ContentValues
+import android.provider.MediaStore
 import android.media.MediaScannerConnection
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -733,7 +735,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 // Failover between CDN candidate hosts across retry attempts with sticky preferredHostIndex
                 val candidateIdx = (preferredHostIndex + chunkAttempt - 1) % candidateUrls.size
                 val baseCandidate = candidateUrls[candidateIdx]
-                val targetUrl = injectRangeQueryParam(baseCandidate, chunkStart, chunkEnd)
+                // Keep URL clean; range is transferred strictly via standard HTTP Range header
+                val targetUrl = baseCandidate
 
                 try {
                     val (conn, _) = openConnectionWithRedirects(targetUrl, chunkRangeHeader)
@@ -741,11 +744,15 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                     val responseCode = conn.responseCode
                     if (responseCode == 416) {
-                        // Range Not Satisfiable: Stream has reached EOF
-                        preferredHostIndex = candidateIdx
-                        totalBytes = bytesDownloaded
-                        chunkSuccess = true
-                        break@chunkLoop
+                        if (chunkStart > 0L) {
+                            // Range Not Satisfiable: Stream has reached EOF
+                            preferredHostIndex = candidateIdx
+                            totalBytes = bytesDownloaded
+                            chunkSuccess = true
+                            break@chunkLoop
+                        } else {
+                            throw IOException("HTTP 416 on initial chunk for $chunkRangeHeader")
+                        }
                     }
 
                     if (responseCode !in 200..299) {
@@ -911,6 +918,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
         val vTempFile = File(tempDir, "v_${tempId}.$vExt")
         val aTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "a_${tempId}.$aExt") else null
+        val muxTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "mux_${tempId}.${if (isWebmTarget) "webm" else "mp4"}") else null
 
         // Determine destination directory: Music/ZenoDeck for audio, Movies/ZenoDeck for video
         val targetDir = if (isAudioOnlyTarget) {
@@ -936,6 +944,40 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         }
         val destinationFile = File(targetDir, outputFileName)
         var finalFile: File? = null
+
+        fun copyToDestination(source: File, destination: File): File {
+            try {
+                destination.parentFile?.mkdirs()
+                if (destination.exists()) destination.delete()
+                if (source.renameTo(destination)) {
+                    return destination
+                }
+                source.inputStream().use { input ->
+                    FileOutputStream(destination).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                source.delete()
+                return destination
+            } catch (e: Exception) {
+                Log.w(TAG, "Direct copy to public destination failed (${e.message}), using app-specific external storage fallback")
+                val fallbackDir = if (isAudioOnlyTarget) {
+                    context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
+                } else {
+                    context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+                }
+                val fallbackFile = File(fallbackDir, outputFileName)
+                fallbackDir?.mkdirs()
+                if (fallbackFile.exists()) fallbackFile.delete()
+                source.inputStream().use { input ->
+                    FileOutputStream(fallbackFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                source.delete()
+                return fallbackFile
+            }
+        }
 
         var totalDownloaded = 0L
         val startTime = System.currentTimeMillis()
@@ -1013,11 +1055,13 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                 // Stage 3: Native Hardware MediaMuxer
                 progressCallback(92, totalDownloaded, totalDownloaded, calculateSpeed(), "muxing")
-                val muxResult = muxVideoAndAudio(vTempFile, aTempFile, destinationFile)
+                val muxTarget = muxTempFile ?: destinationFile
+                val muxResult = muxVideoAndAudio(vTempFile, aTempFile, muxTarget)
                 if (muxResult.isFailure) {
                     return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed"))
                 }
-                finalFile = muxResult.getOrNull() ?: destinationFile
+                val readyFile = muxResult.getOrNull() ?: muxTarget
+                finalFile = copyToDestination(readyFile, destinationFile)
             } else {
                 // Single stream (audio-only or pre-muxed video)
                 progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
@@ -1053,19 +1097,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                 // Pre-muxed stream (itag 18) or audio-only: move directly to destination
                 progressCallback(95, totalDownloaded, totalDownloaded, calculateSpeed(), "finalizing")
-                if (destinationFile.exists()) {
-                    destinationFile.delete()
-                }
-                val moved = vTempFile.renameTo(destinationFile)
-                if (!moved) {
-                    vTempFile.inputStream().use { input ->
-                        destinationFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    vTempFile.delete()
-                }
-                finalFile = destinationFile
+                finalFile = copyToDestination(vTempFile, destinationFile)
             }
 
             val targetFile = finalFile ?: destinationFile
@@ -1080,6 +1112,37 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 "audio/mpeg"
             } else {
                 "video/mp4"
+            }
+
+            // Android 10+ (API 29+) MediaStore publication for Movies/ZenoDeck or Music/ZenoDeck
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, outputFileName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, if (isAudioOnlyTarget) "Music/ZenoDeck" else "Movies/ZenoDeck")
+                        put(MediaStore.MediaColumns.IS_PENDING, 1)
+                    }
+                    val collection = if (isAudioOnlyTarget) {
+                        MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                    } else {
+                        MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                    }
+                    val itemUri = context.contentResolver.insert(collection, values)
+                    if (itemUri != null) {
+                        context.contentResolver.openOutputStream(itemUri)?.use { out ->
+                            targetFile.inputStream().use { inp ->
+                                inp.copyTo(out)
+                            }
+                        }
+                        values.clear()
+                        values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                        context.contentResolver.update(itemUri, values, null, null)
+                        Log.i(TAG, "ZenoDeck MediaStore indexed: $itemUri")
+                    }
+                } catch (msErr: Throwable) {
+                    Log.w(TAG, "MediaStore insert warning: ${msErr.message}")
+                }
             }
 
             MediaScannerConnection.scanFile(
@@ -1102,6 +1165,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             try {
                 if (vTempFile.exists()) vTempFile.delete()
                 if (aTempFile != null && aTempFile.exists()) aTempFile.delete()
+                if (muxTempFile != null && muxTempFile.exists()) muxTempFile.delete()
             } catch (_: Throwable) {}
         }
     }
