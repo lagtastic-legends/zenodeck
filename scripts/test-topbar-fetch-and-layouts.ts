@@ -99,8 +99,10 @@ async function runTests() {
   const kotlinCode = fs.readFileSync(kotlinEnginePath, "utf-8");
 
   assert(
-    kotlinCode.includes("val CHUNK_SIZE = 2L * 1024L * 1024L") && kotlinCode.includes("injectRangeQueryParam"),
-    "ZenoHeadlessMediaEngine.kt implements bounded 2MB chunk streaming with &range= parameter"
+    (kotlinCode.includes("val CHUNK_SIZE = 2L * 1024L * 1024L") ||
+      (kotlinCode.includes("getOptimalChunkSize") && kotlinCode.includes("2L * 1024L * 1024L"))) &&
+    kotlinCode.includes("injectRangeQueryParam"),
+    "ZenoHeadlessMediaEngine.kt implements bounded chunk streaming (dynamic 2MB-8MB) with &range= parameter"
   );
   assert(
     (kotlinCode.includes("connectTimeout = 20000") || kotlinCode.includes("connectTimeout = 8000")) &&

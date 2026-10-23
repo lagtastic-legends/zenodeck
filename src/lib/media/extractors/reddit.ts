@@ -4,6 +4,7 @@
  */
 
 import { universalFetch } from "../innertube-bridge";
+import { probeRemoteFileSize } from "../stream-sizer";
 import type { UniversalMediaInfo, UniversalQualityOption } from "../types";
 
 /**
@@ -135,6 +136,18 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
     }
 
     if (items.length > 0) {
+      await Promise.allSettled(
+        items.slice(0, 4).map(async (item) => {
+          const sz = await probeRemoteFileSize(item.url, {
+            referer: "https://www.reddit.com/",
+            timeoutMs: 1500,
+          });
+          if (sz && item.qualities && item.qualities[0]) {
+            item.qualities[0].fileSize = sz;
+          }
+        })
+      );
+
       const primaryItem = items[0];
       return {
         id: postId,
@@ -153,6 +166,10 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
 
   // Handle Single Image Post
   if (!redditVideo && post.url && /\.(jpe?g|png|gif|webp)$/i.test(post.url)) {
+    const imgSize = await probeRemoteFileSize(post.url, {
+      referer: "https://www.reddit.com/",
+      timeoutMs: 1500,
+    });
     return {
       id: postId,
       platform: "reddit",
@@ -166,6 +183,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
           label: "Full Resolution Image",
           resolution: "Original",
           ext: "jpg",
+          fileSize: imgSize,
           downloadUrl: post.url,
           badge: "IMAGE",
         },
@@ -191,6 +209,37 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
   const height = redditVideo.height || 720;
   const duration = redditVideo.duration ? Math.round(redditVideo.duration) : undefined;
 
+  // Pre-download stream file sizing (video, audio, dash720 in parallel)
+  const [videoSize, audioSize, dash720Size] = await Promise.all([
+    probeRemoteFileSize(fallbackUrl, {
+      referer: "https://www.reddit.com/",
+      timeoutMs: 1500,
+    }),
+    verifiedAudioUrl
+      ? probeRemoteFileSize(verifiedAudioUrl, {
+          referer: "https://www.reddit.com/",
+          timeoutMs: 1500,
+        })
+      : Promise.resolve(undefined),
+    height >= 1080
+      ? probeRemoteFileSize(`${videoBaseUrl}/DASH_720.mp4`, {
+          referer: "https://www.reddit.com/",
+          timeoutMs: 1500,
+        })
+      : Promise.resolve(undefined),
+  ]);
+
+  // Combined muxed size = video + audio
+  const primaryMuxedSize =
+    videoSize !== undefined && audioSize !== undefined
+      ? videoSize + audioSize
+      : videoSize;
+
+  const dash720MuxedSize =
+    dash720Size !== undefined && audioSize !== undefined
+      ? dash720Size + audioSize
+      : dash720Size;
+
   // 1. Primary: Synced High-Definition Video with Muxed Audio
   if (verifiedAudioUrl) {
     const badge = height >= 1080 ? "1080P" : height >= 720 ? "720P" : `${height}P`;
@@ -198,6 +247,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
       label: `Reddit HD Video (${height}p) + Synced Audio`,
       resolution: `${height}p`,
       ext: "mp4",
+      fileSize: primaryMuxedSize,
       downloadUrl: fallbackUrl,
       audioUrl: verifiedAudioUrl,
       requiresMuxing: true,
@@ -210,6 +260,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
         label: "Reddit Video (720p) + Synced Audio",
         resolution: "720p",
         ext: "mp4",
+        fileSize: dash720MuxedSize,
         downloadUrl: `${videoBaseUrl}/DASH_720.mp4`,
         audioUrl: verifiedAudioUrl,
         requiresMuxing: true,
@@ -223,6 +274,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
       resolution: "Audio",
       ext: "m4a",
       isAudioOnly: true,
+      fileSize: audioSize,
       downloadUrl: verifiedAudioUrl,
       badge: "AUDIO",
     });
@@ -232,6 +284,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
       label: `Reddit Video (${height}p) [No Audio]`,
       resolution: `${height}p`,
       ext: "mp4",
+      fileSize: videoSize,
       downloadUrl: fallbackUrl,
       requiresMuxing: false,
       badge: `${height}P`,
@@ -243,6 +296,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
     label: `Raw Video Stream Only (${height}p)`,
     resolution: `${height}p`,
     ext: "mp4",
+    fileSize: videoSize,
     downloadUrl: fallbackUrl,
     requiresMuxing: false,
     badge: "VIDEO",

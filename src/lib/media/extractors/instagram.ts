@@ -4,6 +4,7 @@
  */
 
 import { universalFetch } from "../innertube-bridge";
+import { probeRemoteFileSize } from "../stream-sizer";
 import type { UniversalMediaInfo, UniversalQualityOption } from "../types";
 
 export async function extractInstagramMedia(url: string): Promise<UniversalMediaInfo> {
@@ -132,6 +133,18 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
 
   // If carousel items were found, return carousel payload
   if (carouselItems.length > 0) {
+    await Promise.allSettled(
+      carouselItems.slice(0, 4).map(async (item) => {
+        const size = await probeRemoteFileSize(item.url, {
+          referer: "https://www.instagram.com/",
+          timeoutMs: 1500,
+        });
+        if (size && item.qualities && item.qualities[0]) {
+          item.qualities[0].fileSize = size;
+        }
+      })
+    );
+
     const primaryItem = carouselItems[0];
     return {
       id: shortcode,
@@ -150,6 +163,10 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
   if (!directVideoUrl) {
     // If we have a thumbnail/image URL from embed, offer it as photo download
     if (thumbnailUrl) {
+      const photoSize = await probeRemoteFileSize(thumbnailUrl, {
+        referer: "https://www.instagram.com/",
+        timeoutMs: 1500,
+      });
       return {
         id: shortcode,
         platform: "instagram",
@@ -163,6 +180,7 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
             label: "Instagram HD Photo (JPG)",
             resolution: "Original",
             ext: "jpg",
+            fileSize: photoSize,
             downloadUrl: thumbnailUrl,
             badge: "IMAGE",
           },
@@ -175,11 +193,17 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
     );
   }
 
+  const videoSize = await probeRemoteFileSize(directVideoUrl, {
+    referer: "https://www.instagram.com/",
+    timeoutMs: 1500,
+  });
+
   const qualities: UniversalQualityOption[] = [
     {
       label: "Instagram HD Video (MP4)",
       resolution: "1080p",
       ext: "mp4",
+      fileSize: videoSize,
       downloadUrl: directVideoUrl,
       badge: "HD",
     },
@@ -188,6 +212,7 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
       resolution: "Audio",
       ext: "mp3",
       isAudioOnly: true,
+      fileSize: videoSize,
       downloadUrl: directVideoUrl,
       badge: "MP3",
     },

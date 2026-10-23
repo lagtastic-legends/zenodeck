@@ -129,6 +129,12 @@ async function runTests() {
     "ZenoHeadlessMediaEngine uses exact query parameter regex for itag=18 exclusion"
   );
 
+  assert(
+    engineContent.includes("lastObservedPreferred") &&
+    !engineContent.includes("currentPreferred != lastAttemptedCandidate"),
+    "ZenoHeadlessMediaEngine implements lastObservedPreferred candidate rotation and eliminates 2-node oscillation"
+  );
+
   console.log("\n--- TEST 6: InnerTube Bridge Candidate Scoring & Format Inclusion Contracts ---");
   const innertubePath = path.resolve(__dirname, "../src/lib/youtube/innertube.ts");
   const innertubeContent = fs.readFileSync(innertubePath, "utf-8");

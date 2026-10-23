@@ -36,10 +36,10 @@ async function runTests() {
 
   assert(
     innertubeCode.includes('ANDROID_VR_CLIENT_VERSION = "1.56.21"') &&
-    innertubeCode.includes('IOS_CLIENT_VERSION = "19.45.4"') &&
+    innertubeCode.includes('IOS_CLIENT_VERSION = "20.10.1"') &&
     innertubeCode.includes('ANDROID_VR_USER_AGENT =') &&
     innertubeCode.includes('clientName: "ANDROID_VR"'),
-    "InnerTube specifies ANDROID_VR (1.56.21) and IOS (19.45.4) client profiles with Oculus Quest 3 User-Agent"
+    "InnerTube specifies ANDROID_VR (1.56.21) and IOS (20.10.1) client profiles with Oculus Quest 3 User-Agent"
   );
 
   assert(

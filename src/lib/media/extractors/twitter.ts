@@ -4,6 +4,7 @@
  */
 
 import { universalFetch } from "../innertube-bridge";
+import { probeRemoteFileSize } from "../stream-sizer";
 import type { UniversalMediaInfo, UniversalQualityOption } from "../types";
 
 export async function extractTwitterMedia(url: string): Promise<UniversalMediaInfo> {
@@ -115,9 +116,21 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
             downloadUrl: mediaUrl,
             badge: isVideo ? "VIDEO" : "IMAGE",
           },
-        ],
+        ] as UniversalQualityOption[],
       };
     });
+
+    await Promise.allSettled(
+      items.slice(0, 4).map(async (item) => {
+        const sz = await probeRemoteFileSize(item.url, {
+          referer: "https://twitter.com/",
+          timeoutMs: 1500,
+        });
+        if (sz && item.qualities && item.qualities[0]) {
+          item.qualities[0].fileSize = sz;
+        }
+      })
+    );
 
     const primaryItem = items[0];
     return {
@@ -137,6 +150,10 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
   // Single Photo Tweet
   if (mediaList.length === 1 && mediaList[0].type === "image") {
     const imgUrl = mediaList[0].url;
+    const photoSize = await probeRemoteFileSize(imgUrl, {
+      referer: "https://twitter.com/",
+      timeoutMs: 1500,
+    });
     return {
       id: tweetId,
       platform: "twitter",
@@ -150,6 +167,7 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
           label: "X / Twitter HD Photo (JPG)",
           resolution: "Original",
           ext: "jpg",
+          fileSize: photoSize,
           downloadUrl: imgUrl,
           badge: "IMAGE",
         },
@@ -167,6 +185,10 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
     // If only image URLs available in fallback
     if (tweetData.mediaURLs && tweetData.mediaURLs.length > 0) {
       const imgUrl = tweetData.mediaURLs[0];
+      const photoSize = await probeRemoteFileSize(imgUrl, {
+        referer: "https://twitter.com/",
+        timeoutMs: 1500,
+      });
       return {
         id: tweetId,
         platform: "twitter",
@@ -180,6 +202,7 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
             label: "X / Twitter Photo (JPG)",
             resolution: "Original",
             ext: "jpg",
+            fileSize: photoSize,
             downloadUrl: imgUrl,
             badge: "IMAGE",
           },
@@ -192,10 +215,24 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
   const qualities: UniversalQualityOption[] = [];
   const directVideoUrl = videoMedia.url;
 
+  const videoSize = await probeRemoteFileSize(directVideoUrl, {
+    referer: "https://twitter.com/",
+    timeoutMs: 1500,
+  });
+
+  // Fallback estimation using bitrate & duration if probe timed out
+  const estimatedSize =
+    !videoSize && tweetData.duration_millis && tweetData.bitrate
+      ? Math.floor((tweetData.duration_millis / 1000) * (tweetData.bitrate / 8))
+      : undefined;
+
+  const finalSize = videoSize || estimatedSize;
+
   qualities.push({
     label: "X / Twitter HD Video (MP4)",
     resolution: "HD",
     ext: "mp4",
+    fileSize: finalSize,
     downloadUrl: directVideoUrl,
     badge: "HD",
   });
@@ -206,6 +243,7 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
     resolution: "Audio",
     ext: "mp3",
     isAudioOnly: true,
+    fileSize: finalSize,
     downloadUrl: directVideoUrl,
     badge: "MP3",
   });
