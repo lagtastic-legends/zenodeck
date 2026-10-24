@@ -153,36 +153,36 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
-          title="Zero-Stall Turbo Downloader"
-          badge="High-Speed CDN"
-          description="InnerTube 20.10.4 pipeline with 2-second candidate edge node failover, persistent socket keep-alive, and anti-freeze progress formula."
+          title="Parallel Chunk Engine"
+          badge="Max Throughput"
+          description="Multi-worker concurrent coroutine stream fetching with thread-safe FileChannel positional writes, bypassing single-connection edge throttling."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
           icon={<Cpu className="size-4.5 text-[#c8a0f0]" />}
-          title="4K 60fps & 12 Adaptive Tiers"
-          badge="Full Fidelity"
-          description="Complete 4K UHD, 2K QHD, 1080p60 down to 360p, 320k Studio MP3, and Native AAC without 360p downranking or quality loss."
+          title="Interleaved A/V Sample Muxing"
+          badge="Zero Desync"
+          description="Chronologically interleaved sample muxing with baseline PTS zero-anchoring, guaranteeing frame-perfect audio synchronization in 4K/1080p MP4/WebM."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
           icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Android MediaStore Auto-Index"
-          badge="Scoped Storage"
-          description="Downloads & muxed streams save directly to Movies/ZenoDeck & Music/ZenoDeck with immediate Google Photos, Gallery & VLC indexing."
+          title="Multi-Platform Stream Sizer"
+          badge="Instant Probing"
+          description="Non-blocking HEAD/Range size probes with LRU caching and secondary fallback extractors across TikTok, Instagram Reels, Twitter/X, and Reddit."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
           icon={<Sliders className="size-4.5 text-[#88b4cc]" />}
-          title="Glacier UI & ZenoTap Deck"
-          badge="Stitch Design"
-          description="Ethereal 'Frozen Light' glassmorphism with ice-blue radiant accents, CommitContent v2 direct chat inject, and reactive soundscapes."
+          title="Linear CDN Edge Failover"
+          badge="Anti-Oscillation"
+          description="Monotonic edge candidate traversal with 2.5s connect timeouts and sticky latching, eliminating retry stalls across secondary CDN nodes."
           accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
           badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />

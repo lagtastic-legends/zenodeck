@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.6">
-    <img src="https://img.shields.io/badge/Release-v1.0.6-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.6" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.7">
+    <img src="https://img.shields.io/badge/Release-v1.0.7-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.7" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.6/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,28 +46,28 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.6 (Short & Sweet — Zero-Stall Turbo Downloader & Scoped Storage)
+## 💎 What's New in v1.0.7 (Short & Sweet — Parallel Chunk Acceleration & Zero-Desync Muxing)
 
-ZenoDeck v1.0.6 delivers a comprehensive architectural overhaul to the **Universal Media Downloader**, banishing stalls, unlocking complete 4K resolution tiers, and enabling effortless gallery saving:
+ZenoDeck v1.0.7 delivers a high-performance acceleration and synchronization overhaul across the **Universal Media Downloader**:
 
-- 🚀 **Zero-Stall YouTube Turbo Engine**: Upgraded InnerTube client definitions to `20.10.4` with proactive 2-second candidate edge node failover, eliminating 10-second dead host connection timeouts.
-- 🎯 **12-Tier Adaptive Resolution Priority**: Web and mobile resolution now queries direct unthrottled InnerTube manifests first, banishing 360p downranking and exposing all 4K 60fps, 2K, 1080p, 720p, 480p, 360p, 320k Studio MP3, and Native AAC options.
-- 🛡️ **Clean HTTP Range Chunk Streaming**: Fully standard Range request headers (`Range: bytes=start-end`) without parameter mutation, preventing HTTP 416 errors and false EOF stalls.
-- 📁 **Android 11–15 Scoped Storage & MediaStore Auto-Index**: Native engine writes streams safely in internal sandbox cache, muxes seamlessly, and automatically publishes to `MediaStore.Video.Media` (`Movies/ZenoDeck`) and `MediaStore.Audio.Media` (`Music/ZenoDeck`) for immediate appearance in Google Photos, Gallery, and VLC.
-- ❄️ **Glacier Glassmorphism & ZenoTap CommitContent v2**: Complete Glacier UI/UX suite with Active Media Inspector popover, interactive playback scrubbing, and 1-tap direct chat injection.
+- 🚀 **Parallel Multi-Worker Chunk Engine**: Concurrent coroutine stream fetching with thread-safe `FileChannel` positional writing, bypassing single-connection CDN throttling and delivering significantly accelerated transfer rates.
+- 🎬 **Chronologically Interleaved A/V Muxing**: True presentation timestamp (PTS) sample interleaving in native `MediaMuxer` with baseline zero-anchoring (`presentationTimeUs -= basePts`), completely eliminating audio desync and playback drift in 4K/1080p downloads.
+- 📡 **Anti-Oscillation Linear CDN Failover**: Monotonic edge candidate rotation across all fallback nodes (`lastObservedPreferred`) with 2.5s connect timeouts and sticky latching, eliminating retry stalls during edge node drops.
+- 🔍 **Multi-Platform Stream Sizer & Fallbacks**: Non-blocking HEAD/Range probing with LRU caching (`stream-sizer.ts`) and secondary HTML/regex fallback extractors across TikTok, Instagram Reels, Twitter/X, and Reddit.
+- 🧪 **217-Test Opaque-Box E2E Suite**: 100% pass rate across 4 tiers covering feature coverage, corner cases, cross-feature combinations, and real-world media downloads.
 
 ---
 
-## 🚀 Download & Installation (v1.0.6)
+## 🚀 Download & Installation (v1.0.7)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.6/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.6/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.6/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.6/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 
