@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.8">
-    <img src="https://img.shields.io/badge/Release-v1.0.8-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.8" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.9">
+    <img src="https://img.shields.io/badge/Release-v1.0.9-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.9" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.8/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.9/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">

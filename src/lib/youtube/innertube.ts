@@ -737,12 +737,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     f.codec.toLowerCase().includes("vp9") ||
     f.codec.toLowerCase().includes("vp8");
 
-  // Helper to get paired audio for video format
+  // Helper to get paired audio for video format with strict container quarantine
   const getPairedAudio = (videoFmt: YouTubeFormatMeta) => {
     if (isWebMFormat(videoFmt)) {
-      return bestOpusAudio || bestAudio;
+      return bestOpusAudio || (bestAudio && isWebMFormat(bestAudio) ? bestAudio : null);
     }
-    return bestAacAudio || bestAudio;
+    return bestAacAudio || (bestAudio && !isWebMFormat(bestAudio) ? bestAudio : null);
   };
 
   const getContainerForVideo = (videoFmt: YouTubeFormatMeta): "mp4" | "webm" => {
@@ -959,7 +959,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         durationSeconds > 0
           ? Math.round((320 * 1000 * durationSeconds) / 8)
           : baseAudioLen,
-      videoFormat: fmt18,
+      videoFormat: undefined,
       audioFormat: bestAudio || effectiveAudio,
     });
 
@@ -979,7 +979,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         durationSeconds > 0
           ? Math.round((256 * 1000 * durationSeconds) / 8)
           : Math.round(baseAudioLen * 0.8),
-      videoFormat: fmt18,
+      videoFormat: undefined,
       audioFormat: bestAudio || effectiveAudio,
     });
 
@@ -999,7 +999,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         durationSeconds > 0
           ? Math.round((192 * 1000 * durationSeconds) / 8)
           : Math.round(baseAudioLen * 0.6),
-      videoFormat: fmt18,
+      videoFormat: undefined,
       audioFormat: bestAudio || effectiveAudio,
     });
 
@@ -1019,7 +1019,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         durationSeconds > 0
           ? Math.round((128 * 1000 * durationSeconds) / 8)
           : Math.round(baseAudioLen * 0.4),
-      videoFormat: fmt18,
+      videoFormat: undefined,
       audioFormat: bestAudio || effectiveAudio,
     });
 
@@ -1035,7 +1035,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       isAudioOnly: true,
       container: "m4a",
       approxSizeBytes: bestM4a.contentLength || baseAudioLen,
-      videoFormat: fmt18,
+      videoFormat: undefined,
       audioFormat: bestM4a,
     });
 
@@ -1054,7 +1054,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         durationSeconds > 0
           ? Math.round(44100 * 2 * 2 * durationSeconds)
           : baseAudioLen * 4,
-      videoFormat: fmt18,
+      videoFormat: undefined,
       audioFormat: bestAudio || effectiveAudio,
     });
   }

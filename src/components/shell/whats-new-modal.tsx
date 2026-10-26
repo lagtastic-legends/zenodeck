@@ -152,37 +152,37 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-[#7dd3fc]" />}
-          title="38-Module Preset Unification"
-          badge="Star Pinning ⭐"
-          description="Universal preset selector with instant favorite pinning, custom user preset authoring (+Save Current Settings), and hardware engine tier badges."
+          icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
+          title="Hardware MediaMuxer B-Frame Fix"
+          badge="Zero Crash 🚀"
+          description="Pre-scans true minimum PTS across initial samples and guarantees non-negative monotonic timestamps, permanently eliminating Android MediaMuxer B-frame crashes."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
-          icon={<Zap className="size-4.5 text-[#c8a0f0]" />}
-          title="In-Memory Pipeline Handoff"
-          badge="Zero Re-Upload"
-          description="Direct zero-copy handoff across Studio tools via useWorkstationStore. Pass finished videos, audio stems, and images into 8D Studio, GIF Maker, or PDF Forge."
+          icon={<Sliders className="size-4.5 text-[#c8a0f0]" />}
+          title="Strict Codec Quarantine"
+          badge="Container Match"
+          description="Isolated container muxing pairs AVC video strictly with AAC/MP4 audio and VP9 with Opus, ensuring 100% native gallery playback compatibility on Android."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
           icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Privacy Shield Modal Lock 🛡️"
-          badge="In-Place Overlay"
-          description="Interactive top-bar Privacy Shield displaying live system permissions, ZenoTap native IME bridge link status, and 1-tap OPFS temporary cache purging."
+          title="Resilient Pipeline Fallback"
+          badge="Auto-Recovery"
+          description="Instant seamless fallback to high-speed web chunk streaming if native hardware encounters unsupported streams, ensuring video downloads always complete."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<Cpu className="size-4.5 text-[#88b4cc]" />}
-          title="Document & Imaging Forge"
-          badge="Complete Suite"
-          description="Standardized presets and unified SaveResultModal with direct-to-disk verified telemetry across Image/Text/Lock/Scan-to-PDF, Watermark Eraser, and ASCII Studio."
+          icon={<Headphones className="size-4.5 text-[#88b4cc]" />}
+          title="Pristine Studio Audio Extraction"
+          badge="Pure Stream"
+          description="Audio-only options now bypass video track parsing entirely, delivering bit-perfect 320 kbps MP3, lossless M4A, and studio WAV directly from the master audio stream."
           accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
           badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />

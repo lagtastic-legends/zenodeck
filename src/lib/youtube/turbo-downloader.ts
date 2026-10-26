@@ -708,7 +708,9 @@ export async function downloadYouTubeStream({
   // -------------------------------------------------------------
   const isClipped = Boolean(clipRange?.startTime || clipRange?.endTime);
   if (isNativeAndroidPlatform() && !isClipped) {
-    const videoUrl = option.videoFormat?.url || (isAudioOnly ? option.audioFormat?.url : undefined);
+    const videoUrl = isAudioOnly
+      ? (option.audioFormat?.url || option.videoFormat?.url)
+      : option.videoFormat?.url;
     const audioUrl = !isAudioOnly && option.audioFormat ? option.audioFormat.url : undefined;
     const userAgent = option.userAgent || option.videoFormat?.userAgent || option.audioFormat?.userAgent;
 
@@ -819,11 +821,8 @@ export async function downloadYouTubeStream({
         };
       } catch (nativeErr: any) {
         if (signal?.aborted) throw nativeErr;
-        console.warn("Native Android direct download error:", nativeErr?.message);
-        throw new Error(
-          nativeErr?.message ||
-          "Native download interrupted. Please check network connection and try again."
-        );
+        console.warn("Native Android direct download failed, engaging resilient fallback pipeline:", nativeErr?.message);
+        // Fall back gracefully to standard chunking & in-memory/OPFS pipeline below rather than crashing
       }
     }
   }

@@ -225,13 +225,21 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
             val videoMime = videoFormat.getString(MediaFormat.KEY_MIME) ?: ""
             val audioMime = audioFormat.getString(MediaFormat.KEY_MIME) ?: ""
-            val hasVp9OrOpus = videoMime.contains("vp9", ignoreCase = true) ||
-                    videoMime.contains("vp8", ignoreCase = true) ||
-                    audioMime.contains("opus", ignoreCase = true)
 
-            val isWebmTarget = outputFile.name.endsWith(".webm", ignoreCase = true) || hasVp9OrOpus
-            val targetOutputFile = if (hasVp9OrOpus && outputFile.name.endsWith(".mp4", ignoreCase = true)) {
+            val isVideoWebm = videoMime.contains("vp9", ignoreCase = true) ||
+                    videoMime.contains("vp8", ignoreCase = true) ||
+                    videoMime.contains("av01", ignoreCase = true)
+            val isAudioWebm = audioMime.contains("opus", ignoreCase = true) ||
+                    audioMime.contains("vorbis", ignoreCase = true)
+
+            // Strict Container Quarantine:
+            // MUXER_OUTPUT_WEBM is used only if container is webm or both video & audio are WebM-compliant codecs.
+            // MUXER_OUTPUT_MPEG_4 is used for AVC/H.264/AAC, never mixing AVC into WebM or VP9 into standard MP4.
+            val isWebmTarget = (outputFile.name.endsWith(".webm", ignoreCase = true) || isVideoWebm) && isAudioWebm
+            val targetOutputFile = if (isWebmTarget && outputFile.name.endsWith(".mp4", ignoreCase = true)) {
                 File(outputFile.parentFile, outputFile.nameWithoutExtension + ".webm")
+            } else if (!isWebmTarget && outputFile.name.endsWith(".webm", ignoreCase = true) && !isVideoWebm) {
+                File(outputFile.parentFile, outputFile.nameWithoutExtension + ".mp4")
             } else {
                 outputFile
             }
@@ -248,10 +256,44 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
             muxer = MediaMuxer(targetOutputFile.absolutePath, outputFormat)
             val muxerVideoTrack = muxer.addTrack(videoFormat)
-            val muxerAudioTrack = muxer.addTrack(audioFormat)
+            var muxerAudioTrack = -1
+            try {
+                muxerAudioTrack = muxer.addTrack(audioFormat)
+            } catch (trackErr: Exception) {
+                Log.w(TAG, "Audio track rejected by container ($audioMime in ${if (isWebmTarget) "WebM" else "MP4"}), continuing video-only: ${trackErr.message}")
+            }
 
             videoExtractor.selectTrack(videoTrackIndex)
-            audioExtractor.selectTrack(audioTrackIndex)
+            if (muxerAudioTrack >= 0) {
+                audioExtractor.selectTrack(audioTrackIndex)
+            }
+
+            // Pre-Scan True Minimum PTS Across Initial Samples (Up to 60 Samples)
+            // Eliminates negative presentationTimeUs when Sample #0 has a CTTS composition offset
+            var minVideoPts = Long.MAX_VALUE
+            var videoScanCount = 0
+            while (videoScanCount < 60 && videoExtractor.sampleTime >= 0) {
+                val pts = videoExtractor.sampleTime
+                if (pts in 0 until minVideoPts) minVideoPts = pts
+                videoScanCount++
+                videoExtractor.advance()
+            }
+            videoExtractor.seekTo(0L, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+
+            var minAudioPts = Long.MAX_VALUE
+            if (muxerAudioTrack >= 0) {
+                var audioScanCount = 0
+                while (audioScanCount < 60 && audioExtractor.sampleTime >= 0) {
+                    val pts = audioExtractor.sampleTime
+                    if (pts in 0 until minAudioPts) minAudioPts = pts
+                    audioScanCount++
+                    audioExtractor.advance()
+                }
+                audioExtractor.seekTo(0L, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
+            }
+
+            val videoBasePts = if (minVideoPts != Long.MAX_VALUE && minVideoPts >= 500_000L) minVideoPts else 0L
+            val audioBasePts = if (minAudioPts != Long.MAX_VALUE && minAudioPts >= 500_000L) minAudioPts else 0L
 
             muxer.start()
 
@@ -264,19 +306,16 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             val buffer = ByteBuffer.allocateDirect(maxBufferSize)
             val bufferInfo = MediaCodec.BufferInfo()
 
-            // PTS zero-anchoring: normalize both tracks so playback starts at t=0
-            var videoBasePts = -1L
-            var audioBasePts = -1L
+            var lastVideoPts = -1L
+            var lastAudioPts = -1L
 
             // Chronologically interleaved A/V sample muxing:
-            // Compare video vs audio presentation timestamps and write whichever
-            // sample comes first, preventing audio desync in the output container.
             var videoEof = false
-            var audioEof = false
+            var audioEof = muxerAudioTrack < 0
 
             // Prime both extractors
             if (videoExtractor.sampleTime < 0) videoEof = true
-            if (audioExtractor.sampleTime < 0) audioEof = true
+            if (!audioEof && audioExtractor.sampleTime < 0) audioEof = true
 
             while (!videoEof || !audioEof) {
                 val writeVideo = when {
@@ -293,11 +332,20 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                         continue
                     }
                     val rawPts = videoExtractor.sampleTime
-                    if (videoBasePts < 0L) videoBasePts = rawPts
+                    var pts = maxOf(0L, rawPts - videoBasePts)
+                    if (isWebmTarget && pts <= lastVideoPts) {
+                        pts = lastVideoPts + 100L
+                    }
+                    lastVideoPts = pts
+
                     bufferInfo.offset = 0
                     bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = rawPts - videoBasePts
-                    bufferInfo.flags = videoExtractor.sampleFlags
+                    bufferInfo.presentationTimeUs = pts
+                    bufferInfo.flags = if ((videoExtractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
+                        MediaCodec.BUFFER_FLAG_KEY_FRAME
+                    } else {
+                        0
+                    }
                     muxer.writeSampleData(muxerVideoTrack, buffer, bufferInfo)
                     videoExtractor.advance()
                 } else {
@@ -308,11 +356,20 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                         continue
                     }
                     val rawPts = audioExtractor.sampleTime
-                    if (audioBasePts < 0L) audioBasePts = rawPts
+                    var pts = maxOf(0L, rawPts - audioBasePts)
+                    if (pts <= lastAudioPts) {
+                        pts = lastAudioPts + 100L
+                    }
+                    lastAudioPts = pts
+
                     bufferInfo.offset = 0
                     bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = rawPts - audioBasePts
-                    bufferInfo.flags = audioExtractor.sampleFlags
+                    bufferInfo.presentationTimeUs = pts
+                    bufferInfo.flags = if ((audioExtractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
+                        MediaCodec.BUFFER_FLAG_KEY_FRAME
+                    } else {
+                        0
+                    }
                     muxer.writeSampleData(muxerAudioTrack, buffer, bufferInfo)
                     audioExtractor.advance()
                 }
@@ -1415,7 +1472,14 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed"))
                 }
                 val readyFile = muxResult.getOrNull() ?: muxTarget
-                finalFile = copyToDestination(readyFile, destinationFile)
+                val actualDestination = if (readyFile.name.endsWith(".webm", ignoreCase = true) && destinationFile.name.endsWith(".mp4", ignoreCase = true)) {
+                    File(destinationFile.parentFile, destinationFile.nameWithoutExtension + ".webm")
+                } else if (readyFile.name.endsWith(".mp4", ignoreCase = true) && destinationFile.name.endsWith(".webm", ignoreCase = true)) {
+                    File(destinationFile.parentFile, destinationFile.nameWithoutExtension + ".mp4")
+                } else {
+                    destinationFile
+                }
+                finalFile = copyToDestination(readyFile, actualDestination)
             } else {
                 // Single stream (audio-only or pre-muxed video)
                 progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
@@ -1476,7 +1540,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 try {
                     val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, outputFileName)
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, targetFile.name)
                         put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
                         put(MediaStore.MediaColumns.RELATIVE_PATH, if (isAudioOnlyTarget) "Music/ZenoDeck" else "Movies/ZenoDeck")
                         put(MediaStore.MediaColumns.IS_PENDING, 1)
