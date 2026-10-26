@@ -152,37 +152,37 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
-          title="Parallel Chunk Engine"
-          badge="Max Throughput"
-          description="Multi-worker concurrent coroutine stream fetching with thread-safe FileChannel positional writes, bypassing single-connection edge throttling."
+          icon={<Sliders className="size-4.5 text-[#7dd3fc]" />}
+          title="38-Module Preset Unification"
+          badge="Star Pinning ⭐"
+          description="Universal preset selector with instant favorite pinning, custom user preset authoring (+Save Current Settings), and hardware engine tier badges."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
-          icon={<Cpu className="size-4.5 text-[#c8a0f0]" />}
-          title="Interleaved A/V Sample Muxing"
-          badge="Zero Desync"
-          description="Chronologically interleaved sample muxing with baseline PTS zero-anchoring, guaranteeing frame-perfect audio synchronization in 4K/1080p MP4/WebM."
+          icon={<Zap className="size-4.5 text-[#c8a0f0]" />}
+          title="In-Memory Pipeline Handoff"
+          badge="Zero Re-Upload"
+          description="Direct zero-copy handoff across Studio tools via useWorkstationStore. Pass finished videos, audio stems, and images into 8D Studio, GIF Maker, or PDF Forge."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
           icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Multi-Platform Stream Sizer"
-          badge="Instant Probing"
-          description="Non-blocking HEAD/Range size probes with LRU caching and secondary fallback extractors across TikTok, Instagram Reels, Twitter/X, and Reddit."
+          title="Privacy Shield Modal Lock 🛡️"
+          badge="In-Place Overlay"
+          description="Interactive top-bar Privacy Shield displaying live system permissions, ZenoTap native IME bridge link status, and 1-tap OPFS temporary cache purging."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-[#88b4cc]" />}
-          title="Linear CDN Edge Failover"
-          badge="Anti-Oscillation"
-          description="Monotonic edge candidate traversal with 2.5s connect timeouts and sticky latching, eliminating retry stalls across secondary CDN nodes."
+          icon={<Cpu className="size-4.5 text-[#88b4cc]" />}
+          title="Document & Imaging Forge"
+          badge="Complete Suite"
+          description="Standardized presets and unified SaveResultModal with direct-to-disk verified telemetry across Image/Text/Lock/Scan-to-PDF, Watermark Eraser, and ASCII Studio."
           accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
           badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />

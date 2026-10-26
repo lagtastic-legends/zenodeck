@@ -9,11 +9,13 @@
 
 import { motion } from "framer-motion";
 import { VolumeX, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
 import { ProcessingStatus } from "@/components/media/processing-status";
 import { useMediaJob, type JobSpec } from "@/hooks/use-media-job";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
 
 const SAFE_COPY_EXTS = new Set(["mp4", "mov", "mkv", "webm", "m4v", "avi"]);
@@ -24,6 +26,31 @@ export function VideoMute() {
 
   const [file, setFile] = useState<File | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
+  const notifiedOutputRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      setFile(f);
+    }
+  }, []);
+
+  const output = outputs[0] ?? null;
+
+  useEffect(() => {
+    if (output && phase === "done" && notifiedOutputRef.current !== output.name) {
+      notifiedOutputRef.current = output.name;
+      useSaveDialogStore.getState().showSuccess({
+        filename: output.name,
+        directory: "Download",
+        fileSize: output.size,
+        blob: output.blob,
+      });
+    }
+  }, [output, phase]);
 
   const start = async () => {
     if (!file) return;
@@ -91,8 +118,6 @@ export function VideoMute() {
       await run(fallbackSpec);
     }
   };
-
-  const output = outputs[0] ?? null;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8">

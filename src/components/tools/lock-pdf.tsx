@@ -7,19 +7,58 @@
  */
 
 import { motion } from "framer-motion";
-import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
 import { ParamPanel, ParamToggle } from "@/components/audio/param-controls";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import type { JobOutput } from "@/hooks/use-media-job";
 import {
   buildPdfOutput,
   lockPdf,
   pdfHasEncrypt,
 } from "@/lib/documents/pdf";
+
+const PDF_SECURITY_PRESETS: PresetItem[] = [
+  {
+    id: "read-only-confidential",
+    title: "Read-Only Confidential",
+    subtitle: "Printing & text copying disabled; strict password protected",
+    category: "High Security",
+    badge: "READ-ONLY",
+    badgeColor: "rose",
+    engineTier: "turbo",
+    params: { allowPrinting: false, allowCopying: false },
+    config: { allowPrinting: false, allowCopying: false },
+  },
+  {
+    id: "printable-protected",
+    title: "Printable Protected",
+    subtitle: "High-res printing allowed, text copying prohibited",
+    category: "Distribution",
+    badge: "PRINT ONLY",
+    badgeColor: "amber",
+    engineTier: "high",
+    params: { allowPrinting: true, allowCopying: false },
+    config: { allowPrinting: true, allowCopying: false },
+  },
+  {
+    id: "collaborative-encrypted",
+    title: "Collaborative Encrypted",
+    subtitle: "Both printing and copying enabled with authenticated password",
+    category: "Team",
+    badge: "COLLAB",
+    badgeColor: "emerald",
+    engineTier: "standard",
+    params: { allowPrinting: true, allowCopying: true },
+    config: { allowPrinting: true, allowCopying: true },
+  },
+];
 
 type Status = "idle" | "working" | "done" | "error";
 
@@ -36,6 +75,26 @@ export function LockPdf() {
   const [output, setOutput] = useState<JobOutput | null>(null);
   const [verified, setVerified] = useState(false);
   const [pageCount, setPageCount] = useState(0);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+        setFile(f);
+      }
+    }
+  }, []);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config) {
+      if (typeof p.config.allowPrinting === "boolean") setAllowPrinting(p.config.allowPrinting);
+      if (typeof p.config.allowCopying === "boolean") setAllowCopying(p.config.allowCopying);
+    }
+  };
 
   const busy = status === "working";
   const strong = userPassword.length >= 6;
@@ -74,11 +133,18 @@ export function LockPdf() {
         allowCopying,
       });
       const hasEncrypt = await pdfHasEncrypt(blob);
+      const lockedName = file.name.replace(/\.pdf$/i, "") + "-locked.pdf";
       if (output) URL.revokeObjectURL(output.url);
-      setOutput(buildPdfOutput(file.name.replace(/\.pdf$/i, "") + "-locked.pdf", blob));
+      setOutput(buildPdfOutput(lockedName, blob));
       setVerified(hasEncrypt);
       setPageCount(pageCount);
       setStatus("done");
+      useSaveDialogStore.getState().showSuccess({
+        filename: lockedName,
+        directory: "Documents",
+        fileSize: blob.size,
+        blob,
+      });
       toast({
         title: hasEncrypt ? "PDF encrypted" : "Encryption uncertain",
         description: hasEncrypt
@@ -161,6 +227,17 @@ export function LockPdf() {
         </ParamPanel>
 
         <ParamPanel title="reader permissions">
+          <div className="flex items-center justify-between pb-1 border-b border-border/40">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Access Rights</span>
+            <button
+              type="button"
+              onClick={() => setIsPresetModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+            >
+              <Sparkles className="size-3" />
+              <span>PRESETS</span>
+            </button>
+          </div>
           <ParamToggle
             label="Allow printing"
             checked={allowPrinting}
@@ -227,6 +304,18 @@ export function LockPdf() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="lock-pdf"
+        toolTitle="PDF Security Profiles"
+        subtitle="Reader permission locks and encryption policies"
+        presets={PDF_SECURITY_PRESETS}
+        selectedPresetId={PDF_SECURITY_PRESETS.find(p => p.config?.allowPrinting === allowPrinting && p.config?.allowCopying === allowCopying)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ allowPrinting, allowCopying }}
+      />
     </div>
   );
 }

@@ -1,11 +1,61 @@
 "use client";
 
 import { useState, useRef, useEffect, ChangeEvent } from "react";
-import { Upload, Copy, Download, Image as ImageIcon, Library, ArrowLeft, TerminalSquare } from "lucide-react";
+import { Upload, Copy, Download, Image as ImageIcon, Library, ArrowLeft, TerminalSquare, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { cn } from "@/lib/utils";
 import { ASCII_ARCHIVE, type AsciiCategory, type AsciiArt } from "@/lib/ascii/data";
+
+const ASCII_PRESETS: PresetItem[] = [
+  {
+    id: "terminal-matrix",
+    title: "Terminal Matrix Density",
+    subtitle: "High resolution (140 cols) ideal for desktop terminals and detailed logs",
+    category: "High Res",
+    badge: "140 COLS",
+    badgeColor: "emerald",
+    engineTier: "turbo",
+    params: { resolution: 140, removeBg: false },
+    config: { resolution: 140, removeBg: false },
+  },
+  {
+    id: "mobile-deck-sticker",
+    title: "ZenoTap Deck Sticker",
+    subtitle: "Compact resolution (75 cols) with AI background removal for keyboard paste",
+    category: "Mobile IME",
+    badge: "IME STICKER",
+    badgeColor: "cyan",
+    engineTier: "high",
+    params: { resolution: 75, removeBg: true },
+    config: { resolution: 75, removeBg: true },
+  },
+  {
+    id: "balanced-retro",
+    title: "Classic BBS 100",
+    subtitle: "Standard 100 cols retro BBS character art with full backdrop",
+    category: "Retro",
+    badge: "CLASSIC",
+    badgeColor: "violet",
+    engineTier: "standard",
+    params: { resolution: 100, removeBg: false },
+    config: { resolution: 100, removeBg: false },
+  },
+  {
+    id: "ultra-dense",
+    title: "Ultra Fine Grain (180)",
+    subtitle: "Maximum glyph fidelity for portraits and high-contrast landscapes",
+    category: "Fine Detail",
+    badge: "ULTRA",
+    badgeColor: "amber",
+    engineTier: "ultra",
+    params: { resolution: 180, removeBg: false },
+    config: { resolution: 180, removeBg: false },
+  },
+];
 
 const ASCII_CHARS = ["@", "%", "#", "*", "+", "=", "-", ":", ".", " "];
 
@@ -21,11 +71,37 @@ export function AsciiGenerator() {
   const [asciiArt, setAsciiArt] = useState<string>("");
   const [resolution, setResolution] = useState<number>(100);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeWorkerRef = useRef<Worker | null>(null);
   const bgRemovedUrlRef = useRef<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      if (f.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const src = event.target?.result as string;
+          setOriginalImageSrc(src);
+          if (!removeBgEnabled) setImageSrc(src);
+        };
+        reader.readAsDataURL(f);
+      }
+    }
+  }, [removeBgEnabled]);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config) {
+      if (typeof p.config.resolution === "number") setResolution(p.config.resolution);
+      if (typeof p.config.removeBg === "boolean") setRemoveBgEnabled(p.config.removeBg);
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -217,6 +293,12 @@ export function AsciiGenerator() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    useSaveDialogStore.getState().showSuccess({
+      filename: "omni-ascii.txt",
+      directory: "Documents",
+      fileSize: blob.size,
+      blob,
+    });
   };
 
   return (
@@ -270,6 +352,15 @@ export function AsciiGenerator() {
                   className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 font-display text-sm font-semibold tracking-wide text-primary-foreground transition-transform hover:scale-[1.02]"
                 >
                   <Upload className="size-4" /> UPLOAD IMAGE
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPresetModalOpen(true)}
+                  className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-4 font-mono text-xs font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+                >
+                  <Sparkles className="size-3.5" />
+                  <span>PRESETS</span>
                 </button>
                 
                 <div className="flex flex-col gap-2 rounded-xl border border-border/40 bg-secondary/40 p-3 sm:max-w-[200px]">
@@ -415,6 +506,18 @@ export function AsciiGenerator() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="ascii-generator"
+        toolTitle="ASCII Terminal Presets"
+        subtitle="Resolution density and AI background isolation profiles"
+        presets={ASCII_PRESETS}
+        selectedPresetId={ASCII_PRESETS.find(p => p.config?.resolution === resolution && p.config?.removeBg === removeBgEnabled)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ resolution, removeBg: removeBgEnabled }}
+      />
     </div>
   );
 }

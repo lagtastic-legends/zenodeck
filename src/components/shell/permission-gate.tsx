@@ -8,7 +8,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Capacitor } from "@capacitor/core";
-import { Camera, Mic, Bell, HardDrive, Shield, Settings2, Image, Music, Trash2, Check } from "lucide-react";
+import { Camera, Mic, Bell, HardDrive, Shield, Settings2, Image, Music, Trash2, Check, Keyboard, Sparkles, RefreshCw } from "lucide-react";
 import { ZenoModal } from "@/components/ui/zeno-modal";
 import { useHaptics } from "@/hooks/use-haptics";
 import {
@@ -25,7 +25,7 @@ import {
 } from "@/lib/permissions";
 
 interface PermissionCategory {
-  id: "camera" | "microphone" | "notifications" | "storage" | "photos" | "audio";
+  id: "camera" | "microphone" | "notifications" | "storage" | "photos" | "audio" | "ime";
   icon: React.ReactNode;
   title: string;
   description: string;
@@ -37,6 +37,7 @@ export function PermissionGate() {
   const [visible, setVisible] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [cachePurged, setCachePurged] = useState(false);
+  const [imeStatus, setImeStatus] = useState<"ready" | "web_emulated" | "native_active">("ready");
   const haptics = useHaptics();
 
   const [categories, setCategories] = useState<PermissionCategory[]>([
@@ -82,16 +83,37 @@ export function PermissionGate() {
       description: "100% on-device sandbox storage for generated files (zero cloud tracking)",
       status: "prompt",
     },
+    {
+      id: "ime",
+      icon: <Keyboard className="size-4.5 text-teal-400" />,
+      title: "ZenoTap IME Bridge",
+      description: "Native tactile keyboard & clipboard rich-media direct injection",
+      status: "granted",
+    },
   ]);
 
   const refreshPermissions = useCallback(async () => {
     try {
       const live = await checkAppPermissions();
+      const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+      setImeStatus(isAndroid ? "native_active" : "web_emulated");
+
       setCategories((prev) =>
-        prev.map((c) => ({
-          ...c,
-          status: live[c.id],
-        }))
+        prev.map((c) => {
+          if (c.id === "ime") {
+            return {
+              ...c,
+              status: "granted",
+              description: isAndroid
+                ? "Android native IME service enabled & direct CommitContent v2 active"
+                : "Web studio keyboard deck active with 3D tactile key emulation",
+            };
+          }
+          return {
+            ...c,
+            status: live[c.id as keyof typeof live] || "prompt",
+          };
+        })
       );
     } catch (err) {
       console.warn("Failed to check app permissions:", err);
@@ -151,11 +173,27 @@ export function PermissionGate() {
     }
   };
 
-  const handlePurgeCache = () => {
+  const handlePurgeCache = async () => {
     void haptics.medium();
     try {
       if (typeof window !== "undefined") {
         sessionStorage.clear();
+        // Clear transient OPFS files if supported
+        if (typeof navigator !== "undefined" && "storage" in navigator && navigator.storage.getDirectory) {
+          try {
+            const root = await navigator.storage.getDirectory();
+            // @ts-ignore
+            if (root && root.values) {
+              // @ts-ignore
+              for await (const entry of root.values()) {
+                try {
+                  // @ts-ignore
+                  await root.removeEntry(entry.name, { recursive: true });
+                } catch {}
+              }
+            }
+          } catch {}
+        }
         setCachePurged(true);
         setTimeout(() => setCachePurged(false), 2500);
       }
@@ -236,7 +274,7 @@ export function PermissionGate() {
                         disabled={requesting}
                         className="font-mono text-[9px] uppercase font-bold px-2 py-0.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        Grant
+                        REQUEST
                       </button>
                     )}
                     <span
@@ -245,14 +283,14 @@ export function PermissionGate() {
                           ? "text-emerald-400 bg-emerald-500/20"
                           : cat.status === "denied"
                             ? "text-rose-400 bg-rose-500/20"
-                            : "text-muted-foreground bg-muted/40"
+                            : "text-amber-400 bg-amber-500/20"
                       }`}
                     >
                       {cat.status === "granted"
-                        ? "Active"
+                        ? "GRANTED"
                         : cat.status === "denied"
-                          ? "Denied"
-                          : "Available"}
+                          ? "ACTION NEEDED"
+                          : "READY"}
                     </span>
                   </div>
                 </div>

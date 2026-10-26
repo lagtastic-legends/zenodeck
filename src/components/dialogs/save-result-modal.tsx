@@ -19,9 +19,13 @@ import {
   Settings2,
   Sparkles,
   Layers,
+  Film,
+  Lock,
+  ArrowRight,
 } from "lucide-react";
 import { ZenoModal } from "@/components/ui/zeno-modal";
 import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { useHaptics } from "@/hooks/use-haptics";
 import { formatBytes } from "@/lib/format";
@@ -215,19 +219,30 @@ export function SaveResultModal() {
     }
   };
 
-  const handleOpenStudio = () => {
+  const handleHandoff = (targetToolId: string) => {
     void haptics.medium();
+    if (blob) {
+      useWorkstationStore.getState().setHandoffFile({
+        file: blob,
+        filename,
+        mimeType: blob.type || (category === "video" ? "video/mp4" : category === "audio" ? "audio/mp3" : category === "image" ? "image/png" : "application/octet-stream"),
+        sourceTool: "studio",
+        timestamp: Date.now(),
+      });
+    }
     close();
-    useNavStore.getState().navigate("spatial-8d");
+    useNavStore.getState().navigate(targetToolId);
+  };
+
+  const handleOpenStudio = () => {
+    handleHandoff("spatial-8d");
   };
 
   const handleTrimCompress = () => {
-    void haptics.medium();
-    close();
     if (category === "audio") {
-      useNavStore.getState().navigate("trimmer");
+      handleHandoff("trimmer");
     } else {
-      useNavStore.getState().navigate("video-compressor");
+      handleHandoff("video-compressor");
     }
   };
 
@@ -394,69 +409,204 @@ export function SaveResultModal() {
         {/* 1-Tap Workflow Handoffs (Only on Success) */}
         {isSuccess && (
           <div className="space-y-2 pt-1">
-            <p className="font-mono text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80">
-              One-Tap Next Steps
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+                <Sparkles className="size-3 text-primary animate-pulse" />
+                Continue Workflow in Studio
+              </p>
+              <span className="font-mono text-[9px] text-muted-foreground/70">In-Memory Pipeline</span>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {/* Action 1: Send to ZenoTap Vault */}
-              <button
-                type="button"
-                onClick={handleSendToVault}
-                className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
-                  vaultAdded
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                    : "border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 text-foreground"
-                }`}
-              >
-                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-                  {vaultAdded ? <Check className="size-4 text-emerald-400" /> : <Layers className="size-4" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[11px] font-bold truncate">
-                    {vaultAdded ? "In ZenoTap Vault" : "ZenoTap Vault"}
-                  </p>
-                  <p className="font-mono text-[9px] text-muted-foreground truncate">
-                    Pin to keyboard deck
-                  </p>
-                </div>
-              </button>
+              {category === "video" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("spatial-8d")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-cyan-500/40 hover:bg-cyan-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20">
+                      <Headphones className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">8D Audio Studio</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Binaural 360 & DSP</p>
+                    </div>
+                  </button>
 
-              {/* Action 2: Open in 8D Studio */}
-              <button
-                type="button"
-                onClick={handleOpenStudio}
-                className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 p-2.5 text-left transition-all cursor-pointer text-foreground"
-              >
-                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
-                  <Headphones className="size-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[11px] font-bold truncate">8D Studio</p>
-                  <p className="font-mono text-[9px] text-muted-foreground truncate">
-                    Binaural 360 & DSP
-                  </p>
-                </div>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("gif-maker")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-emerald-500/40 hover:bg-emerald-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20">
+                      <Film className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Convert to GIF</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">ZenoTap sticker loop</p>
+                    </div>
+                  </button>
 
-              {/* Action 3: Trim / Compress */}
-              <button
-                type="button"
-                onClick={handleTrimCompress}
-                className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 p-2.5 text-left transition-all cursor-pointer text-foreground"
-              >
-                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-400">
-                  <Scissors className="size-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[11px] font-bold truncate">
-                    {category === "audio" ? "Audio Trimmer" : "Compressor"}
-                  </p>
-                  <p className="font-mono text-[9px] text-muted-foreground truncate">
-                    {category === "audio" ? "Slice & fade track" : "Reduce size ≤10MB"}
-                  </p>
-                </div>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("video-compressor")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-violet-500/40 hover:bg-violet-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20">
+                      <Scissors className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Compress Video</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Shrink size ≤10MB</p>
+                    </div>
+                  </button>
+                </>
+              ) : category === "audio" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("spatial-8d")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-cyan-500/40 hover:bg-cyan-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20">
+                      <Headphones className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">8D / EQ Studio</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Spatial 360 master</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("trimmer")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-violet-500/40 hover:bg-violet-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20">
+                      <Scissors className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Trim / Ringtone</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Slice & fade cue</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("converter")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-primary/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20">
+                      <FileAudio className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Transcode Audio</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">MP3 / WAV / FLAC</p>
+                    </div>
+                  </button>
+                </>
+              ) : category === "image" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSendToVault}
+                    className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
+                      vaultAdded
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                        : "border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 text-foreground"
+                    }`}
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                      {vaultAdded ? <Check className="size-4 text-emerald-400" /> : <Layers className="size-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">
+                        {vaultAdded ? "In ZenoTap Vault" : "ZenoTap Vault"}
+                      </p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Pin to keyboard deck</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("image-to-pdf")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-amber-500/40 hover:bg-amber-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20">
+                      <FileText className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Convert to PDF</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">A4 document forge</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("ascii-generator")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-emerald-500/40 hover:bg-emerald-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20">
+                      <Sparkles className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">ASCII Art Studio</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Terminal character art</p>
+                    </div>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSendToVault}
+                    className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
+                      vaultAdded
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                        : "border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 text-foreground"
+                    }`}
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                      {vaultAdded ? <Check className="size-4 text-emerald-400" /> : <Layers className="size-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">
+                        {vaultAdded ? "In ZenoTap Vault" : "ZenoTap Vault"}
+                      </p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Pin to keyboard deck</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("lock-pdf")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-amber-500/40 hover:bg-amber-500/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20">
+                      <Lock className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Lock / Protect</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">AES-256 PDF encryption</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleHandoff("scan-to-pdf")}
+                    className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/60 hover:border-primary/40 hover:bg-primary/10 p-2.5 text-left transition-all cursor-pointer text-foreground group"
+                  >
+                    <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20">
+                      <FileText className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[11px] font-bold truncate">Scan to PDF</p>
+                      <p className="font-mono text-[9px] text-muted-foreground truncate">Camera document scan</p>
+                    </div>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

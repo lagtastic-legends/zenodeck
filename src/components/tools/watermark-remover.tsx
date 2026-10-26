@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format";
 import { useVault } from "@/lib/vault/vault-context";
@@ -37,6 +40,53 @@ import {
   type DetectedWatermark,
   type InpaintCoverage,
 } from "@/lib/imaging/ai-watermark";
+
+const WATERMARK_PRESETS: PresetItem[] = [
+  {
+    id: "auto-smart-inpaint",
+    title: "Smart Auto-Detection",
+    subtitle: "AI edge analysis with balanced inpainting for logos & stamps",
+    category: "AI Smart",
+    badge: "AUTO DETECT",
+    badgeColor: "emerald",
+    engineTier: "turbo",
+    params: { zone: "auto", coverage: "balanced" },
+    config: { zone: "auto", coverage: "balanced" },
+  },
+  {
+    id: "four-corners-guard",
+    title: "Four-Corner Purge",
+    subtitle: "Aggressive multi-corner scan for broadcast tags and timestamps",
+    category: "Broadcast",
+    badge: "4-CORNER",
+    badgeColor: "violet",
+    engineTier: "high",
+    params: { zone: "four_corners", coverage: "deep" },
+    config: { zone: "four_corners", coverage: "deep" },
+  },
+  {
+    id: "subtle-feather",
+    title: "Gentle Edge Feather",
+    subtitle: "Soft gradient blending for translucent text watermarks",
+    category: "Subtle",
+    badge: "GENTLE",
+    badgeColor: "cyan",
+    engineTier: "standard",
+    params: { zone: "auto", coverage: "gentle" },
+    config: { zone: "auto", coverage: "gentle" },
+  },
+  {
+    id: "stock-photo-center",
+    title: "Central Stamp Inpaint",
+    subtitle: "Deep inpainting targeting large diagonal watermark stamps",
+    category: "Stock Watermark",
+    badge: "CENTER",
+    badgeColor: "amber",
+    engineTier: "ultra",
+    params: { zone: "center", coverage: "deep" },
+    config: { zone: "center", coverage: "deep" },
+  },
+];
 
 export function WatermarkRemover() {
   const { toast } = useToast();
@@ -67,6 +117,33 @@ export function WatermarkRemover() {
   // Vault state
   const [vaultState, setVaultState] = useState<"idle" | "saved">("idle");
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      if (f.type.startsWith("image/")) {
+        handleFile(f);
+      }
+    }
+  }, []);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config) {
+      if (p.config.zone) {
+        setSelectedZone(p.config.zone as WatermarkZone);
+        if (imageFile) {
+          processImageCore(imageFile, p.config.zone as WatermarkZone, undefined, p.config.coverage as InpaintCoverage || coverage);
+        }
+      }
+      if (p.config.coverage) {
+        setCoverage(p.config.coverage as InpaintCoverage);
+      }
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -318,6 +395,12 @@ export function WatermarkRemover() {
     if (!cleanedBlob || !imageFile) return;
     const cleanName = `cleaned_${imageFile.name.replace(/\.[^/.]+$/, "")}.png`;
     void import("@/lib/native-save").then((m) => m.nativeSave(cleanedBlob, cleanName));
+    useSaveDialogStore.getState().showSuccess({
+      filename: cleanName,
+      directory: "Pictures",
+      fileSize: cleanedBlob.size,
+      blob: cleanedBlob,
+    });
   };
 
   const saveToVault = async () => {
@@ -440,6 +523,15 @@ export function WatermarkRemover() {
           >
             <Upload className="size-3.5 sm:size-4" />
             {imageFile ? "UPLOAD ANOTHER" : "SELECT IMAGE"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsPresetModalOpen(true)}
+            className="flex min-h-10 sm:min-h-11 items-center justify-center gap-1.5 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 px-3.5 font-display text-xs font-semibold text-fuchsia-300 hover:bg-fuchsia-500/20 transition-all cursor-pointer"
+          >
+            <Sparkles className="size-3.5" />
+            <span>PRESETS</span>
           </button>
 
           {cleanedSrc && (
@@ -775,6 +867,18 @@ export function WatermarkRemover() {
           )}
         </div>
       )}
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="watermark-remover"
+        toolTitle="AI Watermark Inpaint Presets"
+        subtitle="Detection heuristics and generative filling profiles"
+        presets={WATERMARK_PRESETS}
+        selectedPresetId={WATERMARK_PRESETS.find(p => p.config?.zone === selectedZone && p.config?.coverage === coverage)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ zone: selectedZone, coverage }}
+      />
     </div>
   );
 }

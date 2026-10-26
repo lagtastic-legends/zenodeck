@@ -7,12 +7,51 @@
  */
 
 import { motion } from "framer-motion";
-import { Check, Copy, Palette, UploadCloud, X } from "lucide-react";
+import { Check, Copy, Palette, UploadCloud, X, Sparkles, Download } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { ParamSelect } from "@/components/audio/param-controls";
 import { useToast } from "@/hooks/use-toast";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { formatBytes } from "@/lib/format";
+
+const PALETTE_PRESETS: PresetItem[] = [
+  {
+    id: "minimal-5",
+    title: "Minimal 5-Color Harmony",
+    subtitle: "Dominant primary, secondary, and accent colors for brand kits",
+    category: "Branding",
+    badge: "5 SWATCHES",
+    badgeColor: "emerald",
+    engineTier: "turbo",
+    params: { size: "5" },
+    config: { size: "5" },
+  },
+  {
+    id: "balanced-8",
+    title: "Balanced 8-Tone Scale",
+    subtitle: "Comprehensive UI color scheme with lights, darks, and accents",
+    category: "UI Design",
+    badge: "8 SWATCHES",
+    badgeColor: "cyan",
+    engineTier: "high",
+    params: { size: "8" },
+    config: { size: "8" },
+  },
+  {
+    id: "detailed-12",
+    title: "Deep 12-Shade Spectrum",
+    subtitle: "Full photographic gamut extraction for illustrations and digital art",
+    category: "Artwork",
+    badge: "12 SWATCHES",
+    badgeColor: "violet",
+    engineTier: "ultra",
+    params: { size: "12" },
+    config: { size: "12" },
+  },
+];
 
 interface Swatch {
   hex: string;
@@ -126,9 +165,41 @@ export function PaletteExtractor() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
 
   const dragDepth = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      if (f.type.startsWith("image/")) {
+        acceptFile(f);
+      }
+    }
+  }, []);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config?.size) {
+      changeSize(String(p.config.size));
+    }
+  };
+
+  const exportPaletteJson = () => {
+    if (swatches.length === 0) return;
+    const jsonStr = JSON.stringify(sortedSwatches, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const name = file ? `${file.name.replace(/\.[^/.]+$/, "")}-palette.json` : "palette.json";
+    useSaveDialogStore.getState().showSuccess({
+      filename: name,
+      directory: "Documents",
+      fileSize: blob.size,
+      blob,
+    });
+  };
 
   useEffect(() => {
     return () => {
@@ -303,6 +374,18 @@ export function PaletteExtractor() {
           </div>
         )}
 
+        <div className="flex items-center justify-between pb-1 border-b border-border/40">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Extraction Palette</p>
+          <button
+            type="button"
+            onClick={() => setIsPresetModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-[10px] font-mono font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+          >
+            <Sparkles className="size-3" />
+            <span>PRESETS</span>
+          </button>
+        </div>
+
         <ParamSelect
           label="Palette size"
           value={size}
@@ -357,6 +440,18 @@ export function PaletteExtractor() {
               ))}
             </div>
 
+            <div className="flex items-center justify-between pt-1">
+              <span className="font-mono text-[10px] uppercase text-muted-foreground">Sorted Swatches ({sortedSwatches.length})</span>
+              <button
+                type="button"
+                onClick={exportPaletteJson}
+                className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-[10px] font-mono font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+              >
+                <Download className="size-3" />
+                <span>SAVE PALETTE JSON</span>
+              </button>
+            </div>
+
             <ul className="scroll-hud grid max-h-96 gap-2 overflow-y-auto pr-1" aria-label="Extracted palette">
               {sortedSwatches.map((s, i) => (
                 <motion.li
@@ -405,6 +500,18 @@ export function PaletteExtractor() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="palette-extractor"
+        toolTitle="Palette Extraction Profiles"
+        subtitle="Quantization depth and swatch count configurations"
+        presets={PALETTE_PRESETS}
+        selectedPresetId={PALETTE_PRESETS.find(p => p.config?.size === size)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ size }}
+      />
     </div>
   );
 }

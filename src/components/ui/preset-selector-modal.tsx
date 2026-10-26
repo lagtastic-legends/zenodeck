@@ -8,6 +8,7 @@ import {
   Sliders,
   Pin,
   PinOff,
+  Star,
   Trash2,
   Plus,
   Check,
@@ -19,38 +20,53 @@ import {
 } from "lucide-react";
 import { useHaptics } from "@/hooks/use-haptics";
 
-export type PresetCategory = "all" | "recommended" | "social" | "studio" | "custom";
+export type PresetCategory = "all" | "recommended" | "social" | "studio" | "custom" | string;
 
 export type ExecutionTier =
   | "Tier 1: FastCopy"
   | "Tier 2: Media3 HW"
   | "Tier 3: WebCodecs"
-  | "Tier 4: Wasm MT";
+  | "Tier 4: Wasm MT"
+  | "turbo"
+  | "high"
+  | "standard"
+  | "ultra"
+  | string;
 
 export interface PresetItem {
   id: string;
-  name: string;
-  description: string;
-  category: "recommended" | "social" | "studio" | "custom";
-  engineTier: ExecutionTier;
-  chips: string[];
+  name?: string;
+  title?: string;
+  description?: string;
+  subtitle?: string;
+  category: "recommended" | "social" | "studio" | "custom" | string;
+  engineTier?: ExecutionTier;
+  chips?: string[];
   params: Record<string, any>;
+  config?: Record<string, any>;
+  badge?: string;
+  badgeColor?: string;
   isPinned?: boolean;
   isCustom?: boolean;
 }
 
-interface PresetSelectorModalProps {
+export interface PresetSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   toolId: string;
   toolTitle: string;
-  builtinPresets: PresetItem[];
+  subtitle?: string;
+  builtinPresets?: PresetItem[];
+  presets?: PresetItem[];
   activePresetId?: string;
+  selectedPresetId?: string;
   onSelectPreset: (preset: PresetItem) => void;
   currentSettings?: Record<string, any>;
+  currentConfig?: Record<string, any>;
+  onSaveCustomPreset?: (preset: PresetItem) => void;
 }
 
-const TIER_STYLES: Record<ExecutionTier, { bg: string; text: string; border: string }> = {
+const TIER_STYLES: Record<string, { bg: string; text: string; border: string }> = {
   "Tier 1: FastCopy": {
     bg: "bg-emerald-500/10",
     text: "text-emerald-400",
@@ -71,6 +87,26 @@ const TIER_STYLES: Record<ExecutionTier, { bg: string; text: string; border: str
     text: "text-amber-400",
     border: "border-amber-500/30",
   },
+  turbo: {
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-400",
+    border: "border-emerald-500/30",
+  },
+  high: {
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-400",
+    border: "border-cyan-400/30",
+  },
+  standard: {
+    bg: "bg-amber-500/10",
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+  },
+  ultra: {
+    bg: "bg-violet-500/10",
+    text: "text-violet-400",
+    border: "border-violet-500/30",
+  },
 };
 
 export function PresetSelectorModal({
@@ -78,11 +114,19 @@ export function PresetSelectorModal({
   onClose,
   toolId,
   toolTitle,
+  subtitle,
   builtinPresets,
+  presets,
   activePresetId,
+  selectedPresetId,
   onSelectPreset,
   currentSettings,
+  currentConfig,
+  onSaveCustomPreset,
 }: PresetSelectorModalProps) {
+  const effectivePresets = builtinPresets || presets || [];
+  const effectiveActiveId = activePresetId || selectedPresetId;
+  const effectiveSettings = currentSettings || currentConfig;
   const haptics = useHaptics();
   const [activeCategory, setActiveCategory] = useState<PresetCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,6 +138,7 @@ export function PresetSelectorModal({
 
   const storageKeyCustom = `zeno_custom_presets_${toolId}`;
   const storageKeyPinned = `zeno_pinned_presets_${toolId}`;
+  const storageKeyGlobalFav = "zeno_fav_presets";
 
   // Load custom presets & pinned IDs from localStorage
   useEffect(() => {
@@ -104,9 +149,11 @@ export function PresetSelectorModal({
         setCustomPresets(JSON.parse(rawCustom));
       }
       const rawPinned = localStorage.getItem(storageKeyPinned);
-      if (rawPinned) {
-        setPinnedIds(JSON.parse(rawPinned));
-      }
+      const rawFav = localStorage.getItem(storageKeyGlobalFav);
+      const mergedPinned = new Set<string>();
+      if (rawPinned) JSON.parse(rawPinned).forEach((id: string) => mergedPinned.add(id));
+      if (rawFav) JSON.parse(rawFav).forEach((id: string) => mergedPinned.add(id));
+      setPinnedIds(Array.from(mergedPinned));
     } catch (e) {
       console.warn("Failed to load custom presets:", e);
     }
@@ -117,6 +164,10 @@ export function PresetSelectorModal({
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(storageKeyCustom, JSON.stringify(items));
+        // Also update general custom preset directory
+        const allCustomMap = JSON.parse(localStorage.getItem("zeno_custom_presets") || "{}");
+        allCustomMap[toolId] = items;
+        localStorage.setItem("zeno_custom_presets", JSON.stringify(allCustomMap));
       } catch (e) {
         console.warn("Failed to persist custom presets:", e);
       }
@@ -128,6 +179,7 @@ export function PresetSelectorModal({
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(storageKeyPinned, JSON.stringify(ids));
+        localStorage.setItem(storageKeyGlobalFav, JSON.stringify(ids));
       } catch (e) {
         console.warn("Failed to persist pinned presets:", e);
       }
@@ -164,17 +216,18 @@ export function PresetSelectorModal({
       description: customDesc.trim() || "User defined custom studio profile",
       category: "custom",
       engineTier: "Tier 1: FastCopy",
-      chips: currentSettings
-        ? Object.entries(currentSettings)
-            .filter(([_, v]) => typeof v === "string" || typeof v === "number")
+      chips: effectiveSettings
+        ? Object.entries(effectiveSettings)
+            .filter(([_, v]) => typeof v === "string" || typeof v === "number" || typeof v === "boolean")
             .slice(0, 4)
             .map(([k, v]) => `${k}: ${v}`)
         : ["Custom Preset"],
-      params: currentSettings || {},
+      params: effectiveSettings || {},
       isCustom: true,
     };
 
     saveCustomPresetsToDisk([newPreset, ...customPresets]);
+    onSaveCustomPreset?.(newPreset);
     setCustomName("");
     setCustomDesc("");
     setIsCreatingCustom(false);
@@ -183,7 +236,7 @@ export function PresetSelectorModal({
 
   // Combine and sort presets
   const allPresets = useMemo(() => {
-    const list = [...customPresets, ...builtinPresets].map((p) => ({
+    const list = [...customPresets, ...effectivePresets].map((p) => ({
       ...p,
       isPinned: pinnedIds.includes(p.id),
     }));
@@ -193,7 +246,7 @@ export function PresetSelectorModal({
       if (!a.isPinned && b.isPinned) return 1;
       return 0;
     });
-  }, [customPresets, builtinPresets, pinnedIds]);
+  }, [customPresets, effectivePresets, pinnedIds]);
 
   const filteredPresets = useMemo(() => {
     return allPresets.filter((item) => {
@@ -204,11 +257,15 @@ export function PresetSelectorModal({
           ? item.isCustom
           : item.category === activeCategory;
 
+      const nameStr = (item.name || item.title || "").toLowerCase();
+      const descStr = (item.description || item.subtitle || "").toLowerCase();
+      const chips = item.chips || (item.config ? Object.entries(item.config).map(([k, v]) => `${k}: ${v}`) : []);
+
       const matchSearch =
         searchQuery.trim() === "" ||
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.chips.some((c) => c.toLowerCase().includes(searchQuery.toLowerCase()));
+        nameStr.includes(searchQuery.toLowerCase()) ||
+        descStr.includes(searchQuery.toLowerCase()) ||
+        chips.some((c) => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
       return matchCat && matchSearch;
     });
@@ -219,25 +276,29 @@ export function PresetSelectorModal({
       isOpen={isOpen}
       onClose={onClose}
       title={`${toolTitle} Presets`}
-      subtitle="Hardware-grade profiles & custom workflows"
+      subtitle={subtitle || "Hardware-grade profiles & custom workflows"}
       icon={<Zap className="size-5" />}
       maxWidthClassName="sm:max-w-xl"
       overlayId={`preset-modal-${toolId}`}
       footer={
-        <div className="flex items-center justify-between gap-3">
-          {currentSettings && (
-            <button
-              type="button"
-              onClick={() => {
-                haptics.impact("light");
-                setIsCreatingCustom((prev) => !prev);
-              }}
-              className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 font-mono text-xs text-primary hover:bg-primary/20 transition-all cursor-pointer"
-            >
-              <Plus className="size-3.5" />
-              <span>{isCreatingCustom ? "Cancel New Preset" : "Save Current Settings as Preset"}</span>
-            </button>
-          )}
+        <div className="flex items-center justify-between gap-3 w-full">
+          <button
+            type="button"
+            onClick={() => {
+              haptics.impact("light");
+              setIsCreatingCustom((prev) => !prev);
+            }}
+            className="flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 font-mono text-xs text-primary hover:bg-primary/20 transition-all cursor-pointer"
+          >
+            <Plus className="size-3.5" />
+            <span>
+              {isCreatingCustom
+                ? "Cancel Custom Preset"
+                : effectiveSettings
+                  ? "Save Current Settings as Preset"
+                  : "+ Create Custom Preset"}
+            </span>
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -349,8 +410,16 @@ export function PresetSelectorModal({
             </div>
           ) : (
             filteredPresets.map((preset) => {
-              const isSelected = activePresetId === preset.id;
-              const tierStyle = TIER_STYLES[preset.engineTier] || TIER_STYLES["Tier 1: FastCopy"];
+              const isSelected = effectiveActiveId === preset.id;
+              const tierKey = preset.engineTier || "Tier 1: FastCopy";
+              const tierStyle = TIER_STYLES[tierKey] || TIER_STYLES["Tier 1: FastCopy"];
+              const displayName = preset.name || preset.title || preset.id;
+              const displayDesc = preset.description || preset.subtitle || "";
+              const displayChips = (preset.chips && preset.chips.length > 0)
+                ? preset.chips
+                : preset.config
+                ? Object.entries(preset.config).map(([k, v]) => `${k}: ${v}`)
+                : [];
 
               return (
                 <div
@@ -369,7 +438,7 @@ export function PresetSelectorModal({
                   <div className="min-w-0 space-y-1.5 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-display text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                        {preset.name}
+                        {displayName}
                       </span>
 
                       {/* Engine Tier Badge */}
@@ -377,7 +446,7 @@ export function PresetSelectorModal({
                         className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider border ${tierStyle.bg} ${tierStyle.text} ${tierStyle.border}`}
                       >
                         <Cpu className="size-2.5" />
-                        {preset.engineTier}
+                        {preset.badge || preset.engineTier || "Profile"}
                       </span>
 
                       {preset.isCustom && (
@@ -387,14 +456,16 @@ export function PresetSelectorModal({
                       )}
                     </div>
 
-                    <p className="font-mono text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                      {preset.description}
-                    </p>
+                    {displayDesc && (
+                      <p className="font-mono text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                        {displayDesc}
+                      </p>
+                    )}
 
                     {/* Parameter Chips */}
-                    {preset.chips.length > 0 && (
+                    {displayChips.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        {preset.chips.map((chip, idx) => (
+                        {displayChips.map((chip, idx) => (
                           <span
                             key={idx}
                             className="inline-flex items-center rounded-md border border-border/50 bg-secondary/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
@@ -411,14 +482,14 @@ export function PresetSelectorModal({
                     <button
                       type="button"
                       onClick={(e) => handleTogglePin(preset.id, e)}
-                      title={preset.isPinned ? "Unpin preset" : "Pin preset to top"}
+                      title={preset.isPinned ? "Remove from starred favorites" : "Star & pin preset to top"}
                       className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                         preset.isPinned
-                          ? "border-amber-500/50 bg-amber-500/15 text-amber-400"
-                          : "border-transparent text-muted-foreground/40 hover:text-muted-foreground hover:border-border/60"
+                          ? "border-amber-500/60 bg-amber-500/20 text-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.3)]"
+                          : "border-transparent text-muted-foreground/40 hover:text-amber-400 hover:border-amber-500/30 hover:bg-amber-500/10"
                       }`}
                     >
-                      {preset.isPinned ? <Pin className="size-3.5 fill-current" /> : <PinOff className="size-3.5" />}
+                      <Star className={`size-3.5 ${preset.isPinned ? "fill-amber-400 text-amber-400" : ""}`} />
                     </button>
 
                     {preset.isCustom && (

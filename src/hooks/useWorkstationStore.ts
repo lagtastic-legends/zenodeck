@@ -6,18 +6,29 @@ export type WorkstationLayoutMode = "standard" | "wide" | "focus";
 export type InspectorTab = "stdout" | "hardware" | "specs";
 export type InspectorWidth = "standard" | "wide";
 
+export interface HandoffPayload {
+  file: File | Blob;
+  filename: string;
+  mimeType: string;
+  sourceTool?: string;
+  timestamp: number;
+}
+
 interface WorkstationState {
   sidebarCollapsed: boolean;
   inspectorCollapsed: boolean;
   inspectorTab: InspectorTab;
   inspectorWidth: InspectorWidth;
   layoutMode: WorkstationLayoutMode;
+  handoffFile: HandoffPayload | null;
 
   setSidebarCollapsed: (collapsed: boolean) => void;
   setInspectorCollapsed: (collapsed: boolean) => void;
   setInspectorTab: (tab: InspectorTab) => void;
   setInspectorWidth: (width: InspectorWidth) => void;
   setLayoutMode: (mode: WorkstationLayoutMode) => void;
+  setHandoffFile: (payload: HandoffPayload | null) => void;
+  consumeHandoffFile: () => HandoffPayload | null;
   toggleSidebar: () => void;
   toggleInspector: () => void;
   toggleFocusMode: () => void;
@@ -29,6 +40,17 @@ export const useWorkstationStore = create<WorkstationState>((set, get) => ({
   inspectorTab: "stdout",
   inspectorWidth: "standard",
   layoutMode: "standard",
+  handoffFile: null,
+
+  setHandoffFile: (payload) => set({ handoffFile: payload }),
+
+  consumeHandoffFile: () => {
+    const current = get().handoffFile;
+    if (current) {
+      set({ handoffFile: null });
+    }
+    return current;
+  },
 
   setSidebarCollapsed: (collapsed) => {
     set((state) => ({

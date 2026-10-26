@@ -9,8 +9,8 @@
  */
 
 import { motion } from "framer-motion";
-import { ImagePlay, Check } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ImagePlay, Check, Sparkles, SlidersHorizontal } from "lucide-react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
 import { ProcessingStatus } from "@/components/media/processing-status";
@@ -23,8 +23,58 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useMediaJob } from "@/hooks/use-media-job";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
 import type { VideoMeta } from "@/lib/media/probe";
+
+const GIF_PRESETS: PresetItem[] = [
+  {
+    id: "zenotap-sticker",
+    title: "ZenoTap Sticker (<15KB)",
+    subtitle: "Ultra-compact 240px 10fps loop tuned for keyboard decks",
+    category: "Micro-Loop",
+    badge: "IME READY",
+    badgeColor: "emerald",
+    engineTier: "turbo",
+    params: { fps: "10", width: "240", loop: "infinite" },
+    config: { fps: "10", width: "240", loop: "infinite" },
+  },
+  {
+    id: "discord-nitro",
+    title: "Discord Nitro Bypass (<10MB)",
+    subtitle: "480px 15fps crisp animation under 10MB upload limit",
+    category: "HD Social",
+    badge: "1080P COMPAT",
+    badgeColor: "violet",
+    engineTier: "high",
+    params: { fps: "15", width: "480", loop: "infinite" },
+    config: { fps: "15", width: "480", loop: "infinite" },
+  },
+  {
+    id: "smooth-24",
+    title: "Smooth 24FPS Cinematic",
+    subtitle: "High framerate fluid animation at 320px",
+    category: "High FPS",
+    badge: "FLUID",
+    badgeColor: "cyan",
+    engineTier: "ultra",
+    params: { fps: "24", width: "320", loop: "infinite" },
+    config: { fps: "24", width: "320", loop: "infinite" },
+  },
+  {
+    id: "retro-dither",
+    title: "Retro Dither Looper",
+    subtitle: "8fps 240px stylized lo-fi aesthetic",
+    category: "Stylized",
+    badge: "LO-FI",
+    badgeColor: "amber",
+    engineTier: "standard",
+    params: { fps: "8", width: "240", loop: "infinite" },
+    config: { fps: "8", width: "240", loop: "infinite" },
+  },
+];
 
 const FPS_OPTIONS = ["8", "10", "12", "15", "20", "24"] as const;
 const WIDTH_OPTIONS = [
@@ -45,6 +95,41 @@ export function GifMaker() {
   const [fps, setFps] = useState<string>("15");
   const [width, setWidth] = useState<string>("480");
   const [loop, setLoop] = useState<string>("infinite");
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const notifiedOutputRef = useRef<string | null>(null);
+
+  const output = outputs[0] ?? null;
+  const outputName = file ? `${baseName(file.name)}.gif` : "clip.gif";
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      setFile(f);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (output && phase === "done" && notifiedOutputRef.current !== output.name) {
+      notifiedOutputRef.current = output.name;
+      useSaveDialogStore.getState().showSuccess({
+        filename: output.name,
+        directory: "Download",
+        fileSize: output.size,
+        blob: output.blob,
+      });
+    }
+  }, [output, phase]);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config) {
+      if (p.config.fps) setFps(String(p.config.fps));
+      if (p.config.width) setWidth(String(p.config.width));
+      if (p.config.loop) setLoop(String(p.config.loop));
+    }
+  };
 
   /* Range is reset whenever a new file is probed (via callback, not effect). */
   const handleProbed = (m: VideoMeta) => {
@@ -57,9 +142,6 @@ export function GifMaker() {
   const clipLength = Math.max(end - start, 0);
   const validRange = duration > 0 && clipLength >= 0.5;
   const estFrames = Math.round(clipLength * Number(fps));
-
-  const output = outputs[0] ?? null;
-  const outputName = file ? `${baseName(file.name)}.gif` : "clip.gif";
 
   const setRangePreset = (preset: "full" | "first5" | "last5") => {
     if (!duration) return;
@@ -149,9 +231,19 @@ export function GifMaker() {
         {/* time range */}
         <div className="space-y-3.5 rounded-xl border border-border/60 bg-card/40 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Time range
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Time range
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsPresetModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+              >
+                <Sparkles className="size-3" />
+                <span>PRESETS</span>
+              </button>
+            </div>
             <div className="flex gap-1.5">
               {chips.map((c) => {
                 const isSelected =
@@ -305,6 +397,18 @@ export function GifMaker() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="gif-maker"
+        toolTitle="GIF & Sticker Presets"
+        subtitle="Curated animation & sticker rendering profiles"
+        presets={GIF_PRESETS}
+        selectedPresetId={GIF_PRESETS.find(p => p.config?.fps === fps && p.config?.width === width)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ fps, width, loop }}
+      />
     </div>
   );
 }

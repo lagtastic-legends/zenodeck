@@ -7,7 +7,7 @@
  */
 
 import { motion } from "framer-motion";
-import { Camera, CameraOff, ScanLine, Wand2 } from "lucide-react";
+import { Camera, CameraOff, ScanLine, Wand2, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ImageQueue, type QueuedImage } from "@/components/documents/image-queue";
 import { PageOptions } from "@/components/documents/page-options";
@@ -15,6 +15,9 @@ import { ParamPanel, ParamToggle } from "@/components/audio/param-controls";
 import { OutputCard } from "@/components/media/output-card";
 import { useToast } from "@/hooks/use-toast";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import type { JobOutput } from "@/hooks/use-media-job";
 import { Capacitor } from "@capacitor/core";
 import { ensureCameraPermission, openAppSettings } from "@/lib/permissions";
@@ -25,6 +28,42 @@ import {
   type Margin,
   type PageSize,
 } from "@/lib/documents/pdf";
+
+const SCAN_DOCUMENT_PRESETS: PresetItem[] = [
+  {
+    id: "scan-high-contrast",
+    title: "Document High Contrast",
+    subtitle: "A4 with enhanced contrast lift & edge margins for receipt/invoice clarity",
+    category: "Scans",
+    badge: "CONTRAST+",
+    badgeColor: "emerald",
+    engineTier: "turbo",
+    params: { enhance: true, pageSize: "a4", margin: "edge" },
+    config: { enhance: true, pageSize: "a4", margin: "edge" },
+  },
+  {
+    id: "scan-lossless-raw",
+    title: "Raw Flatbed Scanner",
+    subtitle: "No artificial contrast enhancement, preserving pencil & color accuracy",
+    category: "Archival",
+    badge: "ORIGINAL",
+    badgeColor: "cyan",
+    engineTier: "standard",
+    params: { enhance: false, pageSize: "a4", margin: "normal" },
+    config: { enhance: false, pageSize: "a4", margin: "normal" },
+  },
+  {
+    id: "scan-compact-receipt",
+    title: "Mobile Compact Receipt",
+    subtitle: "Narrow margins fitted for phone cameras and receipts",
+    category: "Receipts",
+    badge: "COMPACT",
+    badgeColor: "violet",
+    engineTier: "high",
+    params: { enhance: true, pageSize: "a4", margin: "narrow" },
+    config: { enhance: true, pageSize: "a4", margin: "narrow" },
+  },
+];
 
 type Status = "idle" | "working" | "done" | "error";
 type CameraState = "off" | "starting" | "live" | "denied";
@@ -42,6 +81,34 @@ export function ScanToPdf() {
   const [output, setOutput] = useState<JobOutput | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [camera, setCamera] = useState<CameraState>("off");
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      if (f.type.startsWith("image/")) {
+        setPages((prev) => [
+          ...prev,
+          {
+            id: `scan-${++uid}`,
+            file: f,
+            previewUrl: URL.createObjectURL(f),
+          },
+        ]);
+      }
+    }
+  }, []);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config) {
+      if (typeof p.config.enhance === "boolean") setEnhance(p.config.enhance);
+      if (p.config.pageSize) setPageSize(p.config.pageSize as PageSize);
+      if (p.config.margin) setMargin(p.config.margin as Margin);
+    }
+  };
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -212,6 +279,12 @@ export function ScanToPdf() {
       setOutput(buildPdfOutput("omni-scan.pdf", blob));
       setPageCount(n);
       setStatus("done");
+      useSaveDialogStore.getState().showSuccess({
+        filename: "omni-scan.pdf",
+        directory: "Documents",
+        fileSize: blob.size,
+        blob,
+      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : String(err ?? "compile failed");
@@ -312,6 +385,17 @@ export function ScanToPdf() {
         />
 
         <ParamPanel title="scan processing">
+          <div className="flex items-center justify-between pb-1 border-b border-border/40">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Scan Profiles</span>
+            <button
+              type="button"
+              onClick={() => setIsPresetModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+            >
+              <Sparkles className="size-3" />
+              <span>PRESETS</span>
+            </button>
+          </div>
           <ParamToggle
             label="Enhance pages"
             checked={enhance}
@@ -380,6 +464,18 @@ export function ScanToPdf() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="scan-to-pdf"
+        toolTitle="Scan & OCR Profiles"
+        subtitle="Contrast enhancement and margins for camera scans"
+        presets={SCAN_DOCUMENT_PRESETS}
+        selectedPresetId={SCAN_DOCUMENT_PRESETS.find(p => p.config?.enhance === enhance && p.config?.pageSize === pageSize)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ enhance, pageSize, margin }}
+      />
     </div>
   );
 }

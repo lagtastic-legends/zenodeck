@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.7">
-    <img src="https://img.shields.io/badge/Release-v1.0.7-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.7" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.8">
+    <img src="https://img.shields.io/badge/Release-v1.0.8-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.8" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.8/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,28 +46,28 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.7 (Short & Sweet — Parallel Chunk Acceleration & Zero-Desync Muxing)
+## 💎 What's New in v1.0.8 (38-Module Preset Unification, Pipeline Handoff & Privacy Shield Lock)
 
-ZenoDeck v1.0.7 delivers a high-performance acceleration and synchronization overhaul across the **Universal Media Downloader**:
+ZenoDeck v1.0.8 delivers full architectural unification across all 38 studio modules:
 
-- 🚀 **Parallel Multi-Worker Chunk Engine**: Concurrent coroutine stream fetching with thread-safe `FileChannel` positional writing, bypassing single-connection CDN throttling and delivering significantly accelerated transfer rates.
-- 🎬 **Chronologically Interleaved A/V Muxing**: True presentation timestamp (PTS) sample interleaving in native `MediaMuxer` with baseline zero-anchoring (`presentationTimeUs -= basePts`), completely eliminating audio desync and playback drift in 4K/1080p downloads.
-- 📡 **Anti-Oscillation Linear CDN Failover**: Monotonic edge candidate rotation across all fallback nodes (`lastObservedPreferred`) with 2.5s connect timeouts and sticky latching, eliminating retry stalls during edge node drops.
-- 🔍 **Multi-Platform Stream Sizer & Fallbacks**: Non-blocking HEAD/Range probing with LRU caching (`stream-sizer.ts`) and secondary HTML/regex fallback extractors across TikTok, Instagram Reels, Twitter/X, and Reddit.
-- 🧪 **217-Test Opaque-Box E2E Suite**: 100% pass rate across 4 tiers covering feature coverage, corner cases, cross-feature combinations, and real-world media downloads.
+- 🎛️ **Full 38-Module Preset Unification**: Standardized `<PresetSelectorModal>` across all video, audio, document, and imaging tools. Featuring 1-tap **Favorite Pinning (`⭐`)** and custom user preset authoring (**`+ Save Current Settings`**).
+- 🔄 **In-Memory Cross-Tool Pipeline Handoff**: Direct zero-copy handoff across Studio tools via `useWorkstationStore`. Pass finished downloads, converted audio, and exported frames into 8D Studio, GIF Maker, Compressor, or PDF Forge without re-uploading.
+- 🛡️ **Interactive TopBar Privacy Shield (`🛡️`)**: Direct in-place overlay showing live hardware permission badges (`GRANTED` / `REQUEST` / `ACTION NEEDED` / `READY`), ZenoTap native IME bridge detection, and 1-tap OPFS temporary storage purging.
+- 📄 **Document & Imaging Forge Overhaul**: Native preset selectors, OPFS caching, and unified `SaveResultModal` verification integrated across `image-to-pdf`, `text-to-pdf`, `lock-pdf`, `scan-to-pdf`, `gif-maker`, `video-mute`, `watermark-remover`, `ascii-generator`, and `palette-extractor`.
+- 🧪 **217-Test Full Verification Suite**: 100% pass rate across core algorithms, security sanitizers, and hardware bridges.
 
 ---
 
-## 🚀 Download & Installation (v1.0.7)
+## 🚀 Download & Installation (v1.0.8)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.7/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.8/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.8/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.8/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.8/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 

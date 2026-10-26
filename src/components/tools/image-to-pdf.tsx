@@ -6,7 +6,7 @@
  */
 
 import { motion } from "framer-motion";
-import { FileImage } from "lucide-react";
+import { FileImage, Sparkles } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { ImageQueue, type QueuedImage } from "@/components/documents/image-queue";
 import { PdfVisualDeck } from "@/components/tools/pdf-visual-deck";
@@ -15,6 +15,9 @@ import { ParamPanel } from "@/components/audio/param-controls";
 import { OutputCard } from "@/components/media/output-card";
 import { useToast } from "@/hooks/use-toast";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import type { JobOutput } from "@/hooks/use-media-job";
 import { formatBytes } from "@/lib/format";
 import {
@@ -23,6 +26,53 @@ import {
   type Margin,
   type PageSize,
 } from "@/lib/documents/pdf";
+
+const DOCUMENT_PRESETS: PresetItem[] = [
+  {
+    id: "a4-print-ready",
+    title: "A4 Print Ready 300 DPI",
+    subtitle: "Standard ISO A4 layout with normal 20mm margins for print",
+    category: "Print & Office",
+    badge: "PRINT READY",
+    badgeColor: "emerald",
+    engineTier: "turbo",
+    params: { pageSize: "a4", margin: "normal" },
+    config: { pageSize: "a4", margin: "normal" },
+  },
+  {
+    id: "mobile-compact",
+    title: "Mobile Compact Reader",
+    subtitle: "Minimal 5mm margins optimized for reading on phones & tablets",
+    category: "Mobile",
+    badge: "COMPACT",
+    badgeColor: "cyan",
+    engineTier: "high",
+    params: { pageSize: "a4", margin: "narrow" },
+    config: { pageSize: "a4", margin: "narrow" },
+  },
+  {
+    id: "archival-portfolio",
+    title: "Archival Lossless Portfolio",
+    subtitle: "Zero-margin canvas fitted directly to source image dimensions",
+    category: "Archival",
+    badge: "LOSSLESS",
+    badgeColor: "violet",
+    engineTier: "ultra",
+    params: { pageSize: "fit", margin: "none" },
+    config: { pageSize: "fit", margin: "none" },
+  },
+  {
+    id: "high-sec-confidential",
+    title: "High-Security Confidential",
+    subtitle: "US Letter format with wide margins for legal and confidential binders",
+    category: "Security",
+    badge: "CONFIDENTIAL",
+    badgeColor: "amber",
+    engineTier: "standard",
+    params: { pageSize: "letter", margin: "wide" },
+    config: { pageSize: "letter", margin: "wide" },
+  },
+];
 
 type Status = "idle" | "working" | "done" | "error";
 
@@ -37,6 +87,33 @@ export function ImageToPdf() {
   const [error, setError] = useState<string | null>(null);
   const [output, setOutput] = useState<JobOutput | null>(null);
   const [pageCount, setPageCount] = useState(0);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType });
+      if (f.type.startsWith("image/")) {
+        setImages((prev) => [
+          ...prev,
+          {
+            id: `img-${++uid}`,
+            file: f,
+            previewUrl: URL.createObjectURL(f),
+          },
+        ]);
+      }
+    }
+  }, []);
+
+  const handleApplyPreset = (p: PresetItem) => {
+    if (p.config) {
+      if (p.config.pageSize) setPageSize(p.config.pageSize as PageSize);
+      if (p.config.margin) setMargin(p.config.margin as Margin);
+    }
+  };
 
   const busy = status === "working";
 
@@ -143,6 +220,12 @@ export function ImageToPdf() {
       setOutput(buildPdfOutput("omni-images.pdf", blob));
       setPageCount(pages);
       setStatus("done");
+      useSaveDialogStore.getState().showSuccess({
+        filename: "omni-images.pdf",
+        directory: "Documents",
+        fileSize: blob.size,
+        blob,
+      });
       toast({
         title: "PDF compiled",
         description: `${pages} page${pages === 1 ? "" : "s"} · ${(blob.size / 1024).toFixed(0)} KB`,
@@ -195,6 +278,17 @@ export function ImageToPdf() {
         )}
 
         <ParamPanel title="document setup">
+          <div className="flex items-center justify-between pb-1 border-b border-border/40">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Document Layout</span>
+            <button
+              type="button"
+              onClick={() => setIsPresetModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-mono font-bold text-primary hover:bg-primary/20 transition-all cursor-pointer"
+            >
+              <Sparkles className="size-3" />
+              <span>PRESETS</span>
+            </button>
+          </div>
           <PageOptions
             pageSize={pageSize}
             onPageSize={setPageSize}
@@ -260,6 +354,18 @@ export function ImageToPdf() {
           </div>
         )}
       </div>
+
+      <PresetSelectorModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        toolId="image-to-pdf"
+        toolTitle="Document Presets"
+        subtitle="Standardized layout and margin profiles"
+        presets={DOCUMENT_PRESETS}
+        selectedPresetId={DOCUMENT_PRESETS.find(p => p.config?.pageSize === pageSize && p.config?.margin === margin)?.id}
+        onSelectPreset={handleApplyPreset}
+        currentConfig={{ pageSize, margin }}
+      />
     </div>
   );
 }
