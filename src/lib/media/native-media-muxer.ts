@@ -29,6 +29,8 @@ export interface ZenoMedia3PluginInterface {
     videoUrl: string;
     audioUrl?: string;
     userAgent?: string;
+    audioUserAgent?: string;
+    fallbackVideoUrl?: string;
     outputFileName: string;
     approxSizeBytes?: number;
   }): Promise<{ success: boolean; outputPath: string; fileSizeBytes: number; filename: string }>;
@@ -195,6 +197,8 @@ export async function executeNativeYouTubeDownload({
   videoUrl,
   audioUrl,
   userAgent,
+  audioUserAgent,
+  fallbackVideoUrl,
   outputFilename,
   approxSizeBytes,
   onProgress,
@@ -203,6 +207,8 @@ export async function executeNativeYouTubeDownload({
   videoUrl: string;
   audioUrl?: string;
   userAgent?: string;
+  audioUserAgent?: string;
+  fallbackVideoUrl?: string;
   outputFilename: string;
   approxSizeBytes?: number;
   onProgress?: (data: {
@@ -242,6 +248,8 @@ export async function executeNativeYouTubeDownload({
       videoUrl,
       audioUrl: audioUrl || undefined,
       userAgent: userAgent || undefined,
+      audioUserAgent: audioUserAgent || undefined,
+      fallbackVideoUrl: fallbackVideoUrl || undefined,
       outputFileName: outputFilename,
       approxSizeBytes: approxSizeBytes || 0,
     });

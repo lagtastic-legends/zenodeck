@@ -297,11 +297,11 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
             muxer.start()
 
-            // Safe direct buffer for sample streaming
+            // Safe direct buffer for sample streaming — 8MB floor for 4K 60FPS keyframes
             val maxBufferSize = maxOf(
-                videoFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 1024 * 1024),
-                audioFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 512 * 1024),
-                1024 * 1024
+                videoFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 8 * 1024 * 1024),
+                audioFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 1024 * 1024),
+                8 * 1024 * 1024
             )
             val buffer = ByteBuffer.allocateDirect(maxBufferSize)
             val bufferInfo = MediaCodec.BufferInfo()
@@ -333,7 +333,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     }
                     val rawPts = videoExtractor.sampleTime
                     var pts = maxOf(0L, rawPts - videoBasePts)
-                    if (isWebmTarget && pts <= lastVideoPts) {
+                    if (pts <= lastVideoPts) {
                         pts = lastVideoPts + 100L
                     }
                     lastVideoPts = pts
@@ -639,7 +639,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         destinationFile: File,
         isCancelled: () -> Boolean = { false },
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
-    ): Result<File> = downloadStreamDirectToFile(streamUrl, userAgent, destinationFile, isCancelled, 0, onProgress)
+    ): Result<File> = downloadStreamDirectToFile(streamUrl, userAgent, destinationFile, isCancelled, 0, -1L, onProgress)
 
     fun downloadStreamDirectToFile(
         streamUrl: String,
@@ -647,6 +647,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         destinationFile: File,
         isCancelled: () -> Boolean = { false },
         maxWorkers: Int = 0,
+        expectedTotalBytes: Long = -1L,
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit
     ): Result<File> {
         destinationFile.parentFile?.mkdirs()
@@ -771,15 +772,17 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         if (clenMatch != null) {
             totalBytes = clenMatch.groupValues[1].toLongOrNull() ?: -1L
         }
+        if (totalBytes <= 0L && expectedTotalBytes > 0L) {
+            totalBytes = expectedTotalBytes
+        }
 
         // Candidate URLs for edge failover
         val candidateUrls = getCandidateUrls(streamUrl)
 
         // High-Throughput Adaptive Chunking:
-        // Use 8MB for large streams (>40MB), 4MB for medium streams (>10MB), and 2MB for smaller streams
+        // Use 4MB for medium/large streams (>25MB) for 4K 60FPS throughput, and 2MB for smaller streams
         fun getOptimalChunkSize(knownTotal: Long): Long = when {
-            knownTotal > 40L * 1024L * 1024L -> 8L * 1024L * 1024L
-            knownTotal > 10L * 1024L * 1024L -> 4L * 1024L * 1024L
+            knownTotal > 25L * 1024L * 1024L -> 4L * 1024L * 1024L
             else -> 2L * 1024L * 1024L
         }
 
@@ -834,8 +837,17 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
             if (probeConn != null) {
                 val code = probeConn.responseCode
-                if (code == 200) {
-                    // Server does not support Range requests (HTTP 200 OK) -> Progressive single-pass stream
+                val contentRange = probeConn.getHeaderField("Content-Range")
+                if (!contentRange.isNullOrEmpty()) {
+                    val slashIdx = contentRange.lastIndexOf('/')
+                    if (slashIdx >= 0) {
+                        totalBytes = contentRange.substring(slashIdx + 1).trim().toLongOrNull() ?: -1L
+                    }
+                }
+
+                val isAdaptive = isAdaptiveDashStream(streamUrl)
+                if (code == 200 && !isAdaptive) {
+                    // Genuine non-range progressive stream (e.g. itag 18 or direct static media)
                     val contentLen = probeConn.contentLengthLong
                     totalBytes = if (contentLen > 0L) contentLen else -1L
                     var bytesDownloaded = 0L
@@ -873,16 +885,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                         activeConnections.remove(probeConn)
                         probeConn.disconnect()
                     }
-                } else if (code == 206) {
-                    val contentRange = probeConn.getHeaderField("Content-Range")
-                    if (!contentRange.isNullOrEmpty()) {
-                        val slashIdx = contentRange.lastIndexOf('/')
-                        if (slashIdx >= 0) {
-                            totalBytes = contentRange.substring(slashIdx + 1).trim().toLongOrNull() ?: -1L
-                        }
-                    }
-                    probeConn.disconnect()
                 } else {
+                    // Either code == 206 OR (code == 200 on adaptive DASH stream where &range= returned chunk 0)
+                    // Disconnect probeConn and enter sequential chunking loop with resolved totalBytes or streaming mode
                     probeConn.disconnect()
                 }
             }
@@ -944,41 +949,16 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
 
                         preferredHostIndex.set(candidateIdx)
 
-                        if (responseCode == 200) {
-                            if (totalBytes <= 0L && conn.contentLengthLong > 0L) {
-                                totalBytes = conn.contentLengthLong
+                        // Check Content-Range header if totalBytes is still unknown
+                        val cr = conn.getHeaderField("Content-Range")
+                        if (totalBytes <= 0L && !cr.isNullOrEmpty()) {
+                            val slash = cr.lastIndexOf('/')
+                            if (slash >= 0) {
+                                totalBytes = cr.substring(slash + 1).trim().toLongOrNull() ?: -1L
                             }
-                            bytesDownloaded = 0L
-                            BufferedInputStream(conn.inputStream, 131072).use { input ->
-                                FileOutputStream(destinationFile, false).use { fos ->
-                                    BufferedOutputStream(fos, 131072).use { output ->
-                                        while (true) {
-                                            if (isCancelled()) {
-                                                destinationFile.delete()
-                                                return Result.failure(Exception("Download cancelled"))
-                                            }
-                                            val read = input.read(buffer)
-                                            if (read == -1) break
-                                            output.write(buffer, 0, read)
-                                            bytesDownloaded += read
-
-                                            val now = System.currentTimeMillis()
-                                            if (now - lastProgressUpdate >= 120 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
-                                                lastProgressUpdate = now
-                                                onProgress(bytesDownloaded, totalBytes)
-                                            }
-                                        }
-                                        output.flush()
-                                    }
-                                }
-                            }
-                            if (totalBytes <= 0L) {
-                                totalBytes = bytesDownloaded
-                            }
-                            chunkSuccess = true
-                            break@chunkLoop
                         }
 
+                        var chunkBytesRead = 0L
                         BufferedInputStream(conn.inputStream, 131072).use { input ->
                             FileOutputStream(destinationFile, true).use { fos ->
                                 BufferedOutputStream(fos, 131072).use { output ->
@@ -991,6 +971,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                                         if (read == -1) break
                                         output.write(buffer, 0, read)
                                         bytesDownloaded += read
+                                        chunkBytesRead += read
 
                                         val now = System.currentTimeMillis()
                                         if (now - lastProgressUpdate >= 120 || (totalBytes > 0 && bytesDownloaded >= totalBytes)) {
@@ -1003,7 +984,16 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                             }
                         }
 
+                        if (chunkBytesRead == 0L) {
+                            totalBytes = bytesDownloaded
+                            chunkSuccess = true
+                            break@chunkLoop
+                        }
+
                         chunkSuccess = true
+                        if (totalBytes > 0L && bytesDownloaded >= totalBytes) {
+                            break@chunkLoop
+                        }
                     } catch (chunkErr: Exception) {
                         Log.w(TAG, "Sequential chunk error ($chunkRangeHeader, attempt $chunkAttempt/$maxChunkRetries): ${chunkErr.message}")
                         if (chunkAttempt >= maxChunkRetries) {
@@ -1290,6 +1280,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         userAgent: String?,
         outputFileName: String,
         approxSizeBytes: Long = 0L,
+        audioUserAgent: String? = null,
+        fallbackVideoUrl: String? = null,
         isCancelled: () -> Boolean = { false },
         progressCallback: (percent: Int, bytesDownloaded: Long, totalBytes: Long, speedMbps: Double, phase: String) -> Unit
     ): Result<File> {
@@ -1389,11 +1381,16 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 val vTotal = AtomicLong(0L)
                 val aTotal = AtomicLong(0L)
 
+                val effectiveAudioUa = if (!audioUserAgent.isNullOrBlank()) audioUserAgent else userAgent
+                val expectedVideoBytes = if (approxSizeBytes > 0L) (approxSizeBytes * 85L / 100L) else -1L
+                val expectedAudioBytes = if (approxSizeBytes > 0L) (approxSizeBytes * 15L / 100L) else -1L
+
                 val vTask = pool.submit<Result<File>> {
                     downloadStreamDirectToFile(
                         streamUrl = videoUrl,
                         userAgent = userAgent,
                         destinationFile = vTempFile,
+                        expectedTotalBytes = expectedVideoBytes,
                         isCancelled = isCancelled,
                         maxWorkers = 4,
                         onProgress = { downloaded, total ->
@@ -1424,8 +1421,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 val aTask = pool.submit<Result<File>> {
                     downloadStreamDirectToFile(
                         streamUrl = audioUrl,
-                        userAgent = userAgent,
+                        userAgent = effectiveAudioUa,
                         destinationFile = aTempFile,
+                        expectedTotalBytes = expectedAudioBytes,
                         isCancelled = isCancelled,
                         maxWorkers = 2,
                         onProgress = { downloaded, total ->
@@ -1469,17 +1467,42 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 val muxTarget = muxTempFile ?: destinationFile
                 val muxResult = muxVideoAndAudio(vTempFile, aTempFile, muxTarget)
                 if (muxResult.isFailure) {
-                    return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed"))
+                    if (!fallbackVideoUrl.isNullOrBlank()) {
+                        Log.w(TAG, "Adaptive muxing failed (${muxResult.exceptionOrNull()?.message}), attempting single-stream fallback (itag 18): $fallbackVideoUrl")
+                        progressCallback(30, 0L, approxSizeBytes, calculateSpeed(), "downloading_fallback")
+                        val fbResult = downloadStreamDirectToFile(
+                            streamUrl = fallbackVideoUrl,
+                            userAgent = userAgent,
+                            destinationFile = vTempFile,
+                            expectedTotalBytes = approxSizeBytes,
+                            isCancelled = isCancelled,
+                            maxWorkers = 4,
+                            onProgress = { downloaded, total ->
+                                val tot = if (total > 0L) total else approxSizeBytes
+                                val pct = if (tot > 0L) minOf(95, maxOf(10, ((downloaded * 95L) / tot).toInt())) else 50
+                                progressCallback(pct, downloaded, tot, calculateSpeed(), "downloading_fallback")
+                            }
+                        )
+                        if (fbResult.isSuccess) {
+                            finalFile = copyToDestination(vTempFile, destinationFile)
+                        } else {
+                            return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed and fallback download failed: ${fbResult.exceptionOrNull()?.message}"))
+                        }
+                    } else {
+                        return Result.failure(muxResult.exceptionOrNull() ?: Exception("Native MediaMuxer failed"))
+                    }
                 }
-                val readyFile = muxResult.getOrNull() ?: muxTarget
-                val actualDestination = if (readyFile.name.endsWith(".webm", ignoreCase = true) && destinationFile.name.endsWith(".mp4", ignoreCase = true)) {
-                    File(destinationFile.parentFile, destinationFile.nameWithoutExtension + ".webm")
-                } else if (readyFile.name.endsWith(".mp4", ignoreCase = true) && destinationFile.name.endsWith(".webm", ignoreCase = true)) {
-                    File(destinationFile.parentFile, destinationFile.nameWithoutExtension + ".mp4")
-                } else {
-                    destinationFile
+                if (finalFile == null) {
+                    val readyFile = muxResult.getOrNull() ?: muxTarget
+                    val actualDestination = if (readyFile.name.endsWith(".webm", ignoreCase = true) && destinationFile.name.endsWith(".mp4", ignoreCase = true)) {
+                        File(destinationFile.parentFile, destinationFile.nameWithoutExtension + ".webm")
+                    } else if (readyFile.name.endsWith(".mp4", ignoreCase = true) && destinationFile.name.endsWith(".webm", ignoreCase = true)) {
+                        File(destinationFile.parentFile, destinationFile.nameWithoutExtension + ".mp4")
+                    } else {
+                        destinationFile
+                    }
+                    finalFile = copyToDestination(readyFile, actualDestination)
                 }
-                finalFile = copyToDestination(readyFile, actualDestination)
             } else {
                 // Single stream (audio-only or pre-muxed video)
                 progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
@@ -1487,6 +1510,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     streamUrl = videoUrl,
                     userAgent = userAgent,
                     destinationFile = vTempFile,
+                    expectedTotalBytes = approxSizeBytes,
                     isCancelled = isCancelled,
                     maxWorkers = 4,
                     onProgress = { downloaded, total ->

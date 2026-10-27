@@ -243,6 +243,8 @@ class ZenoMedia3Plugin : Plugin() {
         val videoUrl = call.getString("videoUrl")
         val audioUrl = call.getString("audioUrl")
         val userAgent = call.getString("userAgent")
+        val audioUserAgent = call.getString("audioUserAgent")
+        val fallbackVideoUrl = call.getString("fallbackVideoUrl")
         val outputFileName = call.getString("outputFileName") ?: "video_${System.currentTimeMillis()}.mp4"
         val approxSizeBytes = call.getLong("approxSizeBytes") ?: 0L
 
@@ -260,6 +262,8 @@ class ZenoMedia3Plugin : Plugin() {
                     userAgent = userAgent,
                     outputFileName = outputFileName,
                     approxSizeBytes = approxSizeBytes,
+                    audioUserAgent = audioUserAgent,
+                    fallbackVideoUrl = fallbackVideoUrl,
                     progressCallback = { percent, bytesDownloaded, totalBytes, speedMbps, phase ->
                         val data = JSObject().apply {
                             put("percent", percent)

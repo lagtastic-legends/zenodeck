@@ -748,6 +748,8 @@ export async function downloadYouTubeStream({
           videoUrl,
           audioUrl,
           userAgent,
+          audioUserAgent: option.audioUserAgent || option.audioFormat?.userAgent,
+          fallbackVideoUrl: option.fallbackVideoUrl,
           outputFilename,
           approxSizeBytes: option.approxSizeBytes,
           signal,

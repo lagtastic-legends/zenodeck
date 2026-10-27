@@ -153,36 +153,36 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
-          title="Hardware MediaMuxer B-Frame Fix"
-          badge="Zero Crash 🚀"
-          description="Pre-scans true minimum PTS across initial samples and guarantees non-negative monotonic timestamps, permanently eliminating Android MediaMuxer B-frame crashes."
+          title="Full 4K 60FPS Video Engine"
+          badge="2160p60 ⚡"
+          description="Hardware-accelerated 4K 60FPS (2160p60) and 2K 60FPS (1440p60) downloading with 8MB direct buffer allocation and strict 60FPS stream prioritization."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
           icon={<Sliders className="size-4.5 text-[#c8a0f0]" />}
-          title="Strict Codec Quarantine"
-          badge="Container Match"
-          description="Isolated container muxing pairs AVC video strictly with AAC/MP4 audio and VP9 with Opus, ensuring 100% native gallery playback compatibility on Android."
+          title="HTTP 200 Range Continuation"
+          badge="Full Multi-GB"
+          description="Fixed 2MB truncation bug on YouTube CDN single-slice HTTP 200 responses. Multi-gigabyte videos stream continuously without premature termination."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
           icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Resilient Pipeline Fallback"
-          badge="Auto-Recovery"
-          description="Instant seamless fallback to high-speed web chunk streaming if native hardware encounters unsupported streams, ensuring video downloads always complete."
+          title="Monotonic PTS Video Clamping"
+          badge="Zero Desync"
+          description="Strict monotonic timestamp clamping across all video and audio tracks eliminates Android MPEG-4 Writer and WebM container desync and crash loops."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
           icon={<Headphones className="size-4.5 text-[#88b4cc]" />}
-          title="Pristine Studio Audio Extraction"
-          badge="Pure Stream"
-          description="Audio-only options now bypass video track parsing entirely, delivering bit-perfect 320 kbps MP3, lossless M4A, and studio WAV directly from the master audio stream."
+          title="Lossless itag 18 Fallback"
+          badge="Self-Healing"
+          description="Automated fallback to pre-muxed single-stream video if hardware muxing fails on unsupported codecs, guaranteeing successful downloads every time."
           accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
           badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />

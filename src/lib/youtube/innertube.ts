@@ -118,8 +118,10 @@ export interface YouTubeQualityOption {
   videoFormat?: YouTubeFormatMeta;
   audioFormat?: YouTubeFormatMeta;
   userAgent?: string;
+  audioUserAgent?: string;
   videoUrl?: string;
   audioUrl?: string;
+  fallbackVideoUrl?: string;
 }
 
 export interface YouTubeVideoInfo {
@@ -323,6 +325,29 @@ export async function getVisitorData(): Promise<string | undefined> {
 
 const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
   {
+    name: "ANDROID_VR",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": ANDROID_VR_USER_AGENT,
+      "X-YouTube-Client-Name": "28",
+      "X-YouTube-Client-Version": ANDROID_VR_CLIENT_VERSION,
+    },
+    context: {
+      client: {
+        clientName: "ANDROID_VR",
+        clientVersion: ANDROID_VR_CLIENT_VERSION,
+        deviceMake: "Oculus",
+        deviceModel: "Quest 3",
+        androidSdkVersion: 32,
+        osName: "Android",
+        osVersion: "12L",
+        hl: "en",
+        gl: "US",
+        userAgent: ANDROID_VR_USER_AGENT,
+      },
+    },
+  },
+  {
     name: "IOS_MODERN",
     headers: {
       "Content-Type": "application/json",
@@ -384,29 +409,6 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
         osVersion: "18.0",
         hl: "en",
         userAgent: IOS_FALLBACK_USER_AGENT,
-      },
-    },
-  },
-  {
-    name: "ANDROID_VR",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": ANDROID_VR_USER_AGENT,
-      "X-YouTube-Client-Name": "28",
-      "X-YouTube-Client-Version": ANDROID_VR_CLIENT_VERSION,
-    },
-    context: {
-      client: {
-        clientName: "ANDROID_VR",
-        clientVersion: ANDROID_VR_CLIENT_VERSION,
-        deviceMake: "Oculus",
-        deviceModel: "Quest 3",
-        androidSdkVersion: 32,
-        osName: "Android",
-        osVersion: "12L",
-        hl: "en",
-        gl: "US",
-        userAgent: ANDROID_VR_USER_AGENT,
       },
     },
   },
@@ -735,7 +737,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     f.container === "webm" ||
     f.mimeType.toLowerCase().includes("webm") ||
     f.codec.toLowerCase().includes("vp9") ||
-    f.codec.toLowerCase().includes("vp8");
+    f.codec.toLowerCase().includes("vp09") ||
+    f.codec.toLowerCase().includes("vp8") ||
+    f.codec.toLowerCase().includes("av01") ||
+    f.codec.toLowerCase().includes("av1");
 
   // Helper to get paired audio for video format with strict container quarantine
   const getPairedAudio = (videoFmt: YouTubeFormatMeta) => {
@@ -750,7 +755,13 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   };
 
   // Helper to find best format matching resolution and fps criteria
-  const findFormat = (minHeight: number, maxHeight: number, prefer60 = false, preferMp4 = false) => {
+  const findFormat = (
+    minHeight: number,
+    maxHeight: number,
+    prefer60 = false,
+    preferMp4 = false,
+    preferVp9 = false
+  ) => {
     let candidates = videoFormats.filter((f) => {
       const h = f.height || (f.qualityLabel ? parseInt(f.qualityLabel) : 0);
       return h >= minHeight && h <= maxHeight;
@@ -759,24 +770,49 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     if (candidates.length === 0) return null;
 
     if (preferMp4) {
-      const mp4s = candidates.filter((f) => !isWebMFormat(f));
-      if (mp4s.length > 0) {
-        candidates = mp4s;
+      const avcMp4s = candidates.filter(
+        (f) =>
+          !isWebMFormat(f) &&
+          (f.codec.toLowerCase().includes("avc") ||
+            f.codec.toLowerCase().includes("h264") ||
+            f.mimeType.toLowerCase().includes("avc") ||
+            [137, 299, 136, 298, 135, 134, 133, 160].includes(f.itag))
+      );
+      if (avcMp4s.length > 0) {
+        candidates = avcMp4s;
+      } else {
+        const mp4s = candidates.filter((f) => !isWebMFormat(f));
+        if (mp4s.length > 0) {
+          candidates = mp4s;
+        }
+      }
+    } else if (preferVp9) {
+      const vp9s = candidates.filter(
+        (f) => f.codec.toLowerCase().includes("vp9") || f.mimeType.toLowerCase().includes("vp9")
+      );
+      if (vp9s.length > 0) {
+        candidates = vp9s;
       }
     }
 
-    if (prefer60) {
-      const fps60 = candidates.filter((f) => (f.fps || 0) >= 50);
-      if (fps60.length > 0) {
-        return fps60.sort((a, b) => b.bitrate - a.bitrate)[0];
+    // Explicit 60FPS prioritization: (b.fps || 30) - (a.fps || 30)
+    candidates.sort((a, b) => {
+      const fpsA = a.fps || 30;
+      const fpsB = b.fps || 30;
+      if (prefer60 && fpsB !== fpsA) {
+        return fpsB - fpsA; // 60fps comes first!
       }
-    }
+      return b.bitrate - a.bitrate;
+    });
 
-    return candidates.sort((a, b) => b.bitrate - a.bitrate)[0];
+    return candidates[0];
   };
 
-  // 1. 4K 60fps / 4K UHD (2160p)
-  const fmt4k = findFormat(2000, 2160, true);
+  // Find pre-muxed combined itag 18 early for universal fallback
+  const fmt18 = parsedFormats.find((f) => f.itag === 18 && f.url);
+
+  // 1. 4K 60fps / 4K UHD (2160p) — Prioritizes VP9 itag 315/313 for 100% Android MediaMuxer compatibility
+  const fmt4k = findFormat(2000, 2160, true, false, true);
   if (fmt4k) {
     const is60 = (fmt4k.fps || 0) >= 50;
     const pairedAudio = getPairedAudio(fmt4k);
@@ -785,7 +821,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     qualities.push({
       id: is60 ? "2160p60" : "2160p",
       label: is60 ? "4K Ultra HD 60fps" : "4K Ultra HD",
-      resolutionLabel: "3840 × 2160 (2160p)",
+      resolutionLabel: is60 ? "3840 × 2160 (2160p60)" : "3840 × 2160 (2160p)",
       fps: fmt4k.fps || 30,
       badge: is60 ? "4K 60FPS" : "4K",
       is4K: true,
@@ -795,11 +831,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt4k,
       audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
     });
   }
 
-  // 2. 2K 60fps / 1440p QHD
-  const fmt2k = findFormat(1300, 1440, true);
+  // 2. 2K 60fps / 1440p QHD — Prioritizes VP9 itag 308 for 100% Android MediaMuxer compatibility
+  const fmt2k = findFormat(1300, 1440, true, false, true);
   if (fmt2k) {
     const is60 = (fmt2k.fps || 0) >= 50;
     const pairedAudio = getPairedAudio(fmt2k);
@@ -808,7 +845,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     qualities.push({
       id: is60 ? "1440p60" : "1440p",
       label: is60 ? "2K Quad HD 60fps" : "2K Quad HD",
-      resolutionLabel: "2560 × 1440 (1440p)",
+      resolutionLabel: is60 ? "2560 × 1440 (1440p60)" : "2560 × 1440 (1440p)",
       fps: fmt2k.fps || 30,
       badge: is60 ? "2K 60FPS" : "2K",
       is4K: false,
@@ -818,11 +855,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt2k,
       audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
     });
   }
 
-  // 3. 1080p 60fps / 1080p FHD
-  const fmt1080 = findFormat(950, 1080, true, true);
+  // 3. 1080p 60fps / 1080p FHD — Prioritizes H.264/AVC itag 299/137 for native gallery playback
+  const fmt1080 = findFormat(950, 1080, true, true, false);
   if (fmt1080) {
     const is60 = (fmt1080.fps || 0) >= 50;
     const pairedAudio = getPairedAudio(fmt1080);
@@ -831,7 +869,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     qualities.push({
       id: is60 ? "1080p60" : "1080p",
       label: is60 ? "Full HD 60fps" : "Full HD 1080p",
-      resolutionLabel: "1920 × 1080 (1080p)",
+      resolutionLabel: is60 ? "1920 × 1080 (1080p60)" : "1920 × 1080 (1080p)",
       fps: fmt1080.fps || 30,
       badge: is60 ? "1080P 60" : "1080P",
       is4K: false,
@@ -841,33 +879,36 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt1080,
       audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
     });
   }
 
-  // 4. 720p HD
-  const fmt720 = findFormat(650, 720, true, true);
+  // 4. 720p HD / 720p 60fps — Prioritizes H.264/AVC itag 298/136
+  const fmt720 = findFormat(650, 720, true, true, false);
   if (fmt720) {
+    const is60 = (fmt720.fps || 0) >= 50;
     const pairedAudio = getPairedAudio(fmt720);
     const vSize = fmt720.contentLength || 0;
     const aSize = pairedAudio?.contentLength || 0;
     qualities.push({
-      id: "720p",
-      label: "High Definition 720p",
-      resolutionLabel: "1280 × 720 (720p)",
+      id: is60 ? "720p60" : "720p",
+      label: is60 ? "High Definition 720p 60fps" : "High Definition 720p",
+      resolutionLabel: is60 ? "1280 × 720 (720p60)" : "1280 × 720 (720p)",
       fps: fmt720.fps || 30,
-      badge: "720P",
+      badge: is60 ? "720P 60" : "720P",
       is4K: false,
-      is60fps: (fmt720.fps || 0) >= 50,
+      is60fps: is60,
       isAudioOnly: false,
       container: getContainerForVideo(fmt720),
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt720,
       audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
     });
   }
 
   // 5. 480p Standard Quality
-  const fmt480 = findFormat(400, 480, false, true);
+  const fmt480 = findFormat(400, 480, false, true, false);
   if (fmt480) {
     const pairedAudio = getPairedAudio(fmt480);
     const vSize = fmt480.contentLength || 0;
@@ -885,13 +926,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes: vSize + aSize,
       videoFormat: fmt480,
       audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
     });
   }
 
   // 6. 360p Standard Quality
-  // If pre-muxed combined itag 18 is available, prioritize it directly (unthrottled ratebypass stream)
-  const fmt18 = parsedFormats.find((f) => f.itag === 18 && f.url);
-  const fmt360 = fmt18 || findFormat(300, 399, false, true);
+  const fmt360 = fmt18 || findFormat(300, 399, false, true, false);
   if (fmt360) {
     const isCombined18 = fmt360.itag === 18;
     const pairedAudio = isCombined18 ? undefined : getPairedAudio(fmt360);
@@ -910,6 +950,7 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
       approxSizeBytes: isCombined18 ? vSize : vSize + aSize,
       videoFormat: fmt360,
       audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
     });
   }
 
@@ -1095,6 +1136,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     }
     if (!q.userAgent) {
       q.userAgent = q.videoFormat?.userAgent || q.audioFormat?.userAgent || winningUserAgent || ANDROID_VR_USER_AGENT;
+    }
+    if (q.audioFormat?.userAgent && !q.audioUserAgent) {
+      q.audioUserAgent = q.audioFormat.userAgent;
+    }
+    if (!q.isAudioOnly && fmt18?.url && !q.fallbackVideoUrl) {
+      q.fallbackVideoUrl = fmt18.url;
     }
     if (q.videoFormat && !q.videoFormat.userAgent) {
       q.videoFormat.userAgent = winningUserAgent || ANDROID_VR_USER_AGENT;
