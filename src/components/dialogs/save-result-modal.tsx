@@ -219,17 +219,16 @@ export function SaveResultModal() {
     }
   };
 
-  const handleHandoff = (targetToolId: string) => {
+  const handleHandoff = (targetToolId: string, sourceTool = "studio") => {
     void haptics.medium();
-    if (blob) {
-      useWorkstationStore.getState().setHandoffFile({
-        file: blob,
-        filename,
-        mimeType: blob.type || (category === "video" ? "video/mp4" : category === "audio" ? "audio/mp3" : category === "image" ? "image/png" : "application/octet-stream"),
-        sourceTool: "studio",
-        timestamp: Date.now(),
-      });
-    }
+    const resolvedFile = blob || new File([], filename, { type: category === "video" ? "video/mp4" : "application/octet-stream" });
+    useWorkstationStore.getState().setHandoffFile({
+      file: resolvedFile,
+      filename,
+      mimeType: blob?.type || (category === "video" ? "video/mp4" : category === "audio" ? "audio/mp3" : category === "image" ? "image/png" : "application/octet-stream"),
+      sourceTool: targetToolId === "video-converter" ? "youtube-downloader" : sourceTool,
+      timestamp: Date.now(),
+    });
     close();
     useNavStore.getState().navigate(targetToolId);
   };
@@ -416,6 +415,30 @@ export function SaveResultModal() {
               </p>
               <span className="font-mono text-[9px] text-muted-foreground/70">In-Memory Pipeline</span>
             </div>
+
+            {/* Prominent Video to Audio Converter Suggestion Card */}
+            {category === "video" && (
+              <div className="rounded-2xl border border-violet-500/50 bg-gradient-to-r from-violet-950/50 via-card/85 to-card/65 p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="space-y-0.5">
+                  <p className="font-display text-xs sm:text-sm font-bold text-violet-300 flex items-center gap-1.5">
+                    <FileAudio className="size-4 text-violet-400" />
+                    Want MP3 or M4A Audio from this Video?
+                  </p>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    Extract bit-perfect 320kbps MP3, M4A, or WAV audio with 1 tap.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleHandoff("video-converter", "youtube-downloader")}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-mono text-xs font-bold px-4 py-2.5 shadow-md shadow-violet-500/20 transition-all cursor-pointer shrink-0 active:scale-95"
+                >
+                  <FileAudio className="size-3.5" />
+                  <span>Convert Video to Audio</span>
+                  <ArrowRight className="size-3.5" />
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {category === "video" ? (

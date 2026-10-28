@@ -122,6 +122,8 @@ export interface YouTubeQualityOption {
   videoUrl?: string;
   audioUrl?: string;
   fallbackVideoUrl?: string;
+  ytdlpVideoFormatId?: string;
+  ytdlpAudioFormatId?: string;
 }
 
 export interface YouTubeVideoInfo {

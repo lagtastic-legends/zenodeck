@@ -3,6 +3,8 @@ package com.omnitool.app.media
 import android.media.MediaScannerConnection
 import android.os.Environment
 import android.util.Log
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -11,6 +13,7 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import java.io.File
 import java.util.concurrent.Executors
+import org.json.JSONObject
 
 /**
  * ZenoDeck — Jetpack Media3 & Hardware MediaCodec Bridge Plugin
@@ -233,10 +236,43 @@ class ZenoMedia3Plugin : Plugin() {
         call.resolve(result)
     }
 
+    private fun ensurePython(): Python {
+        if (!Python.isStarted()) {
+            Python.start(AndroidPlatform(context))
+        }
+        return Python.getInstance()
+    }
+
+    /**
+     * Extracts video info using Chaquopy embedded yt-dlp Python module.
+     */
+    @PluginMethod
+    fun extractWithYtDlp(call: PluginCall) {
+        val url = call.getString("url")
+        if (url.isNullOrBlank()) {
+            call.reject("url parameter is required.")
+            return
+        }
+        executor.execute {
+            try {
+                val py = ensurePython()
+                val ytdlp = py.getModule("ytdlp_engine")
+                val jsonStr = ytdlp.callAttr("extract_video_info", url).toString()
+                val res = JSObject().apply {
+                    put("success", true)
+                    put("dataJson", jsonStr)
+                }
+                call.resolve(res)
+            } catch (e: Throwable) {
+                Log.e(TAG, "extractWithYtDlp failed: ${e.message}", e)
+                call.reject("yt-dlp extraction failed: ${e.message}")
+            }
+        }
+    }
+
     /**
      * Native direct-to-disk YouTube stream acquisition and lossless hardware MediaMuxer.
-     * Operates completely in native Android (outside Chromium WebView), bypassing CORS,
-     * header stripping, and memory constraints.
+     * Powered by embedded yt-dlp Python engine with seamless fallback to direct HTTP streams.
      */
     @PluginMethod
     fun downloadAndMuxYouTube(call: PluginCall) {
@@ -247,52 +283,169 @@ class ZenoMedia3Plugin : Plugin() {
         val fallbackVideoUrl = call.getString("fallbackVideoUrl")
         val outputFileName = call.getString("outputFileName") ?: "video_${System.currentTimeMillis()}.mp4"
         val approxSizeBytes = call.getLong("approxSizeBytes") ?: 0L
+        val originalUrl = call.getString("originalUrl") ?: videoUrl
+        val useYtDlp = call.getBoolean("useYtDlp") ?: false
+        val ytdlpVideoFormatId = call.getString("ytdlpVideoFormatId")
+        val ytdlpAudioFormatId = call.getString("ytdlpAudioFormatId")
 
         if (videoUrl.isNullOrEmpty()) {
             call.reject("videoUrl parameter is required.")
             return
         }
 
-        executor.execute {
-            try {
-                val result = mediaEngine.downloadAndMuxYouTubeStreams(
-                    context = context,
-                    videoUrl = videoUrl,
-                    audioUrl = audioUrl,
-                    userAgent = userAgent,
-                    outputFileName = outputFileName,
-                    approxSizeBytes = approxSizeBytes,
-                    audioUserAgent = audioUserAgent,
-                    fallbackVideoUrl = fallbackVideoUrl,
-                    progressCallback = { percent, bytesDownloaded, totalBytes, speedMbps, phase ->
+        // Branch A: Pure yt-dlp execution
+        if (useYtDlp || !ytdlpVideoFormatId.isNullOrBlank()) {
+            executor.execute {
+                val tempDir = File(context.cacheDir, "ytdlp_${System.currentTimeMillis()}").apply { mkdirs() }
+                try {
+                    val py = ensurePython()
+                    val ytdlp = py.getModule("ytdlp_engine")
+
+                    val progressBridge = object : Any() {
+                        @Suppress("unused")
+                        fun onProgress(downloaded: Long, total: Long, speed: Double, phase: String) {
+                            val data = JSObject().apply {
+                                val pct = if (total > 0L) minOf(92, maxOf(5, ((downloaded * 90L) / total).toInt())) else 50
+                                put("percent", pct)
+                                put("bytesDownloaded", downloaded)
+                                put("totalBytes", total)
+                                put("speedMbps", speed / (1024.0 * 1024.0))
+                                put("phase", phase)
+                            }
+                            notifyListeners("downloadProgress", data)
+                        }
+                    }
+
+                    val targetUrl = if (!originalUrl.isNullOrBlank() && (originalUrl.startsWith("http://") || originalUrl.startsWith("https://"))) originalUrl else videoUrl
+                    val resJsonStr = ytdlp.callAttr(
+                        "download_video_with_ytdlp",
+                        targetUrl,
+                        ytdlpVideoFormatId ?: "best[ext=mp4]/best",
+                        ytdlpAudioFormatId ?: "none",
+                        tempDir.absolutePath,
+                        progressBridge
+                    ).toString()
+
+                    val json = JSONObject(resJsonStr)
+                    if (!json.optBoolean("success", false)) {
+                        throw Exception(json.optString("error", "yt-dlp execution failed"))
+                    }
+
+                    val isMerged = json.optBoolean("is_merged", false)
+                    val videoPath = json.optString("video_path")
+                    val audioPath = json.optString("audio_path", "")
+
+                    val targetDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ZenoDeck").apply { mkdirs() }
+                    val destFile = File(targetDir, outputFileName)
+
+                    val readyFile: File = if (isMerged || audioPath.isEmpty()) {
+                        val downloaded = File(videoPath)
+                        downloaded.copyTo(destFile, overwrite = true)
+                        destFile
+                    } else {
                         val data = JSObject().apply {
-                            put("percent", percent)
-                            put("bytesDownloaded", bytesDownloaded)
-                            put("totalBytes", totalBytes)
-                            put("speedMbps", speedMbps)
-                            put("phase", phase)
+                            put("percent", 94)
+                            put("bytesDownloaded", 0L)
+                            put("totalBytes", 0L)
+                            put("speedMbps", 0.0)
+                            put("phase", "muxing")
                         }
                         notifyListeners("downloadProgress", data)
+                        val muxResult = mediaEngine.muxVideoAndAudio(File(videoPath), File(audioPath), destFile)
+                        if (muxResult.isFailure) {
+                            throw (muxResult.exceptionOrNull() ?: Exception("Hardware MediaMuxer failed"))
+                        }
+                        muxResult.getOrThrow()
                     }
-                )
 
-                if (result.isSuccess) {
-                    val file = result.getOrThrow()
+                    val mimeType = if (readyFile.name.endsWith(".webm", ignoreCase = true)) "video/webm" else "video/mp4"
+                    MediaScannerConnection.scanFile(context, arrayOf(readyFile.absolutePath), arrayOf(mimeType)) { path, uri ->
+                        Log.i(TAG, "ZenoDeck yt-dlp file scanned: $path -> $uri")
+                    }
+
+                    val finalData = JSObject().apply {
+                        put("percent", 100)
+                        put("bytesDownloaded", readyFile.length())
+                        put("totalBytes", readyFile.length())
+                        put("speedMbps", 0.0)
+                        put("phase", "complete")
+                    }
+                    notifyListeners("downloadProgress", finalData)
+
                     val ret = JSObject().apply {
                         put("success", true)
-                        put("outputPath", file.absolutePath)
-                        put("fileSizeBytes", file.length())
-                        put("filename", file.name)
+                        put("outputPath", readyFile.absolutePath)
+                        put("fileSizeBytes", readyFile.length())
+                        put("filename", readyFile.name)
                     }
                     call.resolve(ret)
-                } else {
-                    val err = result.exceptionOrNull()?.message ?: "Native stream acquisition failed"
-                    call.reject("Native download/mux error: $err")
+                    return@execute
+                } catch (e: Throwable) {
+                    Log.w(TAG, "yt-dlp pipeline failed, falling back to direct stream engine: ${e.message}")
+                } finally {
+                    try { tempDir.deleteRecursively() } catch (_: Throwable) {}
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in downloadAndMuxYouTube", e)
-                call.reject("Native download exception: ${e.message}")
+
+                // Fallback to direct HTTP stream download
+                executeDirectStreamDownload(call, videoUrl, audioUrl, userAgent, audioUserAgent, fallbackVideoUrl, outputFileName, approxSizeBytes)
             }
+            return
+        }
+
+        // Branch B: Direct HTTP stream download
+        executor.execute {
+            executeDirectStreamDownload(call, videoUrl, audioUrl, userAgent, audioUserAgent, fallbackVideoUrl, outputFileName, approxSizeBytes)
+        }
+    }
+
+    private fun executeDirectStreamDownload(
+        call: PluginCall,
+        videoUrl: String,
+        audioUrl: String?,
+        userAgent: String?,
+        audioUserAgent: String?,
+        fallbackVideoUrl: String?,
+        outputFileName: String,
+        approxSizeBytes: Long
+    ) {
+        try {
+            val result = mediaEngine.downloadAndMuxYouTubeStreams(
+                context = context,
+                videoUrl = videoUrl,
+                audioUrl = audioUrl,
+                userAgent = userAgent,
+                outputFileName = outputFileName,
+                approxSizeBytes = approxSizeBytes,
+                audioUserAgent = audioUserAgent,
+                fallbackVideoUrl = fallbackVideoUrl,
+                progressCallback = { percent, bytesDownloaded, totalBytes, speedMbps, phase ->
+                    val data = JSObject().apply {
+                        put("percent", percent)
+                        put("bytesDownloaded", bytesDownloaded)
+                        put("totalBytes", totalBytes)
+                        put("speedMbps", speedMbps)
+                        put("phase", phase)
+                    }
+                    notifyListeners("downloadProgress", data)
+                }
+            )
+
+            if (result.isSuccess) {
+                val file = result.getOrThrow()
+                val ret = JSObject().apply {
+                    put("success", true)
+                    put("outputPath", file.absolutePath)
+                    put("fileSizeBytes", file.length())
+                    put("filename", file.name)
+                }
+                call.resolve(ret)
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Native stream acquisition failed"
+                call.reject("Native download/mux error: $err")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in executeDirectStreamDownload", e)
+            call.reject("Native download exception: ${e.message}")
         }
     }
 }

@@ -25,12 +25,19 @@ export interface ZenoMedia3PluginInterface {
     filePath: string;
     mimeType?: string;
   }): Promise<{ success: boolean; path: string; uri: string }>;
+  extractWithYtDlp(options: {
+    url: string;
+  }): Promise<{ success: boolean; dataJson?: string; error?: string }>;
   downloadAndMuxYouTube(options: {
     videoUrl: string;
     audioUrl?: string;
     userAgent?: string;
     audioUserAgent?: string;
     fallbackVideoUrl?: string;
+    originalUrl?: string;
+    useYtDlp?: boolean;
+    ytdlpVideoFormatId?: string;
+    ytdlpAudioFormatId?: string;
     outputFileName: string;
     approxSizeBytes?: number;
   }): Promise<{ success: boolean; outputPath: string; fileSizeBytes: number; filename: string }>;
@@ -199,6 +206,10 @@ export async function executeNativeYouTubeDownload({
   userAgent,
   audioUserAgent,
   fallbackVideoUrl,
+  originalUrl,
+  useYtDlp,
+  ytdlpVideoFormatId,
+  ytdlpAudioFormatId,
   outputFilename,
   approxSizeBytes,
   onProgress,
@@ -209,6 +220,10 @@ export async function executeNativeYouTubeDownload({
   userAgent?: string;
   audioUserAgent?: string;
   fallbackVideoUrl?: string;
+  originalUrl?: string;
+  useYtDlp?: boolean;
+  ytdlpVideoFormatId?: string;
+  ytdlpAudioFormatId?: string;
   outputFilename: string;
   approxSizeBytes?: number;
   onProgress?: (data: {
@@ -250,6 +265,10 @@ export async function executeNativeYouTubeDownload({
       userAgent: userAgent || undefined,
       audioUserAgent: audioUserAgent || undefined,
       fallbackVideoUrl: fallbackVideoUrl || undefined,
+      originalUrl: originalUrl || undefined,
+      useYtDlp: useYtDlp || undefined,
+      ytdlpVideoFormatId: ytdlpVideoFormatId || undefined,
+      ytdlpAudioFormatId: ytdlpAudioFormatId || undefined,
       outputFileName: outputFilename,
       approxSizeBytes: approxSizeBytes || 0,
     });

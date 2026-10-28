@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, Film, Music4, Wand2, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
 import { ProcessingStatus } from "@/components/media/processing-status";
@@ -272,6 +273,22 @@ export function MediaConverter() {
   const [originalExt, setOriginalExt] = useState<string>("m4a");
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string>("universal-mp4-web");
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType || "video/mp4" });
+      setFile(f);
+      if (handoff.sourceTool === "youtube-downloader") {
+        setMode("audio");
+        setAudioFormat("mp3");
+        setAudioKbps("320");
+        setActivePresetId("audiophile-320k-mp3");
+      }
+    }
+  }, []);
 
   const handleApplyPreset = (preset: PresetItem) => {
     setActivePresetId(preset.id);

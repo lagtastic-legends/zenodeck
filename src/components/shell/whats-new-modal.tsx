@@ -153,36 +153,36 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Zap className="size-4.5 text-[#7dd3fc]" />}
-          title="Full 4K 60FPS Video Engine"
-          badge="2160p60 ⚡"
-          description="Hardware-accelerated 4K 60FPS (2160p60) and 2K 60FPS (1440p60) downloading with 8MB direct buffer allocation and strict 60FPS stream prioritization."
+          title="Pure yt-dlp Python Engine"
+          badge="Chaquopy 15 ⚡"
+          description="Integrated pure yt-dlp Python 3.11 engine via Chaquopy on Android for maximum extraction stability and immunity against YouTube stream signature changes."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
           icon={<Sliders className="size-4.5 text-[#c8a0f0]" />}
-          title="HTTP 200 Range Continuation"
-          badge="Full Multi-GB"
-          description="Fixed 2MB truncation bug on YouTube CDN single-slice HTTP 200 responses. Multi-gigabyte videos stream continuously without premature termination."
+          title="Video-to-Audio 1-Tap CTA"
+          badge="MP3 320k 🎵"
+          description="Need audio from your video? Tap the instant post-download CTA banner to automatically send the file to Media Converter with studio 320kbps MP3 pre-selected."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
 
         <FeatureCard
           icon={<CheckCircle2 className="size-4.5 text-emerald-400" />}
-          title="Monotonic PTS Video Clamping"
-          badge="Zero Desync"
-          description="Strict monotonic timestamp clamping across all video and audio tracks eliminates Android MPEG-4 Writer and WebM container desync and crash loops."
+          title="Video-Only Downloader UI"
+          badge="Streamlined"
+          description="High-definition 4K 60FPS / 2K / 1080p video-first selection ladder with exact container codec pairing and zero clutter."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
           icon={<Headphones className="size-4.5 text-[#88b4cc]" />}
-          title="Lossless itag 18 Fallback"
-          badge="Self-Healing"
-          description="Automated fallback to pre-muxed single-stream video if hardware muxing fails on unsupported codecs, guaranteeing successful downloads every time."
+          title="Native Hardware MediaMuxer"
+          badge="Zero-Lag Mux"
+          description="yt-dlp downloads separate high-speed video and audio streams directly to disk, merged losslessly on-device by Android MediaMuxer with zero re-encoding."
           accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
           badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />

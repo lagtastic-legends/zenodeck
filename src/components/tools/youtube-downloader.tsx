@@ -36,8 +36,12 @@ import {
   HardDrive,
   Headphones,
   Send,
+  ArrowRight,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
+import { useNavStore } from "@/lib/navigation/nav-store";
+import { ZenoMedia3 } from "@/lib/media/native-media-muxer";
 import { getClipboardText } from "@/lib/clipboard";
 import {
   fetchAndFormatSubtitles,
@@ -247,6 +251,25 @@ export function YouTubeDownloader() {
         },
       })
     );
+  };
+
+  const handleConvertVideoToAudio = () => {
+    if (!downloadResult) return;
+    void haptics.medium();
+    const fileToHandoff: File = downloadResult.blob instanceof File
+      ? downloadResult.blob
+      : new File([downloadResult.blob], downloadResult.filename, {
+          type: downloadResult.mimeType || "video/mp4",
+          lastModified: Date.now(),
+        });
+    useWorkstationStore.getState().setHandoffFile({
+      file: fileToHandoff,
+      filename: fileToHandoff.name,
+      mimeType: fileToHandoff.type || "video/mp4",
+      sourceTool: "youtube-downloader",
+      timestamp: Date.now(),
+    });
+    useNavStore.getState().navigate("video-converter");
   };
 
   // Playlist & Batch Queue State
@@ -467,25 +490,41 @@ export function YouTubeDownloader() {
       let lastErrorMessage = "";
 
       // 1. Native mobile resolution: If running in Capacitor (Android/iOS APK),
-      // resolve DIRECTLY on the user's mobile device via native network stack (CapacitorHttp).
+      // resolve DIRECTLY on the user's mobile device via embedded yt-dlp Python engine (Chaquopy).
       // This bypasses browser CORS and cloud datacenter IP blocks completely!
       if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
         try {
-          const directInfo = await resolveYouTubeVideo(videoId);
-          if (directInfo && directInfo.videoId && Array.isArray(directInfo.qualities) && directInfo.qualities.length > 0) {
-            data = directInfo;
-          }
-        } catch (nativeErr: any) {
-          console.warn("Direct device resolution error, retrying once:", nativeErr);
-          lastErrorMessage = nativeErr?.message || "";
-          try {
-            await new Promise((r) => setTimeout(r, 600));
-            const retryInfo = await resolveYouTubeVideo(videoId);
-            if (retryInfo && retryInfo.videoId && Array.isArray(retryInfo.qualities) && retryInfo.qualities.length > 0) {
-              data = retryInfo;
+          const ytdlpRes = await ZenoMedia3.extractWithYtDlp({
+            url: urlToResolve || `https://www.youtube.com/watch?v=${videoId}`,
+          });
+          if (ytdlpRes && ytdlpRes.success && ytdlpRes.dataJson) {
+            const parsed = JSON.parse(ytdlpRes.dataJson);
+            if (parsed && parsed.videoId && Array.isArray(parsed.qualities) && parsed.qualities.length > 0) {
+              data = parsed;
             }
-          } catch (retryErr: any) {
-            lastErrorMessage = retryErr?.message || lastErrorMessage;
+          }
+        } catch (pyErr: any) {
+          console.warn("Native yt-dlp extraction fallback to direct innertube:", pyErr);
+        }
+
+        if (!data) {
+          try {
+            const directInfo = await resolveYouTubeVideo(videoId);
+            if (directInfo && directInfo.videoId && Array.isArray(directInfo.qualities) && directInfo.qualities.length > 0) {
+              data = directInfo;
+            }
+          } catch (nativeErr: any) {
+            console.warn("Direct device resolution error, retrying once:", nativeErr);
+            lastErrorMessage = nativeErr?.message || "";
+            try {
+              await new Promise((r) => setTimeout(r, 600));
+              const retryInfo = await resolveYouTubeVideo(videoId);
+              if (retryInfo && retryInfo.videoId && Array.isArray(retryInfo.qualities) && retryInfo.qualities.length > 0) {
+                data = retryInfo;
+              }
+            } catch (retryErr: any) {
+              lastErrorMessage = retryErr?.message || lastErrorMessage;
+            }
           }
         }
       }
@@ -853,6 +892,7 @@ export function YouTubeDownloader() {
       const result = await downloadYouTubeStream({
         option: selectedQuality,
         videoTitle: videoInfo.title,
+        originalUrl: inputUrl || (videoInfo ? `https://www.youtube.com/watch?v=${videoInfo.videoId}` : undefined),
         author: videoInfo.author,
         thumbnailUrl: videoInfo.thumbnailUrl,
         engine: activeEngine,
@@ -948,6 +988,7 @@ export function YouTubeDownloader() {
               const retryRes = await downloadYouTubeStream({
                 option: matchingQ,
                 videoTitle: freshInfo.title,
+                originalUrl: inputUrl || `https://www.youtube.com/watch?v=${freshInfo.videoId}`,
                 author: freshInfo.author,
                 thumbnailUrl: freshInfo.thumbnailUrl,
                 engine: activeEngine,
@@ -1748,9 +1789,15 @@ export function YouTubeDownloader() {
                   <span>•</span>
                   <span>{videoInfo.durationFormatted}</span>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono text-emerald-300 w-fit">
-                  <ShieldCheck className="size-3.5 text-emerald-400" />
-                  <span>Streams verified · Direct unthrottled endpoints ready</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono text-emerald-300 w-fit">
+                    <ShieldCheck className="size-3.5 text-emerald-400" />
+                    <span>Streams verified · Direct unthrottled endpoints ready</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-mono text-primary w-fit">
+                    <Sparkles className="size-3.5 text-primary" />
+                    <span>🎬 Powered by yt-dlp Video Engine • Need MP3/M4A audio? Tap Convert Video to Audio right after downloading</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2377,6 +2424,32 @@ export function YouTubeDownloader() {
                   <p className="font-mono text-[10px] text-muted-foreground">
                     Lossless stream-copy muxed in WebAssembly · Zero compression artifacts
                   </p>
+                </div>
+
+                {/* Post-Download 1-Tap CTA: Convert Video to Audio */}
+                <div className="rounded-xl border border-violet-500/40 bg-gradient-to-r from-violet-500/15 via-purple-500/10 to-transparent p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-violet-500/25 text-violet-300 border border-violet-500/30 shrink-0">
+                      <Music className="size-5" />
+                    </div>
+                    <div>
+                      <p className="font-display text-xs font-bold text-foreground">
+                        🎵 Want MP3 or M4A Audio from this Video?
+                      </p>
+                      <p className="font-mono text-[10px] text-muted-foreground">
+                        Extract studio-grade 320kbps MP3 / M4A / WAV with 1 tap via built-in Media Converter
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConvertVideoToAudio}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2 font-display text-xs font-bold text-white shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+                  >
+                    <Music className="size-3.5" />
+                    <span>Convert to Audio (MP3/M4A)</span>
+                    <ArrowRight className="size-3.5 ml-0.5" />
+                  </button>
                 </div>
 
                 <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2.5 pt-2">

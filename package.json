@@ -1,6 +1,6 @@
 {
   "name": "zenodeck",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Heavy-Duty, 100% Client-Side WebAssembly Media & Document Workstation with Universal Downloader and ZenoTap IME",
   "homepage": "https://omni-tool-two.vercel.app",
   "repository": {

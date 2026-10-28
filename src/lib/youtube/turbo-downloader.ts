@@ -154,6 +154,7 @@ export function createPauseController(): PauseController {
 export interface TurboDownloadOptions {
   option: YouTubeQualityOption;
   videoTitle: string;
+  originalUrl?: string;
   author?: string;
   thumbnailUrl?: string;
   engine?: FFmpeg | null;
@@ -530,6 +531,7 @@ async function downloadStreamResilient({
 export async function downloadYouTubeStream({
   option,
   videoTitle,
+  originalUrl,
   author,
   thumbnailUrl,
   engine,
@@ -750,6 +752,10 @@ export async function downloadYouTubeStream({
           userAgent,
           audioUserAgent: option.audioUserAgent || option.audioFormat?.userAgent,
           fallbackVideoUrl: option.fallbackVideoUrl,
+          originalUrl: originalUrl || videoUrl,
+          useYtDlp: true,
+          ytdlpVideoFormatId: option.ytdlpVideoFormatId,
+          ytdlpAudioFormatId: option.ytdlpAudioFormatId,
           outputFilename,
           approxSizeBytes: option.approxSizeBytes,
           signal,

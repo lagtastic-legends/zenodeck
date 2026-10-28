@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.10">
-    <img src="https://img.shields.io/badge/Release-v1.0.10-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.10" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.11">
+    <img src="https://img.shields.io/badge/Release-v1.0.11-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.11" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.10/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,28 +46,28 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.10 (Full 4K 60FPS Engine Upgrade & YouTube Video Download Fix)
+## 💎 What's New in v1.0.11 (Pure yt-dlp Python Video Downloader Engine & Video-to-Audio CTA)
 
-ZenoDeck v1.0.10 delivers definitive fixes for YouTube video downloading and introduces full hardware-verified 4K 60FPS support:
+ZenoDeck v1.0.11 brings the embedded `yt-dlp` Python engine directly to Android via Chaquopy alongside an instant 1-tap Video-to-Audio workflow:
 
-- 🎬 **Hardware 4K 60FPS (`2160p60`) & 2K 60FPS Engine**: Priority resolution of high-framerate VP9/Opus (`.webm`) and AVC/AAC (`.mp4`) streams. 8MB direct `ByteBuffer` allocation (`MediaExtractor` keyframe buffer) eliminates buffer overflow on ultra-high-bitrate samples.
-- ⚡ **HTTP 200 Multi-Chunk Continuation**: Resolved YouTube CDN single-slice responses where `&range=` returned HTTP 200 OK. Sequential chunk writing continuously streams multi-gigabyte videos to disk without premature 2MB truncation.
-- 🛡️ **Monotonic Video PTS Clamping**: Guaranteed monotonically increasing timestamps (`pts = lastVideoPts + 100L`) across all tracks, permanently eliminating Android `MPEG4Writer` and WebM container desync and crash loops.
-- 🔁 **Single-Stream itag 18 Lossless Fallback**: Transparent recovery to pre-muxed 360p video if native hardware encounters unsupported exotic stream containers.
-- 🧪 **Full 26/26 Hardware Verification & 217-Test E2E Suite**: 100% pass rate across all tiers, verifying 4K60 resolution, live CDN slicing, and hardware muxing integrity.
+- 🐍 **Pure `yt-dlp` Python Engine (Chaquopy 15.0.1)**: Embedded Python 3.11 with `yt-dlp` running locally on-device. Eliminates extraction failures caused by YouTube JS challenge shifts and client signature updates.
+- 🎬 **Video-Only Downloader UI**: Streamlined quality ladder showing 4K 60FPS (`2160p60`), 2K 60FPS (`1440p60`), 1080p60, 720p, 480p, and 360p with lossless codec-container pairing.
+- 🎵 **1-Tap Post-Download "Convert Video to Audio" Workflow**: Immediate post-download CTA card and save-modal banner that hands off downloaded video files to Media Converter with studio 320kbps MP3 pre-selected.
+- ⚡ **Android Hardware MediaMuxer Dual-Stream Lossless Merge**: `yt-dlp` downloads chunked video and audio tracks directly to disk, and Android's hardware `MediaMuxer` merges them in milliseconds with zero mobile FFmpeg binary overhead.
+- 🧪 **100% Pass Rate Across All 217 E2E Tests**: Comprehensive 4-tier verification covering parallel chunking, hardware muxing, and cross-tool handoff contracts.
 
 ---
 
-## 🚀 Download & Installation (v1.0.10)
+## 🚀 Download & Installation (v1.0.11)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.10/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~12.6 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.10/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~12.6 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.10/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~12.6 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.10/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~12.6 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~59.0 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~40.5 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~37.5 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~41.8 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 
