@@ -346,7 +346,7 @@ export function YouTubeDownloader() {
 
   const videoQualities = videoInfo?.qualities.filter((q) => !q.isAudioOnly) || [];
   const audioQualities = videoInfo?.qualities.filter((q) => q.isAudioOnly) || [];
-  const displayedQualities = mediaTypeTab === "video" ? videoQualities : audioQualities;
+  const displayedQualities = videoQualities;
 
   const handleTabChange = (tab: "video" | "audio") => {
     setMediaTypeTab(tab);
@@ -1804,39 +1804,13 @@ export function YouTubeDownloader() {
 
             {/* Quality Selector & Media Type Selection */}
             <div className="space-y-3">
-              {/* Segmented Media Tabs */}
+              {/* Video Quality Selection Header */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2.5">
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange("video")}
-                    disabled={isDownloading}
-                    className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 font-display text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                      mediaTypeTab === "video"
-                        ? "bg-red-500/20 text-red-300 border border-red-500/40 shadow-xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-card/50 border border-transparent"
-                    }`}
-                  >
+                  <div className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 font-display text-[11px] sm:text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 shadow-xs">
                     <Film className="size-3.5" />
                     <span>Video Streams ({videoQualities.length})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange("audio")}
-                    disabled={isDownloading}
-                    className={`flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3.5 py-1.5 font-display text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                      mediaTypeTab === "audio"
-                        ? "bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-card/50 border border-transparent"
-                    }`}
-                  >
-                    <Music className="size-3.5" />
-                    <span>Direct Audio ({audioQualities.length})</span>
-                    <span className="rounded-full bg-violet-500/30 px-1.5 py-0.2 font-mono text-[9px] text-violet-200 uppercase">
-                      Fast
-                    </span>
-                  </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1862,7 +1836,7 @@ export function YouTubeDownloader() {
               {/* Quality Cards Grid */}
               {displayedQualities.length === 0 ? (
                 <div className="p-8 rounded-xl border border-dashed border-border/70 text-center font-mono text-xs text-muted-foreground">
-                  No {mediaTypeTab} streams available for this media. Try the {mediaTypeTab === "video" ? "audio" : "video"} tab.
+                  No video streams available for this media.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
