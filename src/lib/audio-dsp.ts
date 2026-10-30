@@ -21,7 +21,12 @@ export type AudioEffectType =
   | "tempo-changer"   // 10. Tempo Changer (Pitch-Preserving)
   | "trimmer"         // 11. Trimmer & Slicer
   | "vocal-remover"   // 12. Vocal Remover (Phase Cancellation)
-  | "volume-changer"; // 13. Volume Changer & Dynamic Normalizer
+  | "volume-changer"  // 13. Volume Changer & Dynamic Normalizer
+  | "audio-editor"    // 14. Pro Precision Cutter & Audio Splicer
+  | "ringtone-maker"  // 15. Ringtone Maker Studio
+  | "slowed-reverb"   // 16. Slowed + Reverb Studio
+  | "audio-effects"   // 17. Audio Effects Master
+  | "audio-dsp";      // 18. Studio DSP Suite
 
 export type AudioFormat = "mp3" | "wav" | "flac" | "ogg" | "m4a";
 
@@ -66,7 +71,7 @@ export interface BassBoosterParams {
 }
 
 export interface EqualizerParams {
-  gains: [number, number, number, number, number, number]; // 6 bands: 60, 150, 400, 1000, 2400, 15000 Hz
+  gains: number[]; // 10 ISO bands: 31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000 Hz
 }
 
 export interface NoiseReducerParams {
@@ -114,6 +119,7 @@ export interface TrimmerParams {
   fadeInSec: number;
   fadeOutSec: number;
   boostDb?: number;
+  cutMode?: "keep" | "cut";
 }
 
 export interface VocalRemoverParams {
@@ -357,28 +363,29 @@ export function buildAutoPannerFilter(p: AutoPannerParams): string[] {
 /* 6. Multi-Band Equalizer                                                    */
 /* -------------------------------------------------------------------------- */
 
-export const EQ_FREQUENCIES = [60, 150, 400, 1000, 2400, 15000] as const;
+export const EQ_FREQUENCIES = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const;
 
-export const EQ_PRESET_MAP: Record<string, [number, number, number, number, number, number]> = {
-  Flat: [0, 0, 0, 0, 0, 0],
-  "Bass Boost": [8, 6, 3, 0, 0, 0],
-  "Treble Boost": [0, 0, 0, 2, 5, 7],
-  "Vocal Presence": [-2, 0, 4, 4, 3, 0],
-  Rock: [5, 3, -1, -2, 3, 6],
-  Electronic: [6, 4, 0, -2, 2, 5],
-  Acoustic: [3, 2, 1, 0, 2, 3],
-  Speech: [-6, 2, 4, 3, -2, -4],
-  "Hip-Hop / 808": [9, 7, 1, -1, 1, 4],
-  "Loudness Smile": [6, 3, -2, -1, 3, 5],
+export const EQ_PRESET_MAP: Record<string, number[]> = {
+  Flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  "Bass Boost": [9, 8, 6, 3, 0, 0, 0, 0, 0, 0],
+  "Treble Boost": [0, 0, 0, 0, 0, 1, 3, 5, 7, 8],
+  "Vocal Presence": [-3, -2, 0, 2, 4, 4, 3, 1, 0, 0],
+  Rock: [6, 5, 3, 0, -1, -2, 1, 3, 5, 6],
+  Electronic: [7, 6, 4, 1, 0, -2, 1, 2, 5, 6],
+  Acoustic: [4, 3, 2, 1, 1, 0, 1, 2, 3, 3],
+  Speech: [-8, -6, 2, 3, 4, 3, 1, -2, -4, -6],
+  "Hip-Hop / 808": [10, 9, 7, 3, 0, -1, 0, 1, 3, 4],
+  "Loudness Smile": [7, 6, 3, 0, -2, -1, 1, 3, 5, 6],
 };
 
 export function buildEqualizerFilter(p: EqualizerParams): string[] {
+  const gains = Array.isArray(p.gains) ? p.gains : [];
   const bands = EQ_FREQUENCIES.map((f, i) => {
-    const gain = p.gains[i];
+    const gain = gains[i] ?? 0;
     return gain === 0 ? null : `equalizer=f=${f}:t=q:w=1:g=${gain.toFixed(1)}`;
   }).filter((s): s is string => s !== null);
 
-  if (bands.length > 0 && p.gains.some((g) => g > 0)) {
+  if (bands.length > 0 && gains.some((g) => g > 0)) {
     bands.push("alimiter=limit=0.98");
   }
   return bands;
@@ -487,19 +494,38 @@ export function buildTempoChangerFilter(p: TempoChangerParams): string[] {
 /* -------------------------------------------------------------------------- */
 
 export function buildTrimmerFilter(p: TrimmerParams): string[] {
-  const length = Math.max(p.endSec - p.startSec, 0.1);
-  const chain = [
-    `atrim=start=${p.startSec.toFixed(2)}:end=${p.endSec.toFixed(2)}`,
-    "asetpts=PTS-STARTPTS",
-  ];
-  // Studio S-curve (esin) fades for click-free acoustic transitions
-  if (p.fadeInSec > 0.01) {
-    chain.push(`afade=t=in:st=0:d=${p.fadeInSec.toFixed(2)}:curve=esin`);
+  const isCut = p.cutMode === "cut";
+  const chain: string[] = [];
+
+  if (isCut) {
+    // Cut mode: removes [startSec .. endSec] and splices [0 .. startSec] + [endSec .. duration] together
+    chain.push(
+      `aselect='not(between(t\\,${p.startSec.toFixed(2)}\\,${p.endSec.toFixed(2)}))'`,
+      "asetpts=N/SR/TB"
+    );
+    if (p.fadeInSec > 0.01) {
+      chain.push(`afade=t=in:st=0:d=${p.fadeInSec.toFixed(2)}:curve=esin`);
+    }
+    if (p.fadeOutSec > 0.01) {
+      chain.push(`afade=t=out:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
+    }
+  } else {
+    // Keep mode: retains [startSec .. endSec]
+    const length = Math.max(p.endSec - p.startSec, 0.1);
+    chain.push(
+      `atrim=start=${p.startSec.toFixed(2)}:end=${p.endSec.toFixed(2)}`,
+      "asetpts=PTS-STARTPTS"
+    );
+    // Studio S-curve (esin) fades for click-free acoustic transitions
+    if (p.fadeInSec > 0.01) {
+      chain.push(`afade=t=in:st=0:d=${p.fadeInSec.toFixed(2)}:curve=esin`);
+    }
+    if (p.fadeOutSec > 0.01) {
+      const st = Math.max(length - p.fadeOutSec, 0).toFixed(2);
+      chain.push(`afade=t=out:st=${st}:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
+    }
   }
-  if (p.fadeOutSec > 0.01) {
-    const st = Math.max(length - p.fadeOutSec, 0).toFixed(2);
-    chain.push(`afade=t=out:st=${st}:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
-  }
+
   if (p.boostDb && p.boostDb !== 0) {
     chain.push(`volume=${p.boostDb}dB`);
     if (p.boostDb > 0) {
@@ -558,8 +584,23 @@ export function getAudioFilterGraph(
       return buildStereoPannerFilter(params as StereoPannerParams);
     case "tempo-changer":
       return buildTempoChangerFilter(params as TempoChangerParams);
+    case "audio-editor":
+    case "ringtone-maker":
     case "trimmer":
       return buildTrimmerFilter(params as TrimmerParams);
+    case "slowed-reverb": {
+      const speed = params.speed || 0.85;
+      const chain: string[] = [];
+      let rem = speed;
+      while (rem < 0.5) { chain.push("atempo=0.5"); rem /= 0.5; }
+      while (rem > 2.0) { chain.push("atempo=2.0"); rem /= 2.0; }
+      chain.push(`atempo=${rem.toFixed(4)}`);
+      chain.push("aecho=0.8:0.88:60|120:0.4|0.25");
+      return chain;
+    }
+    case "audio-effects":
+    case "audio-dsp":
+      return buildSpatial8DFilter(params as Spatial8DParams);
     case "vocal-remover":
       return buildVocalRemoverFilter(params as VocalRemoverParams);
     case "volume-changer":
@@ -582,7 +623,7 @@ export function getDefaultAudioParams(effect: AudioEffectType): Record<string, a
     case "bass-booster":
       return { tier: 3, cutoff: 90, clarity: true };
     case "equalizer":
-      return { gains: [0, 0, 0, 0, 0, 0] };
+      return { gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
     case "noise-reducer":
       return { noiseReductionDb: 12, noiseFloorDb: -30, highpassHz: 80, lowpassHz: 14000 };
     case "pitch-shifter":
@@ -596,7 +637,16 @@ export function getDefaultAudioParams(effect: AudioEffectType): Record<string, a
     case "tempo-changer":
       return { speed: 1.0 };
     case "trimmer":
-      return { startSec: 0, endSec: 30, fadeInSec: 0, fadeOutSec: 0, boostDb: 0 };
+      return { startSec: 0, endSec: 30, fadeInSec: 0, fadeOutSec: 0, boostDb: 0, cutMode: "keep" };
+    case "audio-editor":
+      return { startSec: 0, endSec: 30, fadeInSec: 0, fadeOutSec: 0, boostDb: 0, cutMode: "keep" };
+    case "ringtone-maker":
+      return { startSec: 0, endSec: 30, fadeInSec: 1.5, fadeOutSec: 1.5, boostDb: 0, cutMode: "keep" };
+    case "slowed-reverb":
+      return { speed: 0.85, preset: "cathedral", wetPercent: 55, dryPercent: 70 };
+    case "audio-effects":
+    case "audio-dsp":
+      return { cycleSec: 8, intensity: 0.85, widening: 1.25 };
     case "vocal-remover":
       return { mode: "phase_cancel", bassPreserveCutoffHz: 140 };
     case "volume-changer":
@@ -624,7 +674,10 @@ export interface AudioToolMeta {
     | "RotateCcw"
     | "Clock"
     | "Scissors"
-    | "Volume2";
+    | "Volume2"
+    | "Bell"
+    | "Layers"
+    | "Sparkles";
   presets: { label: string; params: Partial<Record<string, any>> }[];
 }
 
@@ -678,7 +731,7 @@ export const AUDIO_TOOLS_CATALOG: AudioToolMeta[] = [
   {
     id: "equalizer",
     name: "Equalizer",
-    shortDesc: "6-band parametric mastering EQ with studio curves",
+    shortDesc: "10-band ISO standard mastering EQ with studio curves",
     category: "frequency",
     accentColor: "emerald",
     iconName: "SlidersVertical",
@@ -845,6 +898,71 @@ export const AUDIO_TOOLS_CATALOG: AudioToolMeta[] = [
       { label: "Night Mode (-12 dB)", params: { gainDb: -12, normalize: false } },
       { label: "Whisper Mode (-18 dB)", params: { gainDb: -18, normalize: false } },
       { label: "EBU R128 Dynamic Normalize", params: { gainDb: 0, normalize: true } },
+    ],
+  },
+  {
+    id: "audio-editor",
+    name: "Precision Cutter & Splicer",
+    shortDesc: "Cut, trim, crop or splice audio waveforms with micro-step precision",
+    category: "utility",
+    accentColor: "indigo",
+    iconName: "Scissors",
+    presets: [
+      { label: "Trim Selection (Keep Mode)", params: { startSec: 0, endSec: 30, cutMode: "keep", fadeInSec: 0.1, fadeOutSec: 0.5 } },
+      { label: "Cut Out Middle (Splice Mode)", params: { startSec: 10, endSec: 20, cutMode: "cut", fadeInSec: 0.05, fadeOutSec: 0.05 } },
+      { label: "Intro Snippet (First 15s)", params: { startSec: 0, endSec: 15, cutMode: "keep", fadeInSec: 0, fadeOutSec: 1.0 } },
+      { label: "Outro Fade (Last 20s)", params: { startSec: 40, endSec: 60, cutMode: "keep", fadeInSec: 1.0, fadeOutSec: 2.0 } },
+    ],
+  },
+  {
+    id: "ringtone-maker",
+    name: "Ringtone Maker",
+    shortDesc: "Create custom phone, alarm, and notification ringtones with instant presets",
+    category: "utility",
+    accentColor: "emerald",
+    iconName: "Bell",
+    presets: [
+      { label: "Call Ringtone (30s)", params: { startSec: 0, endSec: 30, fadeInSec: 1.5, fadeOutSec: 1.5, boostDb: 2 } },
+      { label: "iPhone Tone (25s)", params: { startSec: 0, endSec: 25, fadeInSec: 1.0, fadeOutSec: 1.5, boostDb: 2 } },
+      { label: "Notification Alert (5s)", params: { startSec: 0, endSec: 5, fadeInSec: 0.05, fadeOutSec: 0.5, boostDb: 3 } },
+      { label: "Alarm Loop (15s)", params: { startSec: 0, endSec: 15, fadeInSec: 0.5, fadeOutSec: 1.0, boostDb: 2 } },
+    ],
+  },
+  {
+    id: "slowed-reverb",
+    name: "Slowed + Reverb",
+    shortDesc: "Moody aesthetic pitch downshift with lush cathedral reverberation",
+    category: "creative",
+    accentColor: "violet",
+    iconName: "Waves",
+    presets: [
+      { label: "Late Night Chill (0.85x)", params: { speed: 0.85 } },
+      { label: "Deep Cathedral (0.80x)", params: { speed: 0.80 } },
+      { label: "Subtle Slow (0.92x)", params: { speed: 0.92 } },
+      { label: "Ultra Slow Sleep (0.75x)", params: { speed: 0.75 } },
+    ],
+  },
+  {
+    id: "audio-effects",
+    name: "Audio Effects Master",
+    shortDesc: "Studio multi-effects processor for spatial, frequency, and harmonic color",
+    category: "creative",
+    accentColor: "cyan",
+    iconName: "Sparkles",
+    presets: [
+      { label: "Concert Immersion", params: { cycleSec: 8, intensity: 0.85, widening: 1.35 } },
+      { label: "Studio Widener", params: { cycleSec: 12, intensity: 0.7, widening: 1.4 } },
+    ],
+  },
+  {
+    id: "audio-dsp",
+    name: "Studio DSP Suite",
+    shortDesc: "Professional sound design suite with real-time hardware-grade DSP",
+    category: "creative",
+    accentColor: "violet",
+    iconName: "Layers",
+    presets: [
+      { label: "Mastering Polish", params: { cycleSec: 8, intensity: 0.8, widening: 1.25 } },
     ],
   },
 ];

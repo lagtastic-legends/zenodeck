@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.11">
-    <img src="https://img.shields.io/badge/Release-v1.0.11-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.11" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.12">
+    <img src="https://img.shields.io/badge/Release-v1.0.12-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.12" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.12/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,28 +46,29 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.11 (Pure yt-dlp Python Video Downloader Engine & Video-to-Audio CTA)
+## 💎 What's New in v1.0.12 (Complete 20-Module Audio Engine & DSP Overhaul)
 
-ZenoDeck v1.0.11 brings the embedded `yt-dlp` Python engine directly to Android via Chaquopy alongside an instant 1-tap Video-to-Audio workflow:
+ZenoDeck v1.0.12 delivers a ground-up architectural overhaul of the entire 20-module audio suite, unifying all modules under `UnifiedAudioStudio` with live Web Audio auditioning and precision offline WASM rendering:
 
-- 🐍 **Pure `yt-dlp` Python Engine (Chaquopy 15.0.1)**: Embedded Python 3.11 with `yt-dlp` running locally on-device. Eliminates extraction failures caused by YouTube JS challenge shifts and client signature updates.
-- 🎬 **Video-Only Downloader UI**: Streamlined quality ladder showing 4K 60FPS (`2160p60`), 2K 60FPS (`1440p60`), 1080p60, 720p, 480p, and 360p with lossless codec-container pairing.
-- 🎵 **1-Tap Post-Download "Convert Video to Audio" Workflow**: Immediate post-download CTA card and save-modal banner that hands off downloaded video files to Media Converter with studio 320kbps MP3 pre-selected.
-- ⚡ **Android Hardware MediaMuxer Dual-Stream Lossless Merge**: `yt-dlp` downloads chunked video and audio tracks directly to disk, and Android's hardware `MediaMuxer` merges them in milliseconds with zero mobile FFmpeg binary overhead.
-- 🧪 **100% Pass Rate Across All 217 E2E Tests**: Comprehensive 4-tier verification covering parallel chunking, hardware muxing, and cross-tool handoff contracts.
+- 🎛️ **Full 20-Module Routing Unification**: Audio Cutter, MP3 Editor, Ringtone Maker, Slowed + Reverb, and Audio Effects now route directly into `UnifiedAudioStudio`, sharing real-time waveform scrubbing, Web Audio DSP auditioning, preset selector modals, and instant Save Result dialogs.
+- ✂️ **Pro Precision Cutter & Splicer Deck**: Dual-mode cutter supporting **Keep Selection (Trim)** and **Cut Out Middle (Splice Removal)**, ±0.1s micro-step nudges, zero-crossing boundary snapping, region looping, and sample-accurate 60fps live audible fades.
+- 📱 **Ringtone Quick-Duration Bar**: 1-tap presets for 30s Call Ringtones, 25s iPhone Tones, 5s Notifications, and 15s Alarm Loops with automatic fade shaping and optimal format encoding (MP3 320kbps / M4A).
+- ⚡ **Real-Time Granular Pitch Shifter**: Stereo Hann-windowed dual-delay pitch transposer (-12 to +12 semitones) changing musical pitch in real time during audition without altering playback tempo or speed.
+- 🏛️ **True IR Convolver Reverb & 135Hz Crossover Vocal Remover**: Deterministic algorithmic impulse response convolution, phase-aligned 2-band crossover vocal removal that preserves punchy kick drums and sub-bass (<135Hz), 10-band ISO standard equalizer, and master brickwall safety peak limiting.
+- 🧪 **100% Pass Rate Across All 217 E2E Tests + 20-Module Verification**: Complete test suite and verification scripts exit 0 cleanly with zero errors.
 
 ---
 
-## 🚀 Download & Installation (v1.0.11)
+## 🚀 Download & Installation (v1.0.12)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~59.0 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~40.5 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~37.5 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.11/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~41.8 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.12/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~59.0 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.12/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~40.5 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.12/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~37.5 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.12/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~41.8 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 

@@ -200,7 +200,8 @@ export function buildSinglePassStemSeparationArgs(
 }
 
 /**
- * Builds real-time Web Audio API graph for the 4-track stem mixer console.
+ * Builds real-time Web Audio API graph for the 4-track stem mixer console
+ * using Mid/Side channel extraction, cascaded crossover filters, and transient shaping.
  */
 export function createStemMixerWebAudioNodes(
   ctx: AudioContext,
@@ -213,50 +214,115 @@ export function createStemMixerWebAudioNodes(
 } {
   const masterGain = ctx.createGain();
 
-  // Vocals branch: bandpass + mid-focus
-  const vocFilter = ctx.createBiquadFilter();
-  vocFilter.type = "bandpass";
-  vocFilter.frequency.value = 1500;
-  vocFilter.Q.value = 0.8;
+  // 1. Stereo splitter for Mid/Side computation
+  const splitter = ctx.createChannelSplitter(2);
+  source.connect(splitter);
+
+  // --- VOCALS STEM: Center Mid-Channel Extraction ((L + R) * 0.5) + Vocal Formant Bandpass (180Hz - 7500Hz) ---
+  const midSumL = ctx.createGain();
+  midSumL.gain.value = 0.5;
+  const midSumR = ctx.createGain();
+  midSumR.gain.value = 0.5;
+  const midMerger = ctx.createChannelMerger(2);
+
+  splitter.connect(midSumL, 0); // L
+  splitter.connect(midSumR, 1); // R
+  midSumL.connect(midMerger, 0, 0);
+  midSumR.connect(midMerger, 0, 0); // L+R mono into channel 0
+  midSumL.connect(midMerger, 0, 1);
+  midSumR.connect(midMerger, 0, 1); // L+R mono into channel 1
+
+  const vocHp = ctx.createBiquadFilter();
+  vocHp.type = "highpass";
+  vocHp.frequency.value = 180;
+  vocHp.Q.value = 0.707;
+
+  const vocLp = ctx.createBiquadFilter();
+  vocLp.type = "lowpass";
+  vocLp.frequency.value = 7500;
+  vocLp.Q.value = 0.707;
+
   const vocGain = ctx.createGain();
   const vocPan = ctx.createStereoPanner();
-  source.connect(vocFilter);
-  vocFilter.connect(vocGain);
+
+  midMerger.connect(vocHp);
+  vocHp.connect(vocLp);
+  vocLp.connect(vocGain);
   vocGain.connect(vocPan);
   vocPan.connect(masterGain);
 
-  // Bass branch: lowpass
-  const basFilter = ctx.createBiquadFilter();
-  basFilter.type = "lowpass";
-  basFilter.frequency.value = 180;
+  // --- BASS STEM: Phase-Coherent Mono Lowpass (< 145Hz, 24dB/oct cascaded) ---
+  const basLp1 = ctx.createBiquadFilter();
+  basLp1.type = "lowpass";
+  basLp1.frequency.value = 145;
+  basLp1.Q.value = 0.707;
+
+  const basLp2 = ctx.createBiquadFilter();
+  basLp2.type = "lowpass";
+  basLp2.frequency.value = 145;
+  basLp2.Q.value = 0.707;
+
   const basGain = ctx.createGain();
   const basPan = ctx.createStereoPanner();
-  source.connect(basFilter);
-  basFilter.connect(basGain);
+
+  source.connect(basLp1);
+  basLp1.connect(basLp2);
+  basLp2.connect(basGain);
   basGain.connect(basPan);
   basPan.connect(masterGain);
 
-  // Drums branch: highpass + punch
-  const druFilter = ctx.createBiquadFilter();
-  druFilter.type = "peaking";
-  druFilter.frequency.value = 90;
-  druFilter.gain.value = 3;
+  // --- DRUMS STEM: Transient Punch Shaper (Slow attack 25ms, fast release 40ms + 70Hz & 5kHz shelves) ---
+  const druKickPunch = ctx.createBiquadFilter();
+  druKickPunch.type = "peaking";
+  druKickPunch.frequency.value = 70;
+  druKickPunch.Q.value = 1.2;
+  druKickPunch.gain.value = 4.0;
+
+  const druSnareCrisp = ctx.createBiquadFilter();
+  druSnareCrisp.type = "highshelf";
+  druSnareCrisp.frequency.value = 5000;
+  druSnareCrisp.gain.value = 3.0;
+
+  const druComp = ctx.createDynamicsCompressor();
+  druComp.threshold.value = -12;
+  druComp.knee.value = 6;
+  druComp.ratio.value = 4;
+  druComp.attack.value = 0.025; // 25ms slow attack lets initial drum transient crack through
+  druComp.release.value = 0.040; // 40ms fast release recovers punch immediately
+
   const druGain = ctx.createGain();
   const druPan = ctx.createStereoPanner();
-  source.connect(druFilter);
-  druFilter.connect(druGain);
+
+  source.connect(druKickPunch);
+  druKickPunch.connect(druSnareCrisp);
+  druSnareCrisp.connect(druComp);
+  druComp.connect(druGain);
   druGain.connect(druPan);
   druPan.connect(masterGain);
 
-  // Instruments branch: high-shelf / side focus
-  const insFilter = ctx.createBiquadFilter();
-  insFilter.type = "highshelf";
-  insFilter.frequency.value = 4000;
-  insFilter.gain.value = 2;
+  // --- INSTRUMENTS STEM: Stereo Side Extraction (L - R high-passed > 160Hz) ---
+  const sideDiffR = ctx.createGain();
+  sideDiffR.gain.value = -0.5;
+  const sideSumL = ctx.createGain();
+  sideSumL.gain.value = 0.5;
+  const sideMerger = ctx.createChannelMerger(2);
+
+  splitter.connect(sideSumL, 0); // L
+  splitter.connect(sideDiffR, 1); // -R
+  sideSumL.connect(sideMerger, 0, 0);
+  sideDiffR.connect(sideMerger, 0, 0); // L - R on left
+  sideSumL.connect(sideMerger, 0, 1);
+  sideDiffR.connect(sideMerger, 0, 1); // L - R on right
+
+  const insHp = ctx.createBiquadFilter();
+  insHp.type = "highpass";
+  insHp.frequency.value = 160;
+
   const insGain = ctx.createGain();
   const insPan = ctx.createStereoPanner();
-  source.connect(insFilter);
-  insFilter.connect(insGain);
+
+  sideMerger.connect(insHp);
+  insHp.connect(insGain);
   insGain.connect(insPan);
   insPan.connect(masterGain);
 
@@ -276,16 +342,22 @@ export function createStemMixerWebAudioNodes(
     masterGain,
     cleanup: () => {
       try {
-        vocFilter.disconnect();
+        source.disconnect();
+        splitter.disconnect();
+        vocHp.disconnect();
+        vocLp.disconnect();
         vocGain.disconnect();
         vocPan.disconnect();
-        basFilter.disconnect();
+        basLp1.disconnect();
+        basLp2.disconnect();
         basGain.disconnect();
         basPan.disconnect();
-        druFilter.disconnect();
+        druKickPunch.disconnect();
+        druSnareCrisp.disconnect();
+        druComp.disconnect();
         druGain.disconnect();
         druPan.disconnect();
-        insFilter.disconnect();
+        insHp.disconnect();
         insGain.disconnect();
         insPan.disconnect();
         masterGain.disconnect();

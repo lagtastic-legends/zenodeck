@@ -76,6 +76,10 @@ const ReverseAudioStudioTool = () => <UnifiedAudioStudio initialToolId="reverse-
 const StereoPannerStudioTool = () => <UnifiedAudioStudio initialToolId="stereo-panner" />;
 const VolumeChangerStudioTool = () => <UnifiedAudioStudio initialToolId="volume-changer" />;
 const TrimmerStudioTool = () => <UnifiedAudioStudio initialToolId="trimmer" />;
+const AudioEditorStudioTool = () => <UnifiedAudioStudio initialToolId="audio-editor" />;
+const RingtoneMakerStudioTool = () => <UnifiedAudioStudio initialToolId="ringtone-maker" />;
+const SlowedReverbStudioTool = () => <UnifiedAudioStudio initialToolId="slowed-reverb" />;
+const AudioEffectsStudioTool = () => <UnifiedAudioStudio initialToolId="audio-effects" />;
 const FXRackStudioTool = () => <UnifiedAudioStudio initialStudioMode="fx-rack" />;
 const StemSeparatorStudioTool = () => <UnifiedAudioStudio initialStudioMode="stem-mixer" />;
 
@@ -108,8 +112,8 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "video-compressor": VideoCompressor,
   "video-mute": VideoMute,
   "gif-maker": GifMaker,
-  "audio-editor": AudioEditor,
-  "slowed-reverb": SlowedReverb,
+  "audio-editor": AudioEditorStudioTool,
+  "slowed-reverb": SlowedReverbStudioTool,
   "bass-booster": BassBoosterStudioTool,
   "spatial-8d": Spatial8DStudioTool,
   "equalizer": EqualizerStudioTool,
@@ -117,7 +121,7 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "stereo-panner": StereoPannerStudioTool,
   "volume-changer": VolumeChangerStudioTool,
   "trimmer": TrimmerStudioTool,
-  "ringtone-maker": RingtoneMaker,
+  "ringtone-maker": RingtoneMakerStudioTool,
   "image-to-pdf": ImageToPdf,
   "text-to-pdf": TextToPdf,
   "lock-pdf": LockPdf,
@@ -137,7 +141,7 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "noise-reducer": NoiseReducerTool,
   "pitch-shifter": PitchShifterTool,
   "tempo-changer": TempoChangerTool,
-  "audio-effects": AudioEffectsPanel,
+  "audio-effects": AudioEffectsStudioTool,
   "fx-rack": FXRackStudioTool,
   "stem-separator": StemSeparatorStudioTool,
   "macro-studio": MacroStudioView,

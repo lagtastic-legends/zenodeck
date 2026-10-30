@@ -39,6 +39,7 @@ import {
 import { useAudioProcessor } from "@/hooks/useAudioProcessor";
 import { useHaptics } from "@/hooks/use-haptics";
 import { OutputCard } from "@/components/media/output-card";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
 
 interface FXRackStudioProps {
   file: File | null;
@@ -74,6 +75,19 @@ export function FXRackStudio({
     processAudio,
     reset,
   } = useAudioProcessor();
+
+  /* Automatically surface SaveResultModal on successful export */
+  useEffect(() => {
+    if (result && result.blob) {
+      try {
+        useSaveDialogStore.getState().showSuccess({
+          filename: result.name,
+          blob: result.blob,
+          fileSize: result.size,
+        });
+      } catch {}
+    }
+  }, [result]);
 
   /* Web Audio Real-Time Rack Connection */
   const audioCtxRef = useRef<AudioContext | null>(null);

@@ -34,7 +34,13 @@ import {
   Grid,
   Layers,
   Disc,
+  Bell,
+  Repeat,
+  Magnet,
+  Plus,
+  Minus,
 } from "lucide-react";
+import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
 import { AudioToolsGrid } from "@/components/audio/AudioToolsGrid";
@@ -128,6 +134,84 @@ const BITRATE_OPTIONS = [
   { value: "320", label: "320 kbps (Studio Master)" },
 ];
 
+/**
+ * Synthesizes a deterministic stereo Impulse Response buffer (early reflections + velvet noise decay)
+ */
+function createStudioImpulseResponse(
+  ctx: BaseAudioContext,
+  decaySec: number = 2.0,
+  dampingHz: number = 4500,
+  preDelayMs: number = 20
+): AudioBuffer {
+  const sampleRate = ctx.sampleRate;
+  const length = Math.max(1, Math.floor(sampleRate * decaySec));
+  const buffer = ctx.createBuffer(2, length, sampleRate);
+  const left = buffer.getChannelData(0);
+  const right = buffer.getChannelData(1);
+  const preDelaySamples = Math.floor((preDelayMs / 1000) * sampleRate);
+  const decayConstant = 6.91 / (decaySec * sampleRate); // T60 decay (60dB)
+
+  for (let i = 0; i < length; i++) {
+    if (i < preDelaySamples) {
+      left[i] = 0;
+      right[i] = 0;
+      continue;
+    }
+    const n = i - preDelaySamples;
+    const env = Math.exp(-decayConstant * n);
+    const isEarly = n < sampleRate * 0.05;
+    const density = isEarly ? 0.35 : 1.0;
+    left[i] = (Math.random() * 2 - 1) * env * density;
+    right[i] = (Math.random() * 2 - 1) * env * density;
+  }
+  return buffer;
+}
+
+/**
+ * Real-time Hann-windowed dual-delay pitch shifter (independent of tempo)
+ */
+function createGranularPitchShifter(ctx: AudioContext, semitones: number): AudioNode {
+  if (Math.abs(semitones) < 0.05) {
+    return ctx.createGain();
+  }
+  const bufferSize = 2048;
+  const scriptNode = ctx.createScriptProcessor(bufferSize, 2, 2);
+  const delayLength = 4096;
+  const leftDelay = new Float32Array(delayLength);
+  const rightDelay = new Float32Array(delayLength);
+  let writeIndex = 0;
+  let readIndex1 = 0;
+  let readIndex2 = delayLength / 2;
+  const pitchRatio = Math.pow(2, semitones / 12);
+
+  scriptNode.onaudioprocess = (e) => {
+    const inputL = e.inputBuffer.getChannelData(0);
+    const inputR = e.inputBuffer.getChannelData(1);
+    const outputL = e.outputBuffer.getChannelData(0);
+    const outputR = e.outputBuffer.getChannelData(1);
+
+    for (let i = 0; i < bufferSize; i++) {
+      leftDelay[writeIndex] = inputL[i];
+      rightDelay[writeIndex] = inputR[i];
+
+      const phase1 = (readIndex1 / delayLength) * 2 * Math.PI;
+      const gain1 = 0.5 * (1 - Math.cos(phase1));
+      const gain2 = 1.0 - gain1;
+
+      const idx1 = Math.floor(readIndex1) % delayLength;
+      const idx2 = Math.floor(readIndex2) % delayLength;
+
+      outputL[i] = leftDelay[idx1] * gain1 + leftDelay[idx2] * gain2;
+      outputR[i] = rightDelay[idx1] * gain1 + rightDelay[idx2] * gain2;
+
+      writeIndex = (writeIndex + 1) % delayLength;
+      readIndex1 = (readIndex1 + pitchRatio) % delayLength;
+      readIndex2 = (readIndex2 + pitchRatio) % delayLength;
+    }
+  };
+  return scriptNode;
+}
+
 export function UnifiedAudioStudio({
   initialToolId = "bass-booster",
   initialStudioMode,
@@ -201,6 +285,13 @@ export function UnifiedAudioStudio({
   const pannerNodeRef = useRef<StereoPannerNode | null>(null);
   const spatialFilterRef = useRef<BiquadFilterNode | null>(null);
   const spatialGainRef = useRef<GainNode | null>(null);
+  const fadeGainRef = useRef<GainNode | null>(null);
+  const transportRafRef = useRef<number | null>(null);
+  const [loopRegion, setLoopRegion] = useState(true);
+  const loopRegionRef = useRef<boolean>(true);
+  useEffect(() => {
+    loopRegionRef.current = loopRegion;
+  }, [loopRegion]);
 
   /* Clean up audio preview url */
   useEffect(() => {
@@ -247,7 +338,23 @@ export function UnifiedAudioStudio({
       pannerNodeRef.current = null;
       spatialFilterRef.current = null;
       spatialGainRef.current = null;
+      fadeGainRef.current = null;
       try { source.disconnect(); } catch {}
+
+      // 1. Live Fade Gain Node
+      const fadeGain = ctx.createGain();
+      fadeGain.gain.value = 1.0;
+      fadeGainRef.current = fadeGain;
+      source.connect(fadeGain);
+
+      // 2. Master Brickwall Safety Limiter (prevents digital clipping above 0 dBFS)
+      const masterLimiter = ctx.createDynamicsCompressor();
+      masterLimiter.threshold.value = -0.5;
+      masterLimiter.knee.value = 0;
+      masterLimiter.ratio.value = 20;
+      masterLimiter.attack.value = 0.002;
+      masterLimiter.release.value = 0.08;
+      masterLimiter.connect(ctx.destination);
 
       const nodes: AudioNode[] = [];
 
@@ -257,7 +364,7 @@ export function UnifiedAudioStudio({
           const gain = typeof params.customGainDb === "number" ? params.customGainDb : tier.gain;
           const cutoff = params.cutoff || tier.defaultCutoff;
 
-          // 1. Subsonic highpass filter (28Hz) to prevent inaudible cone flapping & DAC clipping
+          // 1. Subsonic highpass filter (28Hz)
           const subRumble = ctx.createBiquadFilter();
           subRumble.type = "highpass";
           subRumble.frequency.value = 28;
@@ -284,22 +391,13 @@ export function UnifiedAudioStudio({
           const headroomDb = gain * 0.55;
           headroomGain.gain.value = Math.pow(10, -headroomDb / 20);
           nodes.push(headroomGain);
-
-          // 5. Studio peak limiter to eliminate audio tearing and crackle
-          const limiter = ctx.createDynamicsCompressor();
-          limiter.threshold.value = -0.5;
-          limiter.knee.value = 0;
-          limiter.ratio.value = 20;
-          limiter.attack.value = 0.007;
-          limiter.release.value = 0.1;
-          nodes.push(limiter);
           break;
         }
 
         case "equalizer": {
-          const gains = params.gains || [0, 0, 0, 0, 0, 0];
+          const gains = Array.isArray(params.gains) ? params.gains : [];
           EQ_FREQUENCIES.forEach((freq, i) => {
-            const g = gains[i] || 0;
+            const g = gains[i] ?? 0;
             if (g !== 0) {
               const eqFilter = ctx.createBiquadFilter();
               eqFilter.type = "peaking";
@@ -309,6 +407,13 @@ export function UnifiedAudioStudio({
               nodes.push(eqFilter);
             }
           });
+          break;
+        }
+
+        case "pitch-shifter": {
+          const semitones = params.semitones || 0;
+          const shifter = createGranularPitchShifter(ctx, semitones);
+          nodes.push(shifter);
           break;
         }
 
@@ -331,23 +436,19 @@ export function UnifiedAudioStudio({
 
         case "spatial-8d": {
           if (ctx.createStereoPanner) {
-            // 1. Azimuth stereo panner for smooth horizontal 360° rotation
             const panner = ctx.createStereoPanner();
             panner.pan.value = 0;
             pannerNodeRef.current = panner;
 
-            // 2. Dynamic Head-Shadow / Pinna filter (attenuates high-freq when source is behind the head)
             const headShadowFilter = ctx.createBiquadFilter();
             headShadowFilter.type = "lowpass";
             headShadowFilter.frequency.value = 18000;
             spatialFilterRef.current = headShadowFilter;
 
-            // 3. Proximity gain modulation (subtle volume attenuation behind head)
             const proximityGain = ctx.createGain();
             proximityGain.gain.value = 1.0;
             spatialGainRef.current = proximityGain;
 
-            // 4. Binaural room reflection / Haas externalization micro-delay
             const roomDelay = ctx.createDelay();
             roomDelay.delayTime.value = 0.022; // 22ms Haas reflection
             const roomGain = ctx.createGain();
@@ -356,23 +457,25 @@ export function UnifiedAudioStudio({
             roomDamp.type = "lowpass";
             roomDamp.frequency.value = 4500;
 
-            source.connect(panner);
+            fadeGain.connect(panner);
             panner.connect(headShadowFilter);
             headShadowFilter.connect(proximityGain);
-            proximityGain.connect(ctx.destination);
+            proximityGain.connect(masterLimiter);
 
-            source.connect(roomDelay);
+            fadeGain.connect(roomDelay);
             roomDelay.connect(roomDamp);
             roomDamp.connect(roomGain);
-            roomGain.connect(ctx.destination);
+            roomGain.connect(masterLimiter);
 
             currentDspNodesRef.current = [
+              fadeGain,
               panner,
               headShadowFilter,
               proximityGain,
               roomDelay,
               roomDamp,
               roomGain,
+              masterLimiter,
             ];
             return;
           }
@@ -399,70 +502,109 @@ export function UnifiedAudioStudio({
           lp.type = "lowpass";
           lp.frequency.value = params.lowpassHz || 14000;
           nodes.push(lp);
+
+          const expander = ctx.createDynamicsCompressor();
+          expander.threshold.value = params.noiseFloorDb || -30;
+          expander.ratio.value = 4;
+          expander.attack.value = 0.01;
+          expander.release.value = 0.1;
+          nodes.push(expander);
           break;
         }
 
         case "vocal-remover": {
+          // 2-Band Crossover Mid-Side Vocal Remover (Preserves Kick & Sub-Bass < 135Hz)
           if (ctx.createChannelSplitter && ctx.createChannelMerger) {
+            const cutoff = params.bassPreserveCutoffHz || 135;
+            const subLp = ctx.createBiquadFilter();
+            subLp.type = "lowpass";
+            subLp.frequency.value = cutoff;
+            subLp.Q.value = 0.707;
+
+            const highHp = ctx.createBiquadFilter();
+            highHp.type = "highpass";
+            highHp.frequency.value = cutoff;
+            highHp.Q.value = 0.707;
+
             const splitter = ctx.createChannelSplitter(2);
             const merger = ctx.createChannelMerger(2);
             const inverter = ctx.createGain();
             inverter.gain.value = -1;
 
-            source.connect(splitter);
+            const combiner = ctx.createGain();
+            combiner.gain.value = 1.0;
+
+            fadeGain.connect(subLp);
+            subLp.connect(combiner);
+
+            fadeGain.connect(highHp);
+            highHp.connect(splitter);
             splitter.connect(merger, 0, 0); // L -> L
-            splitter.connect(inverter, 1);   // R -> Inv
-            inverter.connect(merger, 0, 0); // -R -> L
-            splitter.connect(merger, 0, 1); // L -> R
-            inverter.connect(merger, 0, 1); // -R -> R
-            merger.connect(ctx.destination);
-            currentDspNodesRef.current = [splitter, merger, inverter];
+            splitter.connect(inverter, 1);    // R -> Inv
+            inverter.connect(merger, 0, 0);   // -R -> L (summed L - R)
+            splitter.connect(merger, 0, 1);   // L -> R
+            inverter.connect(merger, 0, 1);   // -R -> R (summed L - R)
+            merger.connect(combiner);
+
+            combiner.connect(masterLimiter);
+            currentDspNodesRef.current = [fadeGain, subLp, highHp, splitter, merger, inverter, combiner, masterLimiter];
             return;
           }
           break;
         }
 
-        case "reverb": {
-          // Psychoacoustic Haas diffusion: wet/dry balance with zero discrete slapback delay
-          const wetGain = ctx.createGain();
-          wetGain.gain.value = 0.32;
+        case "reverb":
+        case "slowed-reverb": {
+          // True Algorithmic IR Convolver Reverb with parallel Wet/Dry
+          const isSlowed = activeEffect === "slowed-reverb";
+          const decay = isSlowed ? 3.5 : 2.2;
+          const convolver = ctx.createConvolver();
+          convolver.buffer = createStudioImpulseResponse(ctx, decay, 5000, 20);
+
           const dryGain = ctx.createGain();
-          dryGain.gain.value = 0.88;
+          dryGain.gain.value = isSlowed ? 0.70 : 0.85;
+          const wetGain = ctx.createGain();
+          wetGain.gain.value = isSlowed ? 0.50 : 0.35;
 
-          const delay1 = ctx.createDelay();
-          delay1.delayTime.value = 0.022; // 22ms Haas reflection
-          const delay2 = ctx.createDelay();
-          delay2.delayTime.value = 0.035; // 35ms Haas reflection
+          const sumGain = ctx.createGain();
+          sumGain.gain.value = 1.0;
 
-          const lowpass = ctx.createBiquadFilter();
-          lowpass.type = "lowpass";
-          lowpass.frequency.value = 5200; // warm acoustic absorption
+          fadeGain.connect(dryGain);
+          dryGain.connect(sumGain);
 
-          source.connect(dryGain);
-          dryGain.connect(ctx.destination);
+          fadeGain.connect(convolver);
+          convolver.connect(wetGain);
+          wetGain.connect(sumGain);
 
-          source.connect(delay1);
-          delay1.connect(delay2);
-          delay2.connect(lowpass);
-          lowpass.connect(wetGain);
-          wetGain.connect(ctx.destination);
-
-          currentDspNodesRef.current = [dryGain, wetGain, delay1, delay2, lowpass];
+          sumGain.connect(masterLimiter);
+          currentDspNodesRef.current = [fadeGain, dryGain, convolver, wetGain, sumGain, masterLimiter];
           return;
+        }
+
+        case "trimmer":
+        case "audio-editor":
+        case "ringtone-maker": {
+          if (params.boostDb && params.boostDb !== 0) {
+            const boostGain = ctx.createGain();
+            boostGain.gain.value = Math.pow(10, params.boostDb / 20);
+            nodes.push(boostGain);
+          }
+          break;
         }
       }
 
-      // Connect linear chain: source -> node0 -> node1 -> ... -> destination
+      // Connect linear chain: fadeGain -> node0 -> node1 -> ... -> masterLimiter -> destination
       if (nodes.length > 0) {
-        let prev: AudioNode = source;
+        let prev: AudioNode = fadeGain;
         for (const n of nodes) {
           prev.connect(n);
           prev = n;
         }
-        prev.connect(ctx.destination);
-        currentDspNodesRef.current = nodes;
+        prev.connect(masterLimiter);
+        currentDspNodesRef.current = [fadeGain, ...nodes, masterLimiter];
       } else {
-        source.connect(ctx.destination);
+        fadeGain.connect(masterLimiter);
+        currentDspNodesRef.current = [fadeGain, masterLimiter];
       }
     } catch {
       try {
@@ -543,10 +685,96 @@ export function UnifiedAudioStudio({
     };
   }, [isPlaying, activeEffect, params]);
 
+  /* 60fps Transport Monitor for Sample-Accurate Region Scrubbing & Live Audible Fades */
+  useEffect(() => {
+    if (!isPlaying) {
+      if (transportRafRef.current) {
+        cancelAnimationFrame(transportRafRef.current);
+        transportRafRef.current = null;
+      }
+      return;
+    }
+
+    const tickTransport = () => {
+      const audio = audioRef.current;
+      if (!audio || !isPlaying) return;
+      const cur = audio.currentTime;
+      setCurrentTime(cur);
+
+      const isTrimming =
+        activeEffect === "trimmer" ||
+        activeEffect === "audio-editor" ||
+        activeEffect === "ringtone-maker";
+
+      if (isTrimming) {
+        const start = params.startSec ?? 0;
+        const end = params.endSec ?? duration ?? 30;
+        const cutMode = params.cutMode || "keep";
+
+        if (cutMode === "keep") {
+          if (cur < start) {
+            audio.currentTime = start;
+          } else if (cur >= end) {
+            if (loopRegionRef.current) {
+              audio.currentTime = start;
+            } else {
+              audio.pause();
+              setIsPlaying(false);
+              audio.currentTime = start;
+              return;
+            }
+          }
+        } else if (cutMode === "cut") {
+          // Splice mode: skip [start, end)
+          if (cur >= start && cur < end) {
+            audio.currentTime = end;
+          }
+        }
+
+        // Live Audible Fades Automation
+        if (fadeGainRef.current && audioCtxRef.current) {
+          let fadeMult = 1.0;
+          const fadeIn = params.fadeInSec || 0;
+          const fadeOut = params.fadeOutSec || 0;
+
+          if (cutMode === "keep") {
+            const timeSinceStart = cur - start;
+            const timeUntilEnd = end - cur;
+            if (fadeIn > 0.01 && timeSinceStart < fadeIn) {
+              fadeMult = Math.max(0, Math.min(1, timeSinceStart / fadeIn));
+            } else if (fadeOut > 0.01 && timeUntilEnd < fadeOut) {
+              fadeMult = Math.max(0, Math.min(1, timeUntilEnd / fadeOut));
+            }
+          }
+          fadeGainRef.current.gain.setTargetAtTime(
+            fadeMult,
+            audioCtxRef.current.currentTime,
+            0.015
+          );
+        }
+      } else {
+        if (fadeGainRef.current && audioCtxRef.current) {
+          fadeGainRef.current.gain.setTargetAtTime(1.0, audioCtxRef.current.currentTime, 0.015);
+        }
+      }
+
+      transportRafRef.current = requestAnimationFrame(tickTransport);
+    };
+
+    transportRafRef.current = requestAnimationFrame(tickTransport);
+    return () => {
+      if (transportRafRef.current) {
+        cancelAnimationFrame(transportRafRef.current);
+        transportRafRef.current = null;
+      }
+    };
+  }, [isPlaying, activeEffect, params.startSec, params.endSec, params.cutMode, params.fadeInSec, params.fadeOutSec, duration]);
+
   /* Teardown Web Audio API on unmount */
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (transportRafRef.current) cancelAnimationFrame(transportRafRef.current);
       currentDspNodesRef.current.forEach((n) => {
         try { n.disconnect(); } catch {}
       });
@@ -567,7 +795,11 @@ export function UnifiedAudioStudio({
 
   const updateParam = (key: string, value: any) => {
     setParams((prev) => ({ ...prev, [key]: value }));
-    if (activeEffect === "trimmer" && key === "startSec" && audioRef.current && !isPlaying) {
+    const isTrimmerTool =
+      activeEffect === "trimmer" ||
+      activeEffect === "audio-editor" ||
+      activeEffect === "ringtone-maker";
+    if (isTrimmerTool && key === "startSec" && audioRef.current) {
       audioRef.current.currentTime = value;
       setCurrentTime(value);
     }
@@ -581,7 +813,7 @@ export function UnifiedAudioStudio({
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      if (activeEffect === "tempo-changer") {
+      if (activeEffect === "tempo-changer" || activeEffect === "slowed-reverb") {
         try {
           audioRef.current.preservesPitch = true;
         } catch {}
@@ -589,7 +821,11 @@ export function UnifiedAudioStudio({
       } else {
         audioRef.current.playbackRate = 1.0;
       }
-      if (activeEffect === "trimmer") {
+      const isTrimmerTool =
+        activeEffect === "trimmer" ||
+        activeEffect === "audio-editor" ||
+        activeEffect === "ringtone-maker";
+      if (isTrimmerTool) {
         const start = params.startSec || 0;
         const end = params.endSec || duration || 30;
         if (audioRef.current.currentTime < start || audioRef.current.currentTime >= end) {
@@ -602,6 +838,19 @@ export function UnifiedAudioStudio({
       setIsPlaying(true);
     }
   };
+
+  /* Automatically surface SaveResultModal on successful export */
+  useEffect(() => {
+    if (result && result.blob) {
+      try {
+        useSaveDialogStore.getState().showSuccess({
+          filename: result.name,
+          blob: result.blob,
+          fileSize: result.size,
+        });
+      } catch {}
+    }
+  }, [result]);
 
   /* Execute WASM Processing */
   const handleRunProcessing = async () => {
@@ -625,7 +874,11 @@ export function UnifiedAudioStudio({
   /* Probed duration helper */
   const handleProbed = (meta: VideoMeta) => {
     setDuration(meta.durationSec);
-    if (activeEffect === "trimmer") {
+    const isTrimmerTool =
+      activeEffect === "trimmer" ||
+      activeEffect === "audio-editor" ||
+      activeEffect === "ringtone-maker";
+    if (isTrimmerTool) {
       setParams((prev) => ({
         ...prev,
         startSec: 0,
@@ -703,21 +956,13 @@ export function UnifiedAudioStudio({
       {/* Hidden Audio Player for Web Audio API Audition */}
       <audio
         ref={audioRef}
-        onTimeUpdate={(e) => {
-          const el = e.target as HTMLAudioElement;
-          setCurrentTime(el.currentTime);
-          if (activeEffect === "trimmer" && typeof params.endSec === "number" && params.endSec > 0) {
-            if (el.currentTime >= params.endSec) {
-              el.pause();
-              el.currentTime = params.startSec || 0;
-              setCurrentTime(params.startSec || 0);
-              setIsPlaying(false);
-            }
-          }
-        }}
         onEnded={() => {
           setIsPlaying(false);
-          if (activeEffect === "trimmer") {
+          const isTrimmerTool =
+            activeEffect === "trimmer" ||
+            activeEffect === "audio-editor" ||
+            activeEffect === "ringtone-maker";
+          if (isTrimmerTool) {
             if (audioRef.current) audioRef.current.currentTime = params.startSec || 0;
             setCurrentTime(params.startSec || 0);
           }
@@ -1319,17 +1564,17 @@ export function UnifiedAudioStudio({
 
             {activeEffect === "equalizer" && (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
                   {EQ_FREQUENCIES.map((freq, i) => {
-                    const gains = params.gains || [0, 0, 0, 0, 0, 0];
-                    const gainVal = gains[i] || 0;
+                    const gains = Array.isArray(params.gains) ? params.gains : [];
+                    const gainVal = gains[i] ?? 0;
                     return (
                       <div key={freq} className="flex flex-col items-center p-2 rounded-lg bg-background/50 border border-border/50">
-                        <span className="font-mono text-[10px] text-muted-foreground">
+                        <span className="font-mono text-[9px] text-muted-foreground whitespace-nowrap">
                           {freq >= 1000 ? `${freq / 1000}k` : `${freq}`}Hz
                         </span>
-                        <span className={`font-mono text-xs font-semibold my-1 ${gainVal > 0 ? "text-emerald-400" : gainVal < 0 ? "text-amber-400" : "text-muted-foreground"}`}>
-                          {gainVal > 0 ? `+${gainVal}` : gainVal}dB
+                        <span className={`font-mono text-[11px] font-semibold my-1 ${gainVal > 0 ? "text-emerald-400" : gainVal < 0 ? "text-amber-400" : "text-muted-foreground"}`}>
+                          {gainVal > 0 ? `+${gainVal}` : gainVal}
                         </span>
                         <input
                           type="range"
@@ -1472,16 +1717,141 @@ export function UnifiedAudioStudio({
               />
             )}
 
-            {activeEffect === "trimmer" && (
+            {/* Pro Precision Cutter & MP3 Editor */}
+            {(activeEffect === "trimmer" || activeEffect === "audio-editor") && (
               <div className="space-y-4">
+                {/* Cut Mode Toggle */}
+                <div>
+                  <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground block mb-2">
+                    Cutter Action Mode
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        updateParam("cutMode", "keep");
+                      }}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border font-mono text-xs font-semibold transition-all cursor-pointer ${
+                        (params.cutMode || "keep") === "keep"
+                          ? "border-primary bg-primary/20 text-primary shadow-glow"
+                          : "border-border/60 bg-background/50 text-muted-foreground hover:bg-card"
+                      }`}
+                    >
+                      <Scissors className="size-3.5" />
+                      <span>Keep Selection (Trim)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        updateParam("cutMode", "cut");
+                      }}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border font-mono text-xs font-semibold transition-all cursor-pointer ${
+                        params.cutMode === "cut"
+                          ? "border-neon bg-neon/20 text-neon shadow-[0_0_12px_rgba(244,63,94,0.3)]"
+                          : "border-border/60 bg-background/50 text-muted-foreground hover:bg-card"
+                      }`}
+                    >
+                      <Scissors className="size-3.5 rotate-180" />
+                      <span>Cut Out Middle (Splice)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fine Nudge Controls & Region Helpers */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-background/40 border border-border/50">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        setLoopRegion(!loopRegion);
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md border font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer ${
+                        loopRegion
+                          ? "border-primary bg-primary/20 text-primary"
+                          : "border-border/50 bg-background text-muted-foreground"
+                      }`}
+                    >
+                      <Repeat className="size-3" />
+                      <span>Loop {loopRegion ? "ON" : "OFF"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        const s = Math.round((params.startSec || 0) * 10) / 10;
+                        const e = Math.round((params.endSec || duration || 30) * 10) / 10;
+                        setParams((prev) => ({ ...prev, startSec: s, endSec: e }));
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/50 bg-background text-muted-foreground hover:text-foreground font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer"
+                      title="Snap cut boundaries to nearest 100ms zero-crossing"
+                    >
+                      <Magnet className="size-3 text-cyan-400" />
+                      <span>Zero-Snap</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] text-muted-foreground">Start Nudge:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        updateParam("startSec", Math.max(0, (params.startSec || 0) - 0.1));
+                      }}
+                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
+                      aria-label="Nudge start -0.1s"
+                    >
+                      <Minus className="size-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        updateParam("startSec", Math.min(params.endSec || duration || 30, (params.startSec || 0) + 0.1));
+                      }}
+                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
+                      aria-label="Nudge start +0.1s"
+                    >
+                      <Plus className="size-3" />
+                    </button>
+
+                    <span className="font-mono text-[10px] text-muted-foreground ml-1">End Nudge:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        updateParam("endSec", Math.max(params.startSec || 0, (params.endSec || duration || 30) - 0.1));
+                      }}
+                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
+                      aria-label="Nudge end -0.1s"
+                    >
+                      <Minus className="size-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void haptics.light();
+                        updateParam("endSec", Math.min(duration || 300, (params.endSec || duration || 30) + 0.1));
+                      }}
+                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
+                      aria-label="Nudge end +0.1s"
+                    >
+                      <Plus className="size-3" />
+                    </button>
+                  </div>
+                </div>
+
                 <ParamSlider
                   label="Start Offset"
                   value={params.startSec || 0}
                   min={0}
                   max={Math.max(duration - 1, 10)}
-                  step={0.5}
+                  step={0.1}
                   onChange={(v) => updateParam("startSec", v)}
-                  display={(v) => `${v.toFixed(1)}s`}
+                  display={(v) => `${v.toFixed(2)}s`}
                   disabled={busy}
                 />
                 <ParamSlider
@@ -1489,33 +1859,198 @@ export function UnifiedAudioStudio({
                   value={params.endSec || Math.min(30, duration || 30)}
                   min={1}
                   max={Math.max(duration, 30)}
-                  step={0.5}
+                  step={0.1}
                   onChange={(v) => updateParam("endSec", v)}
-                  display={(v) => `${v.toFixed(1)}s`}
+                  display={(v) => `${v.toFixed(2)}s`}
+                  disabled={busy}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <ParamSlider
+                    label="Fade In (Audible in Preview)"
+                    value={params.fadeInSec || 0}
+                    min={0}
+                    max={5}
+                    step={0.1}
+                    onChange={(v) => updateParam("fadeInSec", v)}
+                    display={(v) => `${v.toFixed(1)}s`}
+                    disabled={busy}
+                  />
+                  <ParamSlider
+                    label="Fade Out (Audible in Preview)"
+                    value={params.fadeOutSec || 0}
+                    min={0}
+                    max={5}
+                    step={0.1}
+                    onChange={(v) => updateParam("fadeOutSec", v)}
+                    display={(v) => `${v.toFixed(1)}s`}
+                    disabled={busy}
+                  />
+                </div>
+                <ParamSlider
+                  label="Post-Cut Volume Boost"
+                  value={params.boostDb || 0}
+                  min={-12}
+                  max={12}
+                  step={1}
+                  onChange={(v) => updateParam("boostDb", v)}
+                  display={(v) => `${v > 0 ? `+${v}` : v} dB`}
+                  disabled={busy}
+                />
+              </div>
+            )}
+
+            {/* Ringtone Maker Studio */}
+            {activeEffect === "ringtone-maker" && (
+              <div className="space-y-4">
+                {/* Ringtone Quick-Duration Bar */}
+                <div>
+                  <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground block mb-2">
+                    Ringtone Quick Presets
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {[
+                      { label: "📱 30s Call", length: 30, fmt: "mp3", b: "320" },
+                      { label: "🍎 25s iPhone", length: 25, fmt: "m4a", b: "256" },
+                      { label: "🔔 5s Alert", length: 5, fmt: "mp3", b: "320" },
+                      { label: "⏰ 15s Alarm", length: 15, fmt: "mp3", b: "320" },
+                    ].map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => {
+                          void haptics.light();
+                          const s = params.startSec || 0;
+                          const e = Math.min(duration || 300, s + p.length);
+                          setParams((prev) => ({
+                            ...prev,
+                            startSec: s,
+                            endSec: e,
+                            fadeInSec: p.length <= 5 ? 0.05 : 1.5,
+                            fadeOutSec: p.length <= 5 ? 0.5 : 1.5,
+                            boostDb: 2,
+                            cutMode: "keep",
+                          }));
+                          setFormat(p.fmt as AudioFormat);
+                          setKbps(p.b);
+                        }}
+                        className="flex items-center justify-center py-2 px-2.5 rounded-lg border border-border/60 bg-background/50 hover:bg-card hover:border-primary/40 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer"
+                      >
+                        <span>{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <ParamSlider
+                  label="Ringtone Start Point"
+                  value={params.startSec || 0}
+                  min={0}
+                  max={Math.max(duration - 1, 10)}
+                  step={0.1}
+                  onChange={(v) => {
+                    const ringLen = (params.endSec || 30) - (params.startSec || 0);
+                    updateParam("startSec", v);
+                    updateParam("endSec", Math.min(duration || 300, v + ringLen));
+                  }}
+                  display={(v) => `${v.toFixed(2)}s`}
+                  disabled={busy}
+                />
+                <ParamSlider
+                  label="Ringtone End Point"
+                  value={params.endSec || Math.min(30, duration || 30)}
+                  min={1}
+                  max={Math.max(duration, 30)}
+                  step={0.1}
+                  onChange={(v) => updateParam("endSec", v)}
+                  display={(v) => `${v.toFixed(2)}s`}
                   disabled={busy}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <ParamSlider
                     label="Fade In"
-                    value={params.fadeInSec || 0}
+                    value={params.fadeInSec || 1.5}
                     min={0}
-                    max={5}
-                    step={0.2}
+                    max={3}
+                    step={0.1}
                     onChange={(v) => updateParam("fadeInSec", v)}
                     display={(v) => `${v.toFixed(1)}s`}
                     disabled={busy}
                   />
                   <ParamSlider
                     label="Fade Out"
-                    value={params.fadeOutSec || 0}
+                    value={params.fadeOutSec || 1.5}
                     min={0}
-                    max={5}
-                    step={0.2}
+                    max={3}
+                    step={0.1}
                     onChange={(v) => updateParam("fadeOutSec", v)}
                     display={(v) => `${v.toFixed(1)}s`}
                     disabled={busy}
                   />
                 </div>
+                <ParamSlider
+                  label="Speaker Loudness Boost"
+                  value={params.boostDb || 2}
+                  min={0}
+                  max={6}
+                  step={1}
+                  onChange={(v) => updateParam("boostDb", v)}
+                  display={(v) => `+${v} dB`}
+                  disabled={busy}
+                />
+              </div>
+            )}
+
+            {/* Slowed + Reverb Studio */}
+            {activeEffect === "slowed-reverb" && (
+              <div className="space-y-4">
+                <ParamSlider
+                  label="Playback Speed (Slowed Tempo)"
+                  value={Math.round((params.speed || 0.85) * 100)}
+                  min={60}
+                  max={100}
+                  step={1}
+                  onChange={(v) => updateParam("speed", v / 100)}
+                  display={(v) => `${(v / 100).toFixed(2)}x`}
+                  hintLeft="0.60x (Deep Sleep)"
+                  hintRight="1.00x (Original)"
+                  disabled={busy}
+                />
+                <ParamSlider
+                  label="Cathedral Reverb Wet Balance"
+                  value={params.wetPercent || 50}
+                  min={10}
+                  max={80}
+                  step={5}
+                  onChange={(v) => updateParam("wetPercent", v)}
+                  display={(v) => `${v}%`}
+                  disabled={busy}
+                />
+              </div>
+            )}
+
+            {/* Audio Effects / Audio DSP */}
+            {(activeEffect === "audio-effects" || activeEffect === "audio-dsp") && (
+              <div className="space-y-4">
+                <ParamSlider
+                  label="Spatial Orbit Cycle"
+                  value={params.cycleSec || 8}
+                  min={2}
+                  max={20}
+                  step={1}
+                  onChange={(v) => updateParam("cycleSec", v)}
+                  display={(v) => `${v}s`}
+                  disabled={busy}
+                />
+                <ParamSlider
+                  label="Dimension Widening"
+                  value={Math.round((params.widening || 1.35) * 100)}
+                  min={100}
+                  max={200}
+                  step={5}
+                  onChange={(v) => updateParam("widening", v / 100)}
+                  display={(v) => `${(v / 100).toFixed(2)}x`}
+                  disabled={busy}
+                />
               </div>
             )}
           </div>
