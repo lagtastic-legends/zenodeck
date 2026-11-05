@@ -41,6 +41,15 @@ export interface ZenoMedia3PluginInterface {
     outputFileName: string;
     approxSizeBytes?: number;
   }): Promise<{ success: boolean; outputPath: string; fileSizeBytes: number; filename: string }>;
+  sniffStreamViaWebView(options: {
+    url: string;
+  }): Promise<{
+    success: boolean;
+    streamUrls?: string[];
+    userAgent?: string;
+    playerResponseJson?: string;
+    error?: string;
+  }>;
   addListener(
     eventName: "downloadProgress",
     listenerFunc: (data: {
@@ -289,5 +298,26 @@ export async function executeNativeYouTubeDownload({
         await progressHandle.remove();
       } catch {}
     }
+  }
+}
+
+/**
+ * Headless WebView stream sniffer with shouldInterceptRequest.
+ * Bypasses bot verification and extracts unthrottled streaming URLs directly on Android.
+ */
+export async function sniffStreamViaWebView(url: string): Promise<{
+  success: boolean;
+  streamUrls?: string[];
+  userAgent?: string;
+  playerResponseJson?: string;
+  error?: string;
+}> {
+  if (!isNativeAndroidPlatform()) {
+    return { success: false, error: "Only available on Android" };
+  }
+  try {
+    return await ZenoMedia3.sniffStreamViaWebView({ url });
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
   }
 }

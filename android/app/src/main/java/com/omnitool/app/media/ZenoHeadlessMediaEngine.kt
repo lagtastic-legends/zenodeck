@@ -231,14 +231,20 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     videoMime.contains("av01", ignoreCase = true)
             val isAudioWebm = audioMime.contains("opus", ignoreCase = true) ||
                     audioMime.contains("vorbis", ignoreCase = true)
+            val isAudioAac = audioMime.contains("mp4a", ignoreCase = true) ||
+                    audioMime.contains("aac", ignoreCase = true)
+            val isVideoAvc = videoMime.contains("avc", ignoreCase = true) ||
+                    videoMime.contains("h264", ignoreCase = true) ||
+                    videoMime.contains("hevc", ignoreCase = true) ||
+                    videoMime.contains("h265", ignoreCase = true)
 
-            // Strict Container Quarantine:
-            // MUXER_OUTPUT_WEBM is used only if container is webm or both video & audio are WebM-compliant codecs.
-            // MUXER_OUTPUT_MPEG_4 is used for AVC/H.264/AAC, never mixing AVC into WebM or VP9 into standard MP4.
-            val isWebmTarget = (outputFile.name.endsWith(".webm", ignoreCase = true) || isVideoWebm) && isAudioWebm
+            // Case A: AVC/H.264 + AAC -> MPEG_4
+            // Case B: VP9/AV01 + Opus/Vorbis -> WEBM
+            // Case C: Mixed Container (e.g. AVC + Opus): On API >= 29, MPEG_4 natively accepts Opus.
+            val isWebmTarget = (isVideoWebm && isAudioWebm) || (outputFile.name.endsWith(".webm", ignoreCase = true) && !isVideoAvc)
             val targetOutputFile = if (isWebmTarget && outputFile.name.endsWith(".mp4", ignoreCase = true)) {
                 File(outputFile.parentFile, outputFile.nameWithoutExtension + ".webm")
-            } else if (!isWebmTarget && outputFile.name.endsWith(".webm", ignoreCase = true) && !isVideoWebm) {
+            } else if (!isWebmTarget && outputFile.name.endsWith(".webm", ignoreCase = true)) {
                 File(outputFile.parentFile, outputFile.nameWithoutExtension + ".mp4")
             } else {
                 outputFile
@@ -260,7 +266,10 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             try {
                 muxerAudioTrack = muxer.addTrack(audioFormat)
             } catch (trackErr: Exception) {
-                Log.w(TAG, "Audio track rejected by container ($audioMime in ${if (isWebmTarget) "WebM" else "MP4"}), continuing video-only: ${trackErr.message}")
+                Log.w(TAG, "Audio track rejected by container ($audioMime in ${if (isWebmTarget) "WebM" else "MP4"}), attempting video-only: ${trackErr.message}")
+                if (!isWebmTarget && isAudioWebm && Build.VERSION.SDK_INT < 29) {
+                    throw IllegalStateException("Cross-container Opus audio rejected on API < 29 in MP4 container", trackErr)
+                }
             }
 
             videoExtractor.selectTrack(videoTrackIndex)
@@ -303,54 +312,86 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 audioFormat.getIntegerSafely(MediaFormat.KEY_MAX_INPUT_SIZE, 1024 * 1024),
                 8 * 1024 * 1024
             )
-            val buffer = ByteBuffer.allocateDirect(maxBufferSize)
+            val tempDirectBuffer = ByteBuffer.allocateDirect(maxBufferSize)
+            val audioBuffer = ByteBuffer.allocateDirect(1024 * 1024)
             val bufferInfo = MediaCodec.BufferInfo()
 
             var lastVideoPts = -1L
             var lastAudioPts = -1L
 
-            // Chronologically interleaved A/V sample muxing:
-            var videoEof = false
+            // 16-Packet Sliding Window Monotonic PTS Sorter for Video B-Frames
+            data class BufferedSample(
+                val buffer: ByteBuffer,
+                val offset: Int,
+                val size: Int,
+                val presentationTimeUs: Long,
+                val flags: Int
+            )
+
+            val videoQueue = mutableListOf<BufferedSample>()
+            val slidingWindowCapacity = 16
+            var videoReadEof = false
             var audioEof = muxerAudioTrack < 0
 
-            // Prime both extractors
-            if (videoExtractor.sampleTime < 0) videoEof = true
-            if (!audioEof && audioExtractor.sampleTime < 0) audioEof = true
+            fun fillVideoQueue() {
+                while (!videoReadEof && videoQueue.size < slidingWindowCapacity) {
+                    tempDirectBuffer.clear()
+                    val sampleSize = videoExtractor.readSampleData(tempDirectBuffer, 0)
+                    if (sampleSize < 0) {
+                        videoReadEof = true
+                        break
+                    }
+                    val rawPts = videoExtractor.sampleTime
+                    val normPts = maxOf(0L, rawPts - videoBasePts)
+                    val flags = if ((videoExtractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
+                        MediaCodec.BUFFER_FLAG_KEY_FRAME
+                    } else 0
 
-            while (!videoEof || !audioEof) {
+                    val frameBuffer = ByteBuffer.allocate(sampleSize)
+                    tempDirectBuffer.position(0)
+                    tempDirectBuffer.limit(sampleSize)
+                    frameBuffer.put(tempDirectBuffer)
+                    frameBuffer.flip()
+
+                    videoQueue.add(BufferedSample(frameBuffer, 0, sampleSize, normPts, flags))
+                    videoExtractor.advance()
+                }
+                if (videoQueue.isNotEmpty()) {
+                    videoQueue.sortBy { it.presentationTimeUs }
+                }
+            }
+
+            // Prime both extractors and prefill video sliding window
+            fillVideoQueue()
+            if (!audioEof && audioExtractor.sampleTime < 0) {
+                audioEof = true
+            }
+
+            while (videoQueue.isNotEmpty() || !audioEof) {
+                fillVideoQueue()
+
+                val nextVideoPts = if (videoQueue.isNotEmpty()) videoQueue.first().presentationTimeUs else Long.MAX_VALUE
+                val nextAudioPts = if (!audioEof && audioExtractor.sampleTime >= 0) maxOf(0L, audioExtractor.sampleTime - audioBasePts) else Long.MAX_VALUE
+
                 val writeVideo = when {
-                    videoEof -> false
+                    videoQueue.isEmpty() -> false
                     audioEof -> true
-                    else -> videoExtractor.sampleTime <= audioExtractor.sampleTime
+                    else -> nextVideoPts <= nextAudioPts
                 }
 
                 if (writeVideo) {
-                    buffer.clear()
-                    val sampleSize = videoExtractor.readSampleData(buffer, 0)
-                    if (sampleSize < 0) {
-                        videoEof = true
-                        continue
-                    }
-                    val rawPts = videoExtractor.sampleTime
-                    var pts = maxOf(0L, rawPts - videoBasePts)
+                    val sample = videoQueue.removeAt(0)
+                    var pts = sample.presentationTimeUs
                     if (pts <= lastVideoPts) {
                         pts = lastVideoPts + 100L
                     }
                     lastVideoPts = pts
 
-                    bufferInfo.offset = 0
-                    bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = pts
-                    bufferInfo.flags = if ((videoExtractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
-                        MediaCodec.BUFFER_FLAG_KEY_FRAME
-                    } else {
-                        0
-                    }
-                    muxer.writeSampleData(muxerVideoTrack, buffer, bufferInfo)
-                    videoExtractor.advance()
+                    bufferInfo.set(sample.offset, sample.size, pts, sample.flags)
+                    muxer.writeSampleData(muxerVideoTrack, sample.buffer, bufferInfo)
                 } else {
-                    buffer.clear()
-                    val sampleSize = audioExtractor.readSampleData(buffer, 0)
+                    audioBuffer.clear()
+                    val sampleSize = audioExtractor.readSampleData(audioBuffer, 0)
                     if (sampleSize < 0) {
                         audioEof = true
                         continue
@@ -362,15 +403,12 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     }
                     lastAudioPts = pts
 
-                    bufferInfo.offset = 0
-                    bufferInfo.size = sampleSize
-                    bufferInfo.presentationTimeUs = pts
-                    bufferInfo.flags = if ((audioExtractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
+                    val flags = if ((audioExtractor.sampleFlags and MediaExtractor.SAMPLE_FLAG_SYNC) != 0) {
                         MediaCodec.BUFFER_FLAG_KEY_FRAME
-                    } else {
-                        0
-                    }
-                    muxer.writeSampleData(muxerAudioTrack, buffer, bufferInfo)
+                    } else 0
+
+                    bufferInfo.set(0, sampleSize, pts, flags)
+                    muxer.writeSampleData(muxerAudioTrack, audioBuffer, bufferInfo)
                     audioExtractor.advance()
                 }
             }
@@ -1373,93 +1411,92 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             val isSeparateAudio = !audioUrl.isNullOrEmpty() && aTempFile != null
 
             if (isSeparateAudio) {
-                // High-Speed Concurrent Dual-Stream Acceleration: Download Video & Audio in Parallel
+                // VidMate-Grade Architecture: Sequential Single-Connection HTTP/2 Range Streaming
+                // NEVER download video and audio concurrently (prevents CDN socket flooding and edge resets)
                 progressCallback(5, 0L, approxSizeBytes, 0.0, "downloading_video")
-                val pool = Executors.newFixedThreadPool(2)
-                val vBytes = AtomicLong(0L)
-                val aBytes = AtomicLong(0L)
-                val vTotal = AtomicLong(0L)
-                val aTotal = AtomicLong(0L)
 
                 val effectiveAudioUa = if (!audioUserAgent.isNullOrBlank()) audioUserAgent else userAgent
                 val expectedVideoBytes = if (approxSizeBytes > 0L) (approxSizeBytes * 85L / 100L) else -1L
                 val expectedAudioBytes = if (approxSizeBytes > 0L) (approxSizeBytes * 15L / 100L) else -1L
 
-                val vTask = pool.submit<Result<File>> {
-                    downloadStreamDirectToFile(
-                        streamUrl = videoUrl,
-                        userAgent = userAgent,
-                        destinationFile = vTempFile,
-                        expectedTotalBytes = expectedVideoBytes,
-                        isCancelled = isCancelled,
-                        maxWorkers = 4,
-                        onProgress = { downloaded, total ->
-                            vBytes.set(downloaded)
-                            vTotal.set(total)
-                            val curTotal = vBytes.get() + aBytes.get()
-                            totalDownloaded.set(curTotal)
-                            val now = System.currentTimeMillis()
-                            val last = lastCallbackTime.get()
-                            if (now - last >= 120 || (total > 0L && downloaded >= total)) {
-                                if (lastCallbackTime.compareAndSet(last, now)) {
-                                    val vt = vTotal.get()
-                                    val at = aTotal.get()
-                                    val tot = if (vt > 0L) (vt + if (at > 0L) at else (vt / 10L)) else approxSizeBytes
-                                    val calculatedPct = if (tot > 0L) {
-                                        minOf(90, maxOf(10, ((curTotal * 90L) / tot).toInt()))
-                                    } else {
-                                        minOf(90, 10 + ((curTotal / (1024 * 512)).toInt() * 5))
-                                    }
-                                    val pct = maxReportedPercent.updateAndGet { prev -> maxOf(prev, calculatedPct) }
-                                    progressCallback(pct, curTotal, tot, calculateSpeed(), "downloading_video")
+                // -----------------------------------------------------------------
+                // STAGE 1: Download Video Stream FIRST (5% -> 65% progress)
+                // -----------------------------------------------------------------
+                val videoResult = downloadStreamDirectToFile(
+                    streamUrl = videoUrl,
+                    userAgent = userAgent,
+                    destinationFile = vTempFile,
+                    expectedTotalBytes = expectedVideoBytes,
+                    isCancelled = isCancelled,
+                    maxWorkers = 4,
+                    onProgress = { downloaded, total ->
+                        totalDownloaded.set(downloaded)
+                        val now = System.currentTimeMillis()
+                        val last = lastCallbackTime.get()
+                        if (now - last >= 120 || (total > 0L && downloaded >= total)) {
+                            if (lastCallbackTime.compareAndSet(last, now)) {
+                                val tot = if (total > 0L) total else expectedVideoBytes
+                                val calculatedPct = if (tot > 0L) {
+                                    minOf(65, maxOf(5, 5 + ((downloaded * 60L) / tot).toInt()))
+                                } else {
+                                    minOf(65, 5 + ((downloaded / (1024 * 512)).toInt() * 5))
                                 }
+                                val pct = maxReportedPercent.updateAndGet { prev -> maxOf(prev, calculatedPct) }
+                                progressCallback(pct, downloaded, tot, calculateSpeed(), "downloading_video")
                             }
                         }
-                    )
-                }
-
-                val aTask = pool.submit<Result<File>> {
-                    downloadStreamDirectToFile(
-                        streamUrl = audioUrl,
-                        userAgent = effectiveAudioUa,
-                        destinationFile = aTempFile,
-                        expectedTotalBytes = expectedAudioBytes,
-                        isCancelled = isCancelled,
-                        maxWorkers = 2,
-                        onProgress = { downloaded, total ->
-                            aBytes.set(downloaded)
-                            aTotal.set(total)
-                            val curTotal = vBytes.get() + aBytes.get()
-                            totalDownloaded.set(curTotal)
-                            val now = System.currentTimeMillis()
-                            val last = lastCallbackTime.get()
-                            if (now - last >= 120 || (total > 0L && downloaded >= total)) {
-                                if (lastCallbackTime.compareAndSet(last, now)) {
-                                    val vt = vTotal.get()
-                                    val at = aTotal.get()
-                                    val tot = if (vt > 0L) (vt + if (at > 0L) at else (vt / 10L)) else approxSizeBytes
-                                    val calculatedPct = if (tot > 0L) {
-                                        minOf(90, maxOf(10, ((curTotal * 90L) / tot).toInt()))
-                                    } else {
-                                        minOf(90, 10 + ((curTotal / (1024 * 512)).toInt() * 5))
-                                    }
-                                    val pct = maxReportedPercent.updateAndGet { prev -> maxOf(prev, calculatedPct) }
-                                    progressCallback(pct, curTotal, tot, calculateSpeed(), "downloading_audio")
-                                }
-                            }
-                        }
-                    )
-                }
-
-                val videoResult = vTask.get()
-                val audioResult = aTask.get()
-                pool.shutdown()
+                    }
+                )
 
                 if (videoResult.isFailure) {
                     return Result.failure(videoResult.exceptionOrNull() ?: Exception("Video stream download failed"))
                 }
+
+                // Verification Gate: Verify video temp file exists and has valid length > 10,000L
+                if (!vTempFile.exists() || vTempFile.length() < 10_000L) {
+                    return Result.failure(IOException("Video file on disk is invalid or smaller than 10KB: ${vTempFile.length()} bytes"))
+                }
+
+                val videoBytesOnDisk = vTempFile.length()
+
+                // -----------------------------------------------------------------
+                // STAGE 2: Download Audio Stream SECOND (65% -> 88% progress)
+                // -----------------------------------------------------------------
+                progressCallback(65, videoBytesOnDisk, approxSizeBytes, calculateSpeed(), "downloading_audio")
+
+                val audioResult = downloadStreamDirectToFile(
+                    streamUrl = audioUrl,
+                    userAgent = effectiveAudioUa,
+                    destinationFile = aTempFile,
+                    expectedTotalBytes = expectedAudioBytes,
+                    isCancelled = isCancelled,
+                    maxWorkers = 2,
+                    onProgress = { downloaded, total ->
+                        val curTotal = videoBytesOnDisk + downloaded
+                        totalDownloaded.set(curTotal)
+                        val now = System.currentTimeMillis()
+                        val last = lastCallbackTime.get()
+                        if (now - last >= 120 || (total > 0L && downloaded >= total)) {
+                            if (lastCallbackTime.compareAndSet(last, now)) {
+                                val tot = if (total > 0L) (videoBytesOnDisk + total) else approxSizeBytes
+                                val calculatedPct = if (total > 0L) {
+                                    minOf(88, maxOf(65, 65 + ((downloaded * 23L) / total).toInt()))
+                                } else {
+                                    minOf(88, 65 + ((downloaded / (1024 * 256)).toInt() * 4))
+                                }
+                                val pct = maxReportedPercent.updateAndGet { prev -> maxOf(prev, calculatedPct) }
+                                progressCallback(pct, curTotal, tot, calculateSpeed(), "downloading_audio")
+                            }
+                        }
+                    }
+                )
+
                 if (audioResult.isFailure) {
                     return Result.failure(audioResult.exceptionOrNull() ?: Exception("Audio stream download failed"))
+                }
+
+                if (!aTempFile.exists() || aTempFile.length() < 1_000L) {
+                    return Result.failure(IOException("Audio file on disk is invalid or smaller than 1KB: ${aTempFile.length()} bytes"))
                 }
 
                 // Stage 3: Native Hardware MediaMuxer

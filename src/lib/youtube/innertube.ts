@@ -265,6 +265,10 @@ const ANDROID_VR_CLIENT_VERSION = "1.56.21";
 const ANDROID_VR_USER_AGENT =
   "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
 
+const TVHTML5_CLIENT_VERSION = "7.20250312.16.00";
+const TVHTML5_USER_AGENT =
+  "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/5.0 NativeClient-tv Safari/538.1";
+
 const IOS_MODERN_CLIENT_VERSION = "20.10.4";
 const IOS_MODERN_USER_AGENT =
   "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_1 like Mac OS X;)";
@@ -346,6 +350,26 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
         hl: "en",
         gl: "US",
         userAgent: ANDROID_VR_USER_AGENT,
+      },
+    },
+  },
+  {
+    name: "TVHTML5",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": TVHTML5_USER_AGENT,
+      "X-YouTube-Client-Name": "85",
+      "X-YouTube-Client-Version": TVHTML5_CLIENT_VERSION,
+    },
+    context: {
+      client: {
+        clientName: "TVHTML5",
+        clientVersion: TVHTML5_CLIENT_VERSION,
+        deviceMake: "Samsung",
+        deviceModel: "SmartTV",
+        hl: "en",
+        gl: "US",
+        userAgent: TVHTML5_USER_AGENT,
       },
     },
   },
@@ -618,6 +642,26 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
   }
 
   playerResponse = clientResult?.data || androidResult?.data;
+
+  // Bulletproof Headless WebView Sniffer Fallback (Android Native)
+  if (!playerResponse && typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+    try {
+      const { sniffStreamViaWebView } = await import("@/lib/media/native-media-muxer");
+      const sniffRes = await sniffStreamViaWebView(`https://m.youtube.com/watch?v=${videoId}`);
+      if (sniffRes.success && sniffRes.playerResponseJson) {
+        try {
+          const parsed = typeof sniffRes.playerResponseJson === "string"
+            ? JSON.parse(sniffRes.playerResponseJson)
+            : sniffRes.playerResponseJson;
+          if (parsed?.streamingData) {
+            playerResponse = parsed;
+          }
+        } catch {}
+      }
+    } catch (sniffErr) {
+      console.warn("Headless WebView sniffer fallback failed:", sniffErr);
+    }
+  }
 
   if (!playerResponse) {
     const isBotBlocked = diagnosticAttempts.some(

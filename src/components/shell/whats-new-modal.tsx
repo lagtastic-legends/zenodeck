@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   Sliders,
   Scissors,
+  Film,
+  ShieldCheck,
+  Music,
 } from "lucide-react";
 import { APP_VERSION } from "@/config/version";
 import { useNavStore } from "@/lib/navigation/nav-store";
@@ -153,37 +156,37 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-[#7dd3fc]" />}
-          title="20-Module Unified Audio Studio"
-          badge="Complete Suite 🎛️"
-          description="Every audio tool—including Audio Cutter, MP3 Editor, Ringtone Maker, and FX Rack—now runs through UnifiedAudioStudio with full live waveform scrubbing, Web Audio preview, and instant Save Result dialog handoff."
+          icon={<Film className="size-4.5 text-[#7dd3fc]" />}
+          title="VidMate-Grade Sliding PTS Muxer"
+          badge="Zero B-Frame Crash 🎬"
+          description="16-packet sliding window monotonic PTS sorter buffers decode-order frames and writes strictly non-decreasing presentation timestamps, guaranteeing 100% crash immunity across all AVC/H.264 and VP9 videos."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
-          icon={<Scissors className="size-4.5 text-[#c8a0f0]" />}
-          title="Pro Precision Cutter Deck"
-          badge="Keep & Cut ✂️"
-          description="Interactive cutter with dual modes: 'Keep Selection' (Trim) and 'Cut Out Middle' (Splice Removal), featuring ±0.1s micro-nudging, zero-crossing snap, region looping, and live audible fades."
-          accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
-          badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
-        />
-
-        <FeatureCard
           icon={<Zap className="size-4.5 text-emerald-400" />}
-          title="Real-Time Granular Pitch Shifter"
-          badge="Live Audio ⚡"
-          description="Hardware-grade Hann-windowed dual-delay pitch shifter altering musical pitch (-12 to +12 semitones) in real time during audition without changing tempo or playback rate."
+          title="Sequential HTTP/2 Range Streaming"
+          badge="Socket Immune ⚡"
+          description="Sequential contiguous range downloads stream video first (5% -> 65%), verify on-disk integrity (>10KB), and stream audio second (65% -> 88%), eliminating parallel socket resets on mobile edge networks."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<Headphones className="size-4.5 text-[#88b4cc]" />}
-          title="IR Convolver & Crossover Stems"
-          badge="Studio DSP 🏛️"
-          description="Algorithmic Impulse Response Convolver reverb, 2-band 135Hz crossover vocal cancellation preserving kick/sub-bass, and full 10-band ISO graphic equalizer with true brickwall peak limiting."
+          icon={<ShieldCheck className="size-4.5 text-[#c8a0f0]" />}
+          title="Headless WebView shouldIntercept Sniffer"
+          badge="pot= Token Carrier 🛡️"
+          description="Invisible native WebView interceptor captures pre-signed googlevideo.com streaming URLs directly from the browser context with live Proof of Origin (pot=) tokens and window.ytInitialPlayerResponse DOM data."
+          accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
+          badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
+        />
+
+        <FeatureCard
+          icon={<Music className="size-4.5 text-[#88b4cc]" />}
+          title="VidMate Quality Sheet & Audio Handoff"
+          badge="1-Tap MP3 Extract 🎵"
+          description="Fast bottom sheet with 2-column radio grids for Direct Audio (MP3 320k/160k, M4A) and Video Resolutions (360p to 4K 60FPS), paired with instant 1-tap post-download handoff to the built-in Media Converter."
           accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
           badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />

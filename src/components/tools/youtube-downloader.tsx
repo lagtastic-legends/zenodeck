@@ -99,6 +99,7 @@ import type {
   PlatformType,
 } from "@/lib/media/types";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+import { VidmateQualitySheet } from "./vidmate-quality-sheet";
 
 const DOWNLOADER_PRESETS: PresetItem[] = [
   {
@@ -190,6 +191,7 @@ export function YouTubeDownloader() {
 
   // Preset Selector Modal State
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [isQualitySheetOpen, setIsQualitySheetOpen] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string>("smooth-1080p-mobile");
 
   const handleApplyDownloaderPreset = (preset: PresetItem) => {
@@ -572,6 +574,7 @@ export function YouTubeDownloader() {
 
       const info: YouTubeVideoInfo = data;
       setVideoInfo(info);
+      setIsQualitySheetOpen(true);
 
       // Default select the appropriate option based on active tab
       const firstVideo = info.qualities?.find((q) => !q.isAudioOnly);
@@ -1827,6 +1830,19 @@ export function YouTubeDownloader() {
                     <span>Presets</span>
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void haptics.light();
+                      setIsQualitySheetOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-emerald-500/50 bg-emerald-500/15 px-3 py-1 font-mono text-xs font-semibold text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-500 transition-all cursor-pointer shadow-xs active:scale-95"
+                    title="Open VidMate Quality & Format Bottom Sheet"
+                  >
+                    <Download className="size-3.5" />
+                    <span>Choose Quality</span>
+                  </button>
+
                   <span className="hidden sm:inline-block font-mono text-[11px] text-muted-foreground">
                     {selectedQuality ? `${selectedQuality.label} · ${formatBytes(selectedQuality.approxSizeBytes)}` : ""}
                   </span>
@@ -2578,6 +2594,30 @@ export function YouTubeDownloader() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* VidMate-Style Format & Quality Bottom Sheet */}
+      <VidmateQualitySheet
+        isOpen={isQualitySheetOpen}
+        onClose={() => setIsQualitySheetOpen(false)}
+        videoInfo={videoInfo}
+        selectedQualityId={selectedQuality?.id || ""}
+        onSelectQuality={(qid) => {
+          const found = videoInfo?.qualities.find((q) => q.id === qid);
+          if (found) {
+            setSelectedQuality(found);
+            if (found.isAudioOnly) setMediaTypeTab("audio");
+            else setMediaTypeTab("video");
+          }
+        }}
+        onDownload={(opt) => {
+          setSelectedQuality(opt);
+          if (opt.isAudioOnly) setMediaTypeTab("audio");
+          else setMediaTypeTab("video");
+          setTimeout(() => {
+            handleStartDownload();
+          }, 150);
+        }}
+      />
 
       {/* Universal Downloader Preset Selector Modal */}
       <PresetSelectorModal

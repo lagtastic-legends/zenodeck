@@ -2,7 +2,13 @@ package com.omnitool.app.media
 
 import android.media.MediaScannerConnection
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.getcapacitor.JSArray
@@ -12,7 +18,9 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import java.io.File
+import java.util.Collections
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONObject
 
 /**
@@ -446,6 +454,104 @@ class ZenoMedia3Plugin : Plugin() {
         } catch (e: Exception) {
             Log.e(TAG, "Error in executeDirectStreamDownload", e)
             call.reject("Native download exception: ${e.message}")
+        }
+    }
+
+    /**
+     * Native Headless WebView stream sniffer with shouldInterceptRequest.
+     * Intercepts outbound googlevideo.com/videoplayback URLs (with pot=, n=, and deciphered signatures)
+     * and evaluates window.ytInitialPlayerResponse directly from the live DOM.
+     */
+    @PluginMethod
+    fun sniffStreamViaWebView(call: PluginCall) {
+        val targetUrl = call.getString("url")
+        if (targetUrl.isNullOrBlank()) {
+            call.reject("URL parameter is required")
+            return
+        }
+
+        Handler(Looper.getMainLooper()).post {
+            try {
+                val webView = WebView(context)
+                val interceptedUrls = Collections.synchronizedList(mutableListOf<String>())
+                val isResolved = AtomicBoolean(false)
+                val timeoutHandler = Handler(Looper.getMainLooper())
+
+                webView.settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    mediaPlaybackRequiresUserGesture = false
+                }
+                val webViewUa = webView.settings.userAgentString
+
+                fun finishAndResolve(finalJson: String?) {
+                    if (isResolved.compareAndSet(false, true)) {
+                        timeoutHandler.removeCallbacksAndMessages(null)
+                        val res = JSObject().apply {
+                            put("success", true)
+                            val urlsArray = JSArray()
+                            interceptedUrls.forEach { urlsArray.put(it) }
+                            put("streamUrls", urlsArray)
+                            put("userAgent", webViewUa)
+                            if (!finalJson.isNullOrBlank() && finalJson != "null" && finalJson != "\"null\"") {
+                                put("playerResponseJson", finalJson)
+                            }
+                        }
+                        call.resolve(res)
+                        try {
+                            webView.stopLoading()
+                            webView.destroy()
+                        } catch (_: Throwable) {}
+                    }
+                }
+
+                val timeoutRunnable = Runnable {
+                    webView.evaluateJavascript("(function(){ try { return JSON.stringify(window.ytInitialPlayerResponse || null); } catch(e){ return null; } })()") { res ->
+                        finishAndResolve(res)
+                    }
+                }
+                timeoutHandler.postDelayed(timeoutRunnable, 6000L)
+
+                webView.webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                        val reqUrl = request?.url?.toString() ?: ""
+                        if (reqUrl.contains("googlevideo.com/videoplayback")) {
+                            if (!interceptedUrls.contains(reqUrl)) {
+                                interceptedUrls.add(reqUrl)
+                                if (interceptedUrls.size >= 2) {
+                                    // Trigger early resolve after a short stabilization delay
+                                    timeoutHandler.postDelayed({
+                                        view?.evaluateJavascript("(function(){ try { return JSON.stringify(window.ytInitialPlayerResponse || null); } catch(e){ return null; } })()") { res ->
+                                            finishAndResolve(res)
+                                        }
+                                    }, 1000L)
+                                }
+                            }
+                        }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        view?.evaluateJavascript("(function(){ try { return JSON.stringify(window.ytInitialPlayerResponse || null); } catch(e){ return null; } })()") { res ->
+                            if (!res.isNullOrBlank() && res != "null" && res != "\"null\"") {
+                                timeoutHandler.postDelayed({
+                                    finishAndResolve(res)
+                                }, 1500L)
+                            }
+                        }
+                    }
+                }
+
+                webView.loadUrl(targetUrl)
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to initialize headless WebView sniffer", e)
+                val fallback = JSObject().apply {
+                    put("success", false)
+                    put("error", e.message ?: "Headless WebView sniffer initialization error")
+                }
+                call.resolve(fallback)
+            }
         }
     }
 }
