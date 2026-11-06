@@ -37,6 +37,7 @@ import {
   Headphones,
   Send,
   ArrowRight,
+  Globe,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useWorkstationStore } from "@/hooks/useWorkstationStore";
@@ -100,6 +101,7 @@ import type {
 } from "@/lib/media/types";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { VidmateQualitySheet } from "./vidmate-quality-sheet";
+import { MiniBrowserView } from "./mini-browser-view";
 
 const DOWNLOADER_PRESETS: PresetItem[] = [
   {
@@ -155,6 +157,7 @@ export function YouTubeDownloader() {
   const { playSuccess, playError } = useUIAudio();
 
   const [inputUrl, setInputUrl] = useState("");
+  const [downloaderMode, setDownloaderMode] = useState<"quick-link" | "in-app-browser">("quick-link");
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<YouTubeVideoInfo | null>(null);
@@ -1345,9 +1348,57 @@ export function YouTubeDownloader() {
 
       {/* 1. Downloader Main View */}
       {activeViewTab === "downloader" && (
-        <>
+        <div className="space-y-4">
+          {/* Dual Downloader Mode Toggle: Quick Link vs In-App Browser */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl border border-border/70 bg-card/60 w-full sm:w-auto sm:inline-flex shadow-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setDownloaderMode("quick-link");
+                void haptics.light();
+              }}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+                downloaderMode === "quick-link"
+                  ? "bg-primary/20 text-primary border border-primary/40 shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Zap className="size-3.5" />
+              <span>Quick Link / Paste</span>
+            </button>
 
-      {/* URL Input Bar */}
+            <button
+              type="button"
+              onClick={() => {
+                setDownloaderMode("in-app-browser");
+                void haptics.light();
+              }}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
+                downloaderMode === "in-app-browser"
+                  ? "bg-gradient-to-r from-red-600/25 via-rose-500/20 to-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Globe className="size-3.5 text-amber-400" />
+              <span>In-App Browser</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/25 text-[9px] font-bold text-amber-300 border border-amber-500/30">
+                FAB Sniffer
+              </span>
+            </button>
+          </div>
+
+          {downloaderMode === "in-app-browser" ? (
+            <MiniBrowserView
+              activeUrl={inputUrl}
+              onMediaSelect={(url) => setInputUrl(url)}
+              onDownloadDetected={(url) => {
+                setInputUrl(url);
+                void handleResolve(url);
+              }}
+            />
+          ) : (
+            <>
+              {/* URL Input Bar */}
       <div className="panel-hud rounded-2xl border border-primary/20 bg-card/50 p-4 sm:p-5 shadow-elevation1 space-y-3">
         <div className="flex items-center justify-between">
           <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -2485,7 +2536,9 @@ export function YouTubeDownloader() {
           </motion.div>
         )}
       </AnimatePresence>
-        </>
+            </>
+          )}
+        </div>
       )}
 
       {/* 2. Subtitles View */}

@@ -12,6 +12,8 @@ import {
   Film,
   ShieldCheck,
   Music,
+  Globe,
+  Download,
 } from "lucide-react";
 import { APP_VERSION } from "@/config/version";
 import { useNavStore } from "@/lib/navigation/nav-store";
@@ -156,39 +158,39 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Film className="size-4.5 text-[#7dd3fc]" />}
-          title="VidMate-Grade Sliding PTS Muxer"
-          badge="Zero B-Frame Crash 🎬"
-          description="16-packet sliding window monotonic PTS sorter buffers decode-order frames and writes strictly non-decreasing presentation timestamps, guaranteeing 100% crash immunity across all AVC/H.264 and VP9 videos."
+          icon={<Globe className="size-4.5 text-[#7dd3fc]" />}
+          title="In-App Mini Browser & Omnibox"
+          badge="Full Web Nav 🌐"
+          description="Complete web browsing experience with back, forward, reload, and home controls, omnibox input with auto-prefixing, DuckDuckGo search fallback, and smooth live page loading progress."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
+          icon={<Download className="size-4.5 text-amber-400" />}
+          title="VidMate-Style Floating Download FAB"
+          badge="Auto-Pulsing ⚡"
+          description="High-visibility bottom-right floating action button that detects video and audio media on the current page, expanding with a glowing cyber pulse and badge when media streams are ready."
+          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
+        />
+
+        <FeatureCard
           icon={<Zap className="size-4.5 text-emerald-400" />}
-          title="Sequential HTTP/2 Range Streaming"
-          badge="Socket Immune ⚡"
-          description="Sequential contiguous range downloads stream video first (5% -> 65%), verify on-disk integrity (>10KB), and stream audio second (65% -> 88%), eliminating parallel socket resets on mobile edge networks."
+          title="1-Tap Format & Quality Sheet"
+          badge="360p to 4K 60FPS 🎬"
+          description="Tapping the floating FAB instantly triggers VidmateQualitySheet, displaying 2-column grids for Direct Audio (MP3 320k / M4A) and Video Resolutions (4K 60FPS down to 360p) with exact file sizes."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<ShieldCheck className="size-4.5 text-[#c8a0f0]" />}
-          title="Headless WebView shouldIntercept Sniffer"
-          badge="pot= Token Carrier 🛡️"
-          description="Invisible native WebView interceptor captures pre-signed googlevideo.com streaming URLs directly from the browser context with live Proof of Origin (pot=) tokens and window.ytInitialPlayerResponse DOM data."
+          icon={<Film className="size-4.5 text-[#c8a0f0]" />}
+          title="Quick Site Portal Deck"
+          badge="8 Top Hubs 🚀"
+          description="Curated glassmorphic home deck featuring 1-tap bookmarks for YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, and SoundCloud with native cookie & CORS bypass on mobile."
           accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
           badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
-        />
-
-        <FeatureCard
-          icon={<Music className="size-4.5 text-[#88b4cc]" />}
-          title="VidMate Quality Sheet & Audio Handoff"
-          badge="1-Tap MP3 Extract 🎵"
-          description="Fast bottom sheet with 2-column radio grids for Direct Audio (MP3 320k/160k, M4A) and Video Resolutions (360p to 4K 60FPS), paired with instant 1-tap post-download handoff to the built-in Media Converter."
-          accentClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
-          badgeClass="bg-cyan-500/15 text-[#88b4cc] border border-cyan-400/30"
         />
       </div>
     </ZenoModal>

@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.13">
-    <img src="https://img.shields.io/badge/Release-v1.0.13-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.13" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.14">
+    <img src="https://img.shields.io/badge/Release-v1.0.14-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.14" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.13/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.14/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,15 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.14 (In-App Mini Browser & Floating VidMate Action Button)
+
+- **In-App Mini Browser & Omnibox:** Complete web browsing experience embedded inside the Downloader with back, forward, reload, and home controls, omnibox input with auto-prefixing, DuckDuckGo search fallback, and progress tracking.
+- **Floating VidMate-Style Download Action Button (FAB):** Persistent circular action button that pulses with cyber-glow animation when media is detected on the current webpage.
+- **1-Tap Quality Sheet Trigger:** Tapping the FAB automatically captures the active page URL and opens `<VidmateQualitySheet />` with direct audio and video options.
+- **Quick Site Portal Deck:** 8 one-tap bookmarks for YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, and SoundCloud.
 
 ---
 

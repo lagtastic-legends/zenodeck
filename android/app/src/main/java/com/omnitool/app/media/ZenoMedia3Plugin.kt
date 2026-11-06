@@ -1,14 +1,22 @@
 package com.omnitool.app.media
 
+import android.app.Dialog
+import android.graphics.Color
 import android.media.MediaScannerConnection
+import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.ViewGroup
+import android.view.Window
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.getcapacitor.JSArray
@@ -551,6 +559,162 @@ class ZenoMedia3Plugin : Plugin() {
                     put("error", e.message ?: "Headless WebView sniffer initialization error")
                 }
                 call.resolve(fallback)
+            }
+        }
+    }
+
+    private var inAppBrowserWebView: WebView? = null
+
+    /**
+     * Native In-App Browser Manager.
+     * Coordinates navigation, handles cookies, and sniffs media streams in real-time.
+     */
+    @PluginMethod
+    fun openInAppBrowser(call: PluginCall) {
+        val targetUrl = call.getString("url") ?: "https://m.youtube.com"
+
+        Handler(Looper.getMainLooper()).post {
+            try {
+                if (inAppBrowserWebView == null) {
+                    val webView = WebView(context).apply {
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true
+                            mediaPlaybackRequiresUserGesture = false
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            }
+                            userAgentString = "$userAgentString ZenoDeck/1.0.14 Mobile"
+                        }
+
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                val data = JSObject().apply {
+                                    put("progress", newProgress)
+                                    put("url", view?.url ?: "")
+                                }
+                                notifyListeners("browserProgress", data)
+                            }
+
+                            override fun onReceivedTitle(view: WebView?, title: String?) {
+                                val data = JSObject().apply {
+                                    put("title", title ?: "")
+                                    put("url", view?.url ?: "")
+                                }
+                                notifyListeners("browserTitle", data)
+                            }
+                        }
+
+                        webViewClient = object : WebViewClient() {
+                            private fun checkUrlForMedia(navUrl: String, title: String?) {
+                                val isMediaUrl = navUrl.contains("youtube.com/watch") ||
+                                    navUrl.contains("youtu.be/") ||
+                                    navUrl.contains("tiktok.com/") ||
+                                    navUrl.contains("instagram.com/reel/") ||
+                                    navUrl.contains("instagram.com/p/") ||
+                                    navUrl.contains("facebook.com/watch") ||
+                                    (navUrl.contains("x.com/") && navUrl.contains("/status/")) ||
+                                    (navUrl.contains("twitter.com/") && navUrl.contains("/status/")) ||
+                                    navUrl.contains("googlevideo.com/videoplayback") ||
+                                    navUrl.endsWith(".mp4") || navUrl.endsWith(".m3u8") || navUrl.endsWith(".mp3")
+
+                                if (isMediaUrl) {
+                                    val eventData = JSObject().apply {
+                                        put("url", navUrl)
+                                        put("mediaType", if (navUrl.endsWith(".mp3") || navUrl.endsWith(".m4a")) "audio" else "video")
+                                        put("title", title ?: "Media Detected")
+                                    }
+                                    notifyListeners("mediaDetected", eventData)
+                                }
+                            }
+
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                val navUrl = request?.url?.toString() ?: ""
+                                checkUrlForMedia(navUrl, view?.title)
+                                return false
+                            }
+
+                            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                                val reqUrl = request?.url?.toString() ?: ""
+                                if (reqUrl.contains("googlevideo.com/videoplayback") || reqUrl.contains(".m3u8") || reqUrl.contains(".mpd")) {
+                                    val eventData = JSObject().apply {
+                                        put("url", reqUrl)
+                                        put("mediaType", "video")
+                                        put("title", view?.title ?: "Stream Detected")
+                                        put("isDirectStream", true)
+                                    }
+                                    notifyListeners("mediaDetected", eventData)
+                                }
+                                return super.shouldInterceptRequest(view, request)
+                            }
+
+                            override fun onPageFinished(view: WebView?, finishedUrl: String?) {
+                                super.onPageFinished(view, finishedUrl)
+                                if (finishedUrl != null) {
+                                    checkUrlForMedia(finishedUrl, view?.title)
+                                }
+
+                                val js = """
+                                    (function() {
+                                        try {
+                                            var ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
+                                            var video = document.querySelector('video');
+                                            var videoSrc = video ? (video.currentSrc || video.src) : null;
+                                            return JSON.stringify({
+                                                title: ogTitle || document.title,
+                                                videoSrc: videoSrc
+                                            });
+                                        } catch(e) {
+                                            return null;
+                                        }
+                                    })()
+                                """.trimIndent()
+
+                                view?.evaluateJavascript(js) { res ->
+                                    if (!res.isNullOrBlank() && res != "null" && res != "\"null\"") {
+                                        try {
+                                            val cleaned = if (res.startsWith("\"") && res.endsWith("\"")) {
+                                                org.json.JSONTokener(res).nextValue().toString()
+                                            } else res
+                                            val json = JSONObject(cleaned)
+                                            val vSrc = json.optString("videoSrc", "")
+                                            if (vSrc.isNotEmpty() && vSrc.startsWith("http")) {
+                                                val eventData = JSObject().apply {
+                                                    put("url", vSrc)
+                                                    put("mediaType", "video")
+                                                    put("title", json.optString("title", view?.title ?: "Detected Video"))
+                                                }
+                                                notifyListeners("mediaDetected", eventData)
+                                            }
+                                        } catch (_: Throwable) {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    inAppBrowserWebView = webView
+                }
+
+                inAppBrowserWebView?.loadUrl(targetUrl)
+                call.resolve(JSObject().apply { put("success", true) })
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to open In-App Browser", e)
+                call.reject("Failed to open browser: ${e.message}")
+            }
+        }
+    }
+
+    @PluginMethod
+    fun closeInAppBrowser(call: PluginCall) {
+        Handler(Looper.getMainLooper()).post {
+            try {
+                inAppBrowserWebView?.stopLoading()
+                inAppBrowserWebView?.destroy()
+                inAppBrowserWebView = null
+                call.resolve(JSObject().apply { put("success", true) })
+            } catch (e: Throwable) {
+                call.reject("Failed to close browser: ${e.message}")
             }
         }
     }

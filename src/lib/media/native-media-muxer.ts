@@ -50,6 +50,8 @@ export interface ZenoMedia3PluginInterface {
     playerResponseJson?: string;
     error?: string;
   }>;
+  openInAppBrowser(options: { url: string }): Promise<{ success: boolean }>;
+  closeInAppBrowser(): Promise<{ success: boolean }>;
   addListener(
     eventName: "downloadProgress",
     listenerFunc: (data: {
@@ -58,6 +60,29 @@ export interface ZenoMedia3PluginInterface {
       totalBytes: number;
       speedMbps: number;
       phase: string;
+    }) => void
+  ): Promise<any>;
+  addListener(
+    eventName: "mediaDetected",
+    listenerFunc: (data: {
+      url: string;
+      mediaType: string;
+      title: string;
+      isDirectStream?: boolean;
+    }) => void
+  ): Promise<any>;
+  addListener(
+    eventName: "browserProgress",
+    listenerFunc: (data: {
+      progress: number;
+      url: string;
+    }) => void
+  ): Promise<any>;
+  addListener(
+    eventName: "browserTitle",
+    listenerFunc: (data: {
+      title: string;
+      url: string;
     }) => void
   ): Promise<any>;
 }
