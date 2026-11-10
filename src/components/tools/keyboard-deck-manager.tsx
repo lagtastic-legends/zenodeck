@@ -82,6 +82,8 @@ import {
   getShowNumberRow,
   setAutoCorrect,
   getAutoCorrect,
+  setGestureTyping,
+  getGestureTyping,
   getClipboardHistory,
   clearClipboardHistory,
   type DeckGifItem,
@@ -444,6 +446,7 @@ export function KeyboardDeckManager() {
   const [layoutMode, setLayoutMode] = useState<KeyboardLayoutMode>("QWERTY");
   const [showNumberRow, setShowNumberRowState] = useState<boolean>(true);
   const [autoCorrect, setAutoCorrectState] = useState<boolean>(true);
+  const [gestureTyping, setGestureTypingState] = useState<boolean>(true);
   const [clipboardItems, setClipboardItems] = useState<ClipboardVaultItemBridge[]>([]);
   const [testSandboxText, setTestSandboxText] = useState<string>("");
 
@@ -462,7 +465,7 @@ export function KeyboardDeckManager() {
   const loadDeck = useCallback(async () => {
     setLoading(true);
     try {
-      const [deckItems, imeStatus, savedTheme, savedLayout, savedNumRow, savedAutoCorr, savedClips] = await Promise.all([
+      const [deckItems, imeStatus, savedTheme, savedLayout, savedNumRow, savedAutoCorr, savedClips, savedGesture] = await Promise.all([
         getKeyboardDeckGifs(),
         getKeyboardStatus(),
         getKeyboardTheme(),
@@ -470,6 +473,7 @@ export function KeyboardDeckManager() {
         getShowNumberRow(),
         getAutoCorrect(),
         getClipboardHistory(),
+        getGestureTyping(),
       ]);
       setGifs(deckItems);
       setStatus(imeStatus);
@@ -477,6 +481,7 @@ export function KeyboardDeckManager() {
       setLayoutMode(savedLayout);
       setShowNumberRowState(savedNumRow);
       setAutoCorrectState(savedAutoCorr);
+      setGestureTypingState(savedGesture);
       setClipboardItems(savedClips);
       setSyncToken(getStoredSyncToken());
       setPairedDeviceName(getStoredDeviceName());
@@ -627,6 +632,14 @@ export function KeyboardDeckManager() {
     setAutoCorrectState(next);
     await setAutoCorrect(next);
     toast.success(`Predictive auto-correct ${next ? "enabled" : "disabled"}`);
+  };
+
+  const handleToggleGestureTyping = async () => {
+    void haptics.impact();
+    const next = !gestureTyping;
+    setGestureTypingState(next);
+    await setGestureTyping(next);
+    toast.success(`Gesture glide typing ${next ? "enabled" : "disabled"}`);
   };
 
   const handleClearClipboard = async () => {
@@ -1277,7 +1290,7 @@ export function KeyboardDeckManager() {
         </div>
 
         {/* Layout Modes & Toggles Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
           {/* Layout Selector */}
           <div className="p-3 rounded-xl border border-sky-400/20 bg-[#111828]/80 space-y-2">
             <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
@@ -1348,6 +1361,30 @@ export function KeyboardDeckManager() {
               <span className="font-mono">{autoCorrect ? "ON" : "OFF"}</span>
             </button>
           </div>
+
+          {/* Gesture / Glide Typing Toggle */}
+          <div className="p-3 rounded-xl border border-sky-400/20 bg-[#111828]/80 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+                <SlidersHorizontal className="size-3.5 text-[#7dd3fc]" /> Gesture / Glide Typing
+              </span>
+              <p className="text-[10px] text-[#a0b4c4] mt-1">
+                Swipe trajectory typing with multilingual vocabulary (EN, FR, DE, ES).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleToggleGestureTyping()}
+              className={`mt-2 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-between border ${
+                gestureTyping
+                  ? "bg-purple-500/20 border-purple-500/40 text-purple-300"
+                  : "bg-neutral-900 border-neutral-700 text-neutral-400"
+              }`}
+            >
+              <span>{gestureTyping ? "Glide Typing Active" : "Glide Typing Disabled"}</span>
+              <span className="font-mono">{gestureTyping ? "ON" : "OFF"}</span>
+            </button>
+          </div>
         </div>
 
         {/* 30-Slot Persistent Clipboard Vault & Interactive Test Box */}
@@ -1389,7 +1426,7 @@ export function KeyboardDeckManager() {
               className="w-full px-3 py-1.5 text-xs rounded-lg border border-sky-400/20 bg-[#0a0e1a] text-[#e0e8f0] placeholder:text-muted-foreground focus:outline-none focus:border-[#7dd3fc]"
             />
             <p className="text-[10px] text-[#a0b4c4]">
-              Try typing <span className="font-mono text-cyan-300">&quot;dont&quot;</span> or double-tapping Spacebar for auto-period.
+              Try typing <span className="font-mono text-cyan-300">&quot;dont&quot;</span>, swiping across keys for glide typing, or double-tapping Spacebar.
             </p>
           </div>
         </div>

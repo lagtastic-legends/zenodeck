@@ -117,7 +117,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
         // Multilingual Dictionaries (French for AZERTY, German for QWERTZ, Spanish)
         private val FRENCH_VOCABULARY = listOf(
             "bonjour", "merci", "salut", "avec", "pour", "dans", "faire", "comme", "mais", "nous",
-            "vous", "bien", "dire", "elle", "leur", "aussi", "autre", "temps", "oui", "non", "tout"
+            "vous", "bien", "dire", "elle", "leur", "aussi", "autre", "temps", "oui", "non", "tout", "monde"
         )
         private val GERMAN_VOCABULARY = listOf(
             "hallo", "danke", "bitte", "nicht", "eine", "haben", "werden", "sein", "kann", "nach",
@@ -611,15 +611,133 @@ class ZenoDeckKeyboardService : InputMethodService() {
         }
 
         val allChars = matrix.flatten()
+        val gestureThreshold = 22 * resources.displayMetrics.density
+        var downX = 0f
+        var downY = 0f
+        var isGlideActive = false
+
         for (i in 0 until minOf(allChars.size, keyButtons.size)) {
             val char = allChars[i]
             val btn = keyButtons[i]
             btn.tag = char
-            btn.setOnClickListener {
-                onLetterKeyTapped(btn.tag as String)
+
+            btn.setOnTouchListener { v, event ->
+                val keyChar = (v.tag as? String) ?: ""
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downX = event.rawX
+                        downY = event.rawY
+                        isGlideActive = false
+                        glideTrajectory.clear()
+                        if (keyChar.isNotEmpty()) glideTrajectory.add(keyChar)
+                        v.isPressed = true
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (isGestureTypingEnabled) {
+                            val dist = Math.hypot((event.rawX - downX).toDouble(), (event.rawY - downY).toDouble())
+                            if (!isGlideActive && dist >= gestureThreshold) {
+                                isGlideActive = true
+                            }
+                            if (isGlideActive) {
+                                val loc = IntArray(2)
+                                for (candidate in keyButtons) {
+                                    candidate.getLocationOnScreen(loc)
+                                    val left = loc[0]
+                                    val top = loc[1]
+                                    val right = left + candidate.width
+                                    val bottom = top + candidate.height
+                                    if (event.rawX >= left && event.rawX <= right && event.rawY >= top && event.rawY <= bottom) {
+                                        val c = candidate.tag as? String
+                                        if (c != null && (glideTrajectory.isEmpty() || glideTrajectory.last() != c)) {
+                                            glideTrajectory.add(c)
+                                            vibrateTick()
+                                            val preview = resolveGlideWord(glideTrajectory) ?: glideTrajectory.joinToString("").lowercase()
+                                            showKeyEcho("~ $preview", 600)
+                                        }
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        v.isPressed = false
+                        if (isGlideActive && glideTrajectory.size >= 2) {
+                            val word = resolveGlideWord(glideTrajectory) ?: glideTrajectory.joinToString("").lowercase()
+                            val formatted = if (isShifted || isCapsLock) word.replaceFirstChar { it.uppercase() } else word
+                            currentInputConnection?.commitText("$formatted ", 1)
+                            vibrateTactileClick()
+                            showKeyEcho("✓ $formatted", 800)
+                            userWordFreq[word.lowercase()] = (userWordFreq[word.lowercase()] ?: 0) + 1
+                            saveUserDictionary()
+                            composingWord.clear()
+                            updatePredictiveCandidates()
+                            checkAutoCapitalization()
+                        } else {
+                            if (keyChar.isNotEmpty()) {
+                                onLetterKeyTapped(keyChar)
+                            }
+                        }
+                        isGlideActive = false
+                        glideTrajectory.clear()
+                        true
+                    }
+                    MotionEvent.ACTION_CANCEL -> {
+                        v.isPressed = false
+                        isGlideActive = false
+                        glideTrajectory.clear()
+                        hideKeyEcho()
+                        true
+                    }
+                    else -> false
+                }
             }
         }
         updateKeyCapsText()
+    }
+
+    /**
+     * Resolves a glide trajectory (sequence of touched keycaps) to the most likely word.
+     * Selects from multilingual vocabularies (English, French, German, Spanish) and user frequency.
+     */
+    fun resolveGlideWord(trajectory: List<String>): String? {
+        if (trajectory.size < 2) return null
+        val startChar = trajectory.first().lowercase()
+        val endChar = trajectory.last().lowercase()
+
+        val candidateVocab = when (currentLayout.uppercase()) {
+            "AZERTY" -> FRENCH_VOCABULARY + CORE_VOCABULARY
+            "QWERTZ" -> GERMAN_VOCABULARY + CORE_VOCABULARY
+            else -> CORE_VOCABULARY + SPANISH_VOCABULARY
+        } + userWordFreq.keys
+
+        val startEndMatches = candidateVocab.filter { word ->
+            val w = word.lowercase()
+            w.startsWith(startChar) && w.endsWith(endChar)
+        }
+
+        if (startEndMatches.isEmpty()) {
+            return candidateVocab.find { it.startsWith(startChar) && it.length >= trajectory.size }
+        }
+
+        val scored = startEndMatches.map { word ->
+            var trajIdx = 0
+            val w = word.lowercase()
+            for (ch in w) {
+                if (trajIdx < trajectory.size && ch.toString().equals(trajectory[trajIdx], ignoreCase = true)) {
+                    trajIdx++
+                }
+            }
+            val matchScore = trajIdx.toFloat() / trajectory.size.toFloat()
+            val lenDiff = Math.abs(w.length - trajectory.size)
+            val freqBonus = (userWordFreq[w] ?: 0) * 0.1f
+            val totalScore = matchScore * 10 - lenDiff + freqBonus
+            word to totalScore
+        }
+
+        return scored.maxByOrNull { it.second }?.first
     }
 
     private fun updateKeyCapsText() {
