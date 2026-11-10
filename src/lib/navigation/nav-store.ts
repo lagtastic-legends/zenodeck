@@ -71,6 +71,7 @@ const getInitialView = (): string => {
   if (typeof window !== "undefined" && window.location.hash) {
     const raw = window.location.hash.replace(/^#/, "");
     if (raw === "video-editor" || raw === "editor") return "video-converter";
+    if (raw === "youtube-downloader") return DASHBOARD_VIEW;
     if (raw && raw !== DASHBOARD_VIEW) {
       return raw;
     }

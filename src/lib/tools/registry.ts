@@ -31,7 +31,6 @@ import {
   Sliders,
   Waves,
   Scissors,
-  Youtube,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -71,18 +70,6 @@ export const CATEGORY_ORDER: ToolCategory[] = [
  */
 export const TOOL_REGISTRY: ToolMeta[] = [
   /* ---------------- PHASE 2 — Video & Visual Engine ---------------- */
-  {
-    id: "youtube-downloader",
-    name: "Universal Media Downloader",
-    description: "Download videos & audio from YouTube (4K), TikTok (No Watermark), Instagram Reels, X/Twitter, and Reddit.",
-    category: "video",
-    icon: Youtube,
-    phase: 2,
-    status: "online",
-    accent: "red",
-    requiresEngine: true,
-    nativeOnly: true,
-  },
   {
     id: "video-converter",
     name: "Video Converter",

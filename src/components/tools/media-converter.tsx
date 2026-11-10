@@ -281,7 +281,7 @@ export function MediaConverter() {
         ? handoff.file
         : new File([handoff.file], handoff.filename, { type: handoff.mimeType || "video/mp4" });
       setFile(f);
-      if (handoff.sourceTool === "youtube-downloader") {
+      if (handoff.sourceTool === "youtube-downloader" || (handoff.mimeType?.startsWith("video/") && handoff.filename)) {
         setMode("audio");
         setAudioFormat("mp3");
         setAudioKbps("320");

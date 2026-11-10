@@ -25,7 +25,6 @@ import { useAiStore } from "@/store/useAiStore";
 
 const VIEW_TITLES: Record<string, { label: string; tag: string }> = {
   dashboard: { label: "DASHBOARD HUB", tag: "CORE" },
-  "youtube-downloader": { label: "YOUTUBE 4K TURBO", tag: "P2 MEDIA" },
   "video-converter": { label: "VIDEO ENGINE", tag: "P2 MEDIA" },
   "video-compressor": { label: "VIDEO COMPRESSOR", tag: "P2 MEDIA" },
   "video-mute": { label: "VIDEO MUTE", tag: "P2 MEDIA" },

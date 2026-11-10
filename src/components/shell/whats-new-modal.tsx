@@ -129,7 +129,7 @@ export function WhatsNewModal() {
       subtitle={
         previousVersion && previousVersion !== APP_VERSION
           ? `Upgraded from v${previousVersion} · Verified Local Engine`
-          : "Official GA Release · Universal Media Downloader & Hardware Ergonomics"
+          : "Official GA Release · Professional Media & Audio Workstation"
       }
       badge="WHAT'S NEW"
       badgeTone="emerald"

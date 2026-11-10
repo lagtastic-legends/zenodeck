@@ -6,7 +6,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass, Database, Download, Layers, Loader2, Scissors, Smartphone, Sparkles, Video, Youtube } from "lucide-react";
+import { Compass, Database, Download, Layers, Loader2, Scissors, Smartphone, Sparkles, Video } from "lucide-react";
 import { lazy, Suspense, useEffect } from "react";
 import { AuthGateway } from "@/components/auth/auth-gateway";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -33,7 +33,6 @@ import { WorkstationRibbon } from "@/components/shell/workstation-ribbon";
 import { ToolErrorBoundary } from "@/components/shell/tool-error-boundary";
 
 /* Dynamic code-split tool modules to control memory & isolate thread workloads */
-const YouTubeDownloader = lazy(() => import("@/components/tools/youtube-downloader").then((m) => ({ default: m.YouTubeDownloader })));
 const MediaConverter = lazy(() => import("@/components/tools/media-converter").then((m) => ({ default: m.MediaConverter })));
 const VideoCompressor = lazy(() => import("@/components/tools/video-compressor").then((m) => ({ default: m.VideoCompressor })));
 const VideoMute = lazy(() => import("@/components/tools/video-mute").then((m) => ({ default: m.VideoMute })));
@@ -107,7 +106,6 @@ function ToolSkeleton() {
 
 /** tool id → module implementation (grows every phase) */
 const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
-  "youtube-downloader": YouTubeDownloader,
   "video-converter": MediaConverter,
   "video-compressor": VideoCompressor,
   "video-mute": VideoMute,
@@ -150,43 +148,6 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
 
 function ToolView({ toolId }: { toolId: string }) {
   const resetNav = useNavStore((s) => s.reset);
-
-  if (toolId === "youtube-downloader" && !Capacitor.isNativePlatform()) {
-    return (
-      <div className="mx-auto w-full max-w-xl panel-hud flex flex-col items-center gap-4 rounded-2xl p-8 sm:p-10 text-center shadow-elevation2 border border-primary/30 mt-6">
-        <div className="relative grid size-16 place-items-center rounded-2xl border border-red-500/40 bg-red-500/10 text-red-500 shadow-glow">
-          <Youtube className="size-8" />
-          <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-            4K
-          </span>
-        </div>
-        <div className="space-y-1.5">
-          <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-foreground">
-            Native Android Exclusive
-          </h2>
-          <p className="font-mono text-xs text-muted-foreground leading-relaxed max-w-md">
-            To bypass cloud datacenter IP blocks and browser streaming throttling, the high-speed YouTube 4K Turbo Downloader runs natively in the Zenodeck Android app.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 mt-3 w-full sm:w-auto">
-          <a
-            href="/zenodeck.apk"
-            download="zenodeck.apk"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-primary/50 bg-primary/20 px-6 py-3 font-display text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/30 active:scale-95 transition-all shadow-glow"
-          >
-            <Download className="size-4" />
-            <span>Download Zenodeck APK</span>
-          </a>
-          <button
-            onClick={resetNav}
-            className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-border/70 bg-card/50 px-5 py-3 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:border-primary/40 hover:text-foreground active:scale-95 transition-all"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const Tool = TOOL_COMPONENTS[toolId];
   if (!Tool) {
@@ -295,14 +256,14 @@ export function AppShell() {
         navigate("keyboard-deck");
       }
 
-      // Android ACTION_SEND shared URL routing: open Universal Downloader
+      // Android ACTION_SEND shared URL routing: open Media Studio
       if ((window as any).__zenodeck_pending_shared_url) {
-        navigate("youtube-downloader");
+        navigate("video-converter");
       }
 
       const handleSharedUrl = (e: any) => {
         if (e?.detail?.url) {
-          navigate("youtube-downloader");
+          navigate("video-converter");
         }
       };
 
