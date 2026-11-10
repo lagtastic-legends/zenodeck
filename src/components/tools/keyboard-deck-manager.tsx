@@ -27,6 +27,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Sliders,
+  Palette,
   Search,
   X,
   Volume2,
@@ -75,9 +76,19 @@ import {
   openKeyboardPicker,
   setKeyboardTheme,
   getKeyboardTheme,
+  setKeyboardLayoutMode,
+  getKeyboardLayoutMode,
+  setShowNumberRow,
+  getShowNumberRow,
+  setAutoCorrect,
+  getAutoCorrect,
+  getClipboardHistory,
+  clearClipboardHistory,
   type DeckGifItem,
   type KeyboardStatus,
   type KeyboardTheme,
+  type KeyboardLayoutMode,
+  type ClipboardVaultItemBridge,
 } from "@/lib/zenodeck-bridge";
 import {
   zenoTapClient,
@@ -427,9 +438,14 @@ export function KeyboardDeckManager() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedFilterPill, setSelectedFilterPill] = useState<string>("all");
 
-  // Bridge to ZenoTapKeyboardSimulator
+  // Bridge to ZenoTapKeyboardSimulator & Native Settings
   const [injectedItem, setInjectedItem] = useState<ZenoTapInjectedItem | null>(null);
   const [currentTheme, setCurrentTheme] = useState<KeyboardTheme>("glacier");
+  const [layoutMode, setLayoutMode] = useState<KeyboardLayoutMode>("QWERTY");
+  const [showNumberRow, setShowNumberRowState] = useState<boolean>(true);
+  const [autoCorrect, setAutoCorrectState] = useState<boolean>(true);
+  const [clipboardItems, setClipboardItems] = useState<ClipboardVaultItemBridge[]>([]);
+  const [testSandboxText, setTestSandboxText] = useState<string>("");
 
   const dndId = useId();
   const sensors = useSensors(
@@ -446,14 +462,22 @@ export function KeyboardDeckManager() {
   const loadDeck = useCallback(async () => {
     setLoading(true);
     try {
-      const [deckItems, imeStatus, savedTheme] = await Promise.all([
+      const [deckItems, imeStatus, savedTheme, savedLayout, savedNumRow, savedAutoCorr, savedClips] = await Promise.all([
         getKeyboardDeckGifs(),
         getKeyboardStatus(),
         getKeyboardTheme(),
+        getKeyboardLayoutMode(),
+        getShowNumberRow(),
+        getAutoCorrect(),
+        getClipboardHistory(),
       ]);
       setGifs(deckItems);
       setStatus(imeStatus);
       setCurrentTheme(savedTheme);
+      setLayoutMode(savedLayout);
+      setShowNumberRowState(savedNumRow);
+      setAutoCorrectState(savedAutoCorr);
+      setClipboardItems(savedClips);
       setSyncToken(getStoredSyncToken());
       setPairedDeviceName(getStoredDeviceName());
       setAutoSync(getStoredAutoSync());
@@ -573,6 +597,44 @@ export function KeyboardDeckManager() {
       setIsUploading(false);
       e.target.value = "";
     }
+  };
+
+  const handleThemeSelect = async (theme: KeyboardTheme) => {
+    void haptics.impact();
+    setCurrentTheme(theme);
+    await setKeyboardTheme(theme);
+    toast.success(`Theme updated to ${theme.replace("_", " ").toUpperCase()}`);
+  };
+
+  const handleLayoutSelect = async (layout: KeyboardLayoutMode) => {
+    void haptics.impact();
+    setLayoutMode(layout);
+    await setKeyboardLayoutMode(layout);
+    toast.success(`Keyboard layout remapped to ${layout}`);
+  };
+
+  const handleToggleNumberRow = async () => {
+    void haptics.impact();
+    const next = !showNumberRow;
+    setShowNumberRowState(next);
+    await setShowNumberRow(next);
+    toast.success(`Top number row ${next ? "enabled" : "hidden"}`);
+  };
+
+  const handleToggleAutoCorrect = async () => {
+    void haptics.impact();
+    const next = !autoCorrect;
+    setAutoCorrectState(next);
+    await setAutoCorrect(next);
+    toast.success(`Predictive auto-correct ${next ? "enabled" : "disabled"}`);
+  };
+
+  const handleClearClipboard = async () => {
+    void haptics.impact();
+    await clearClipboardHistory(false);
+    const updated = await getClipboardHistory();
+    setClipboardItems(updated);
+    toast.success("Unpinned clipboard history cleared");
   };
 
   const handleSyncCloud = async () => {
@@ -1116,6 +1178,222 @@ export function KeyboardDeckManager() {
         injectedItem={injectedItem}
         onSelectInspectItem={selectVaultItemForInspection}
       />
+
+      {/* 8. Gboard-Grade Native Keyboard Engine & Layout Studio */}
+      <div className="rounded-2xl border border-sky-400/20 bg-[#141c2e]/60 p-4 sm:p-5 backdrop-blur-xl shadow-lg space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-9 rounded-xl bg-cyan-400/10 border border-cyan-400/30 flex items-center justify-center text-[#22d3ee]">
+              <Sliders className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-headline text-sm font-bold text-[#e0e8f0] flex items-center gap-2">
+                ZenoTap Gboard-Grade Engine Settings
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  Native IME v1.0.15
+                </span>
+              </h2>
+              <p className="text-xs text-[#a0b4c4]">
+                Multi-layout remapping, predictive auto-correct, dedicated number row, and 30-slot persistent clipboard vault.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Themes Card Grid */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+            <Palette className="size-3.5 text-[#7dd3fc]" /> Native IME Theme
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {/* Glacier */}
+            <button
+              type="button"
+              onClick={() => void handleThemeSelect("glacier")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                currentTheme === "glacier"
+                  ? "border-[#7dd3fc] bg-[#0a0e1a] shadow-[0_0_15px_rgba(125,211,252,0.2)]"
+                  : "border-sky-400/20 bg-[#0a0e1a]/60 hover:border-sky-400/40"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="size-3 rounded-full bg-[#7dd3fc]" />
+                <span className="text-xs font-bold text-[#e0e8f0]">Glacier Light</span>
+              </div>
+              <p className="text-[10px] text-[#a0b4c4]">Stitch Frozen Ice (#0A0E1A)</p>
+            </button>
+
+            {/* Obsidian */}
+            <button
+              type="button"
+              onClick={() => void handleThemeSelect("obsidian")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                currentTheme === "obsidian"
+                  ? "border-cyan-400 bg-neutral-950 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                  : "border-neutral-800 bg-neutral-950/60 hover:border-neutral-700"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="size-3 rounded-full bg-cyan-400" />
+                <span className="text-xs font-bold text-neutral-100">Obsidian Dark</span>
+              </div>
+              <p className="text-[10px] text-neutral-400">Cyber-Violet (#0E0F14)</p>
+            </button>
+
+            {/* Terracotta */}
+            <button
+              type="button"
+              onClick={() => void handleThemeSelect("terracotta")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                currentTheme === "terracotta"
+                  ? "border-[#C2652A] bg-[#FAF5EE] text-[#342A24] shadow-[0_0_15px_rgba(194,101,42,0.2)]"
+                  : "border-amber-900/30 bg-[#FAF5EE]/90 text-[#342A24] hover:border-[#C2652A]/50"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="size-3 rounded-full bg-[#C2652A]" />
+                <span className="text-xs font-bold text-[#342A24]">Terracotta</span>
+              </div>
+              <p className="text-[10px] text-[#79695F]">Warm Clay Paper (#FAF5EE)</p>
+            </button>
+
+            {/* Forest & Champagne */}
+            <button
+              type="button"
+              onClick={() => void handleThemeSelect("forest_champagne")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                currentTheme === "forest_champagne"
+                  ? "border-[#F7E7CE] bg-[#102C26] shadow-[0_0_15px_rgba(247,231,206,0.25)]"
+                  : "border-emerald-800/40 bg-[#102C26]/80 hover:border-[#F7E7CE]/40"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="size-3 rounded-full bg-[#F7E7CE]" />
+                <span className="text-xs font-bold text-[#FAF5EE]">Forest &amp; Gold</span>
+              </div>
+              <p className="text-[10px] text-[#A79277]">Emerald &amp; Champagne (#102C26)</p>
+            </button>
+          </div>
+        </div>
+
+        {/* Layout Modes & Toggles Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          {/* Layout Selector */}
+          <div className="p-3 rounded-xl border border-sky-400/20 bg-[#111828]/80 space-y-2">
+            <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+              <Keyboard className="size-3.5 text-[#7dd3fc]" /> Layout Remapping
+            </span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(["QWERTY", "AZERTY", "QWERTZ", "DVORAK"] as KeyboardLayoutMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => void handleLayoutSelect(mode)}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    layoutMode === mode
+                      ? "bg-sky-500/20 border border-sky-400 text-[#7dd3fc]"
+                      : "bg-[#141c2e] border border-sky-400/10 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Number Row Toggle */}
+          <div className="p-3 rounded-xl border border-sky-400/20 bg-[#111828]/80 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+                <Zap className="size-3.5 text-[#7dd3fc]" /> Dedicated Number Row
+              </span>
+              <p className="text-[10px] text-[#a0b4c4] mt-1">
+                Adds a top numeric row (1-0) above the QWERTY keys for fast typing.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleToggleNumberRow()}
+              className={`mt-2 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-between border ${
+                showNumberRow
+                  ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                  : "bg-neutral-900 border-neutral-700 text-neutral-400"
+              }`}
+            >
+              <span>{showNumberRow ? "Number Row Active" : "Number Row Hidden"}</span>
+              <span className="font-mono">{showNumberRow ? "ON" : "OFF"}</span>
+            </button>
+          </div>
+
+          {/* Auto-Correct Toggle */}
+          <div className="p-3 rounded-xl border border-sky-400/20 bg-[#111828]/80 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-[#7dd3fc]" /> Predictive Auto-Correct
+              </span>
+              <p className="text-[10px] text-[#a0b4c4] mt-1">
+                Zero-latency offline contraction correction (e.g. dont → don&apos;t, im → I&apos;m).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleToggleAutoCorrect()}
+              className={`mt-2 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-between border ${
+                autoCorrect
+                  ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300"
+                  : "bg-neutral-900 border-neutral-700 text-neutral-400"
+              }`}
+            >
+              <span>{autoCorrect ? "Auto-Correct Active" : "Auto-Correct Disabled"}</span>
+              <span className="font-mono">{autoCorrect ? "ON" : "OFF"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 30-Slot Persistent Clipboard Vault & Interactive Test Box */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Clipboard History summary */}
+          <div className="p-3.5 rounded-xl border border-sky-400/20 bg-[#111828]/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+                📋 Persistent Clipboard Vault
+              </span>
+              <span className="text-[10px] font-mono text-[#7dd3fc]">
+                {clipboardItems.length} / 30 slots
+              </span>
+            </div>
+            <p className="text-[10px] text-[#a0b4c4]">
+              Pinned clips are protected from FIFO purges. Sniffs media download URLs automatically.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => void handleClearClipboard()}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+              >
+                Clear Unpinned History
+              </button>
+            </div>
+          </div>
+
+          {/* Live Interactive Test Sandbox Box */}
+          <div className="p-3.5 rounded-xl border border-sky-400/20 bg-[#111828]/80 space-y-2">
+            <span className="text-xs font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+              ⌨️ Live Test Sandbox Input
+            </span>
+            <input
+              type="text"
+              value={testSandboxText}
+              onChange={(e) => setTestSandboxText(e.target.value)}
+              placeholder="Tap here to test physical keyboard, IME, or voice typing..."
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-sky-400/20 bg-[#0a0e1a] text-[#e0e8f0] placeholder:text-muted-foreground focus:outline-none focus:border-[#7dd3fc]"
+            />
+            <p className="text-[10px] text-[#a0b4c4]">
+              Try typing <span className="font-mono text-cyan-300">&quot;dont&quot;</span> or double-tapping Spacebar for auto-period.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* 8. 3-Step Connection & IME Setup Banner */}
       <div className="rounded-2xl border border-sky-400/20 bg-[#141c2e]/60 p-4 sm:p-5 backdrop-blur-xl shadow-lg space-y-4">

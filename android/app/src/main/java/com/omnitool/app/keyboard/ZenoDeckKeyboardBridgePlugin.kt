@@ -12,6 +12,8 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 
@@ -19,12 +21,13 @@ import java.io.FileOutputStream
  * ZenoDeckKeyboardBridgePlugin
  *
  * Capacitor bridge connecting the React / Next.js web application
- * to the native Android Keyboard (IME) storage deck.
+ * to the native Android Keyboard (IME) storage deck and configuration settings.
  *
  * Provides:
  * 1. Atomic file writes to the internal app sandbox (filesDir/zenodeck_gifs)
- * 2. Real-time broadcast notification to ZenoDeckKeyboardService
+ * 2. Real-time broadcast notifications to ZenoDeckKeyboardService
  * 3. System IME settings discovery (is keyboard enabled/selected, deep linking to Settings)
+ * 4. Settings synchronization (Themes, Layout Modes, Number Row, Auto-Correct, Clipboard History)
  */
 @CapacitorPlugin(name = "ZenoDeckKeyboardBridge")
 class ZenoDeckKeyboardBridgePlugin : Plugin() {
@@ -34,11 +37,19 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         const val DECK_DIRECTORY_NAME = "zenodeck_gifs"
         const val ACTION_DECK_UPDATED = "com.omnitool.app.ACTION_GIF_DECK_UPDATED"
         const val ACTION_THEME_UPDATED = "com.omnitool.app.ACTION_KEYBOARD_THEME_UPDATED"
+        const val ACTION_SETTINGS_UPDATED = "com.omnitool.app.ACTION_KEYBOARD_SETTINGS_UPDATED"
         const val PREFS_NAME = "zenodeck_prefs"
         const val PREF_KEY_THEME = "keyboard_theme"
+        const val PREF_KEY_LAYOUT_MODE = "keyboard_layout_mode"
+        const val PREF_KEY_SHOW_NUMBER_ROW = "keyboard_show_number_row"
+        const val PREF_KEY_AUTO_CORRECT = "keyboard_auto_correct"
+        const val PREF_KEY_DOUBLE_SPACE_PERIOD = "keyboard_double_space_period"
+        const val PREF_KEY_CLIPBOARD_VAULT = "zenotap_clipboard_vault"
+
         const val THEME_OBSIDIAN = "obsidian"
         const val THEME_TERRACOTTA = "terracotta"
         const val THEME_GLACIER = "glacier"
+        const val THEME_FOREST_CHAMPAGNE = "forest_champagne"
     }
 
     private fun getDeckDirectory(): File {
@@ -67,7 +78,6 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         }
 
         try {
-            // Strip data URL preamble if passed (e.g. "data:image/gif;base64,...")
             val cleanBase64 = if (base64Data.contains(",")) {
                 base64Data.substringAfter(",")
             } else {
@@ -77,14 +87,12 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
             val bytes = Base64.decode(cleanBase64, Base64.DEFAULT)
             val deckDir = getDeckDirectory()
 
-            // Atomic write: write to .tmp file first, then atomically rename
             val tempFile = File(deckDir, ".tmp_${System.currentTimeMillis()}_$filename")
             val targetFile = File(deckDir, filename)
 
             FileOutputStream(tempFile).use { it.write(bytes) }
 
             if (tempFile.renameTo(targetFile)) {
-                // Generate or save lightweight <15KB WebP preview thumbnail for IME memory protection
                 val thumbFile = File(deckDir, "$filename.thumb.webp")
                 if (!thumbnailBase64.isNullOrEmpty()) {
                     val cleanThumb = if (thumbnailBase64.contains(",")) {
@@ -94,90 +102,73 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
                     }
                     val thumbBytes = Base64.decode(cleanThumb, Base64.DEFAULT)
                     FileOutputStream(thumbFile).use { it.write(thumbBytes) }
-                } else {
-                    try {
-                        val options = android.graphics.BitmapFactory.Options().apply {
-                            inSampleSize = 2
-                        }
-                        val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                        if (bitmap != null) {
-                            com.omnitool.app.media.ZenoHeadlessMediaEngine.getInstance(context)
-                                .generateCompanionThumbnail(bitmap, thumbFile)
-                            bitmap.recycle()
-                        }
-                    } catch (thumbErr: Exception) {
-                        Log.w(TAG, "Automatic thumbnail extraction failed: ${thumbErr.message}")
-                    }
                 }
 
-                // Broadcast update so active keyboard refreshes immediately
                 val intent = Intent(ACTION_DECK_UPDATED).apply {
                     setPackage(context.packageName)
                 }
                 context.sendBroadcast(intent)
-
-                Log.d(TAG, "Saved GIF to shared deck: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+                Log.d(TAG, "Saved GIF $filename (${targetFile.length()} bytes) and broadcast sent")
 
                 val ret = JSObject().apply {
                     put("success", true)
                     put("filename", filename)
                     put("path", targetFile.absolutePath)
                     put("size", targetFile.length())
-                    put("thumbnailPath", if (thumbFile.exists()) thumbFile.absolutePath else null)
                 }
                 call.resolve(ret)
             } else {
-                tempFile.delete()
-                call.reject("Failed to commit atomic file rename for $filename")
+                call.reject("Failed to commit file to shared deck")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving GIF to shared deck", e)
+            Log.e(TAG, "Failed to save GIF", e)
             call.reject("Failed to save GIF: ${e.message}", e)
         }
     }
 
     /**
-     * Returns an array of all GIFs currently present in the shared deck directory.
-     * Excludes thumbnail companions (.thumb.webp) to present clean media entries.
+     * Lists all saved GIFs and Stickers in the shared deck directory.
      */
     @PluginMethod
     fun getDeckGifs(call: PluginCall) {
         try {
             val deckDir = getDeckDirectory()
             val files = deckDir.listFiles { file ->
-                file.isFile &&
-                file.name.endsWith(".gif", ignoreCase = true) &&
-                !file.name.endsWith(".thumb.webp", ignoreCase = true) &&
-                !file.name.startsWith(".")
+                file.isFile && (file.extension.equals("gif", ignoreCase = true) ||
+                        file.extension.equals("webp", ignoreCase = true) ||
+                        file.extension.equals("png", ignoreCase = true)) &&
+                        !file.name.contains(".thumb.")
             } ?: emptyArray()
 
-            val array = JSArray()
-            files.sortedByDescending { it.lastModified() }.forEach { file ->
-                val thumbFile = File(deckDir, "${file.name}.thumb.webp")
-                val item = JSObject().apply {
+            val sortedFiles = files.sortedWith(
+                compareByDescending<File> { it.name.startsWith("pinned_", ignoreCase = true) }
+                    .thenByDescending { it.lastModified() }
+            )
+
+            val gifsArray = JSArray()
+            for (file in sortedFiles) {
+                val obj = JSObject().apply {
                     put("filename", file.name)
                     put("path", file.absolutePath)
                     put("size", file.length())
                     put("modified", file.lastModified())
-                    put("thumbnailPath", if (thumbFile.exists()) thumbFile.absolutePath else null)
-                    put("hasThumbnail", thumbFile.exists())
                 }
-                array.put(item)
+                gifsArray.put(obj)
             }
 
             val ret = JSObject().apply {
-                put("gifs", array)
-                put("count", files.size)
+                put("gifs", gifsArray)
+                put("count", gifsArray.length())
             }
             call.resolve(ret)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to read deck GIFs", e)
-            call.reject("Failed to read deck GIFs: ${e.message}", e)
+            Log.e(TAG, "Failed to query deck GIFs", e)
+            call.reject("Failed to list deck GIFs: ${e.message}", e)
         }
     }
 
     /**
-     * Deletes a specific GIF from the deck directory.
+     * Deletes a GIF from the shared deck directory.
      */
     @PluginMethod
     fun deleteGif(call: PluginCall) {
@@ -189,8 +180,13 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
 
         try {
             val deckDir = getDeckDirectory()
-            val file = File(deckDir, filename)
-            val deleted = file.exists() && file.delete()
+            val targetFile = File(deckDir, filename)
+            val thumbFile = File(deckDir, "$filename.thumb.webp")
+
+            val deleted = targetFile.delete()
+            if (thumbFile.exists()) {
+                thumbFile.delete()
+            }
 
             if (deleted) {
                 val intent = Intent(ACTION_DECK_UPDATED).apply {
@@ -270,14 +266,13 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
     }
 
     /**
-     * Sets and persists the native keyboard theme ('obsidian' or 'terracotta').
-     * Broadcasts update to ZenoDeckKeyboardService for live runtime skinning.
+     * Sets and persists the native keyboard theme ('glacier', 'obsidian', 'terracotta', or 'forest_champagne').
      */
     @PluginMethod
     fun setKeyboardTheme(call: PluginCall) {
         val theme = call.getString("theme") ?: THEME_GLACIER
-        if (theme != THEME_OBSIDIAN && theme != THEME_TERRACOTTA && theme != THEME_GLACIER) {
-            call.reject("Invalid theme: $theme. Supported values: '$THEME_GLACIER', '$THEME_OBSIDIAN', '$THEME_TERRACOTTA'")
+        if (theme != THEME_OBSIDIAN && theme != THEME_TERRACOTTA && theme != THEME_GLACIER && theme != THEME_FOREST_CHAMPAGNE) {
+            call.reject("Invalid theme: $theme. Supported values: '$THEME_GLACIER', '$THEME_OBSIDIAN', '$THEME_TERRACOTTA', '$THEME_FOREST_CHAMPAGNE'")
             return
         }
 
@@ -311,13 +306,188 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         try {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val theme = prefs.getString(PREF_KEY_THEME, THEME_GLACIER) ?: THEME_GLACIER
-            val ret = JSObject().apply {
-                put("theme", theme)
-            }
-            call.resolve(ret)
+            call.resolve(JSObject().put("theme", theme))
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get keyboard theme", e)
             call.reject("Failed to get keyboard theme: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets and persists the keyboard layout mode ('QWERTY', 'AZERTY', 'QWERTZ', 'DVORAK').
+     */
+    @PluginMethod
+    fun setLayoutMode(call: PluginCall) {
+        val layout = call.getString("layout")?.uppercase() ?: "QWERTY"
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(PREF_KEY_LAYOUT_MODE, layout).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "layout")
+                putExtra("value", layout)
+            }
+            context.sendBroadcast(intent)
+
+            call.resolve(JSObject().put("success", true).put("layout", layout))
+        } catch (e: Exception) {
+            call.reject("Failed to set layout mode: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Gets the currently saved keyboard layout mode.
+     */
+    @PluginMethod
+    fun getLayoutMode(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val layout = prefs.getString(PREF_KEY_LAYOUT_MODE, "QWERTY") ?: "QWERTY"
+            call.resolve(JSObject().put("layout", layout))
+        } catch (e: Exception) {
+            call.reject("Failed to get layout mode: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets whether the dedicated top number row is visible.
+     */
+    @PluginMethod
+    fun setShowNumberRow(call: PluginCall) {
+        val enabled = call.getBoolean("enabled", true) ?: true
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(PREF_KEY_SHOW_NUMBER_ROW, enabled).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "number_row")
+                putExtra("value", enabled)
+            }
+            context.sendBroadcast(intent)
+
+            call.resolve(JSObject().put("success", true).put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to set show number row: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Gets whether the dedicated top number row is enabled.
+     */
+    @PluginMethod
+    fun getShowNumberRow(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val enabled = prefs.getBoolean(PREF_KEY_SHOW_NUMBER_ROW, true)
+            call.resolve(JSObject().put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to get show number row: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets whether auto-correct and predictive word completion is enabled.
+     */
+    @PluginMethod
+    fun setAutoCorrect(call: PluginCall) {
+        val enabled = call.getBoolean("enabled", true) ?: true
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(PREF_KEY_AUTO_CORRECT, enabled).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "auto_correct")
+                putExtra("value", enabled)
+            }
+            context.sendBroadcast(intent)
+
+            call.resolve(JSObject().put("success", true).put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to set auto-correct: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Gets whether auto-correct is enabled.
+     */
+    @PluginMethod
+    fun getAutoCorrect(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val enabled = prefs.getBoolean(PREF_KEY_AUTO_CORRECT, true)
+            call.resolve(JSObject().put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to get auto-correct: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves up to 30 stored clips from the persistent clipboard vault.
+     */
+    @PluginMethod
+    fun getClipboardHistory(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val rawJson = prefs.getString(PREF_KEY_CLIPBOARD_VAULT, "[]") ?: "[]"
+            val jsonArray = JSONArray(rawJson)
+
+            val itemsArray = JSArray()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val jsObj = JSObject().apply {
+                    put("id", obj.optString("id", ""))
+                    put("text", obj.optString("text", ""))
+                    put("timestamp", obj.optLong("timestamp", 0L))
+                    put("isPinned", obj.optBoolean("isPinned", false))
+                }
+                itemsArray.put(jsObj)
+            }
+
+            val ret = JSObject().apply {
+                put("items", itemsArray)
+                put("count", itemsArray.length())
+            }
+            call.resolve(ret)
+        } catch (e: Exception) {
+            call.reject("Failed to load clipboard history: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Clears unpinned clips (or all clips if clearPinned is true) from the clipboard vault.
+     */
+    @PluginMethod
+    fun clearClipboardHistory(call: PluginCall) {
+        val clearPinned = call.getBoolean("clearPinned", false) ?: false
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            if (clearPinned) {
+                prefs.edit().putString(PREF_KEY_CLIPBOARD_VAULT, "[]").apply()
+            } else {
+                val rawJson = prefs.getString(PREF_KEY_CLIPBOARD_VAULT, "[]") ?: "[]"
+                val jsonArray = JSONArray(rawJson)
+                val newArray = JSONArray()
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    if (obj.optBoolean("isPinned", false)) {
+                        newArray.put(obj)
+                    }
+                }
+                prefs.edit().putString(PREF_KEY_CLIPBOARD_VAULT, newArray.toString()).apply()
+            }
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "clipboard")
+            }
+            context.sendBroadcast(intent)
+
+            call.resolve(JSObject().put("success", true))
+        } catch (e: Exception) {
+            call.reject("Failed to clear clipboard history: ${e.message}", e)
         }
     }
 }

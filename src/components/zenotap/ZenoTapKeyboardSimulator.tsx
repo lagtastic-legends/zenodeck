@@ -128,7 +128,9 @@ export function ZenoTapKeyboardSimulator({
     onThemeChanged?.(newTheme);
     await setKeyboardTheme(newTheme);
     const label =
-      newTheme === "glacier"
+      newTheme === "forest_champagne"
+        ? "Forest & Champagne Gold"
+        : newTheme === "glacier"
         ? "Glacier Frozen Light"
         : newTheme === "terracotta"
         ? "Terracotta Warm"
@@ -231,6 +233,7 @@ export function ZenoTapKeyboardSimulator({
 
   const isGlacier = theme === "glacier";
   const isTerracotta = theme === "terracotta";
+  const isForest = theme === "forest_champagne";
 
   return (
     <div
@@ -306,6 +309,18 @@ export function ZenoTapKeyboardSimulator({
           >
             <div className="size-2 rounded-full bg-[#C2652A]" />
             Terracotta
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSwitchTheme("forest_champagne")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              isForest
+                ? "bg-[#102C26] text-[#F7E7CE] shadow-sm border border-[#F7E7CE]/40 font-semibold shadow-[0_0_12px_rgba(247,231,206,0.2)]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <div className="size-2 rounded-full bg-[#F7E7CE] shadow-[0_0_8px_rgba(247,231,206,0.6)]" />
+            Forest &amp; Gold
           </button>
         </div>
       </div>

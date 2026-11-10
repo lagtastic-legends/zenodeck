@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="keyboard_total_height">280dp</dimen>
-    <dimen name="keyboard_padding">5dp</dimen>
-    <dimen name="keyboard_ribbon_height">38dp</dimen>
-    <dimen name="keyboard_ribbon_pill_height">28dp</dimen>
-    <dimen name="keyboard_ribbon_btn_height">26dp</dimen>
-    <dimen name="keyboard_clipboard_height">32dp</dimen>
-    <dimen name="keyboard_category_strip_height">28dp</dimen>
+    <dimen name="keyboard_total_height">295dp</dimen>
+    <dimen name="keyboard_padding">4dp</dimen>
+    <dimen name="keyboard_ribbon_height">34dp</dimen>
+    <dimen name="keyboard_ribbon_pill_height">26dp</dimen>
+    <dimen name="keyboard_ribbon_btn_height">24dp</dimen>
+    <dimen name="keyboard_clipboard_height">30dp</dimen>
+    <dimen name="keyboard_category_strip_height">26dp</dimen>
+    <dimen name="keyboard_predictive_height">32dp</dimen>
+    <dimen name="keyboard_number_row_height">30dp</dimen>
     <dimen name="keyboard_vault_height">210dp</dimen>
     <dimen name="keyboard_bottom_strip_height">46dp</dimen>
     <dimen name="keyboard_key_height">46dp</dimen>

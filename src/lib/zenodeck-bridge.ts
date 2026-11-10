@@ -30,11 +30,42 @@ interface ZenoDeckNativePlugin {
   openInputMethodPicker(): Promise<{ success: boolean }>;
   setKeyboardTheme(options: { theme: string }): Promise<{ success: boolean; theme: string }>;
   getKeyboardTheme(): Promise<{ theme: string }>;
+  setLayoutMode(options: { layout: string }): Promise<{ success: boolean; layout: string }>;
+  getLayoutMode(): Promise<{ layout: string }>;
+  setShowNumberRow(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
+  getShowNumberRow(): Promise<{ enabled: boolean }>;
+  setAutoCorrect(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
+  getAutoCorrect(): Promise<{ enabled: boolean }>;
+  getClipboardHistory(): Promise<{ items: ClipboardVaultItemBridge[]; count: number }>;
+  clearClipboardHistory(options?: { clearPinned?: boolean }): Promise<{ success: boolean }>;
+}
+
+export interface ClipboardVaultItemBridge {
+  id: string;
+  text: string;
+  timestamp: number;
+  isPinned: boolean;
 }
 
 const NativeBridge = registerPlugin<ZenoDeckNativePlugin>("ZenoDeckKeyboardBridge");
 
 const DECK_SUBDIR = "zenodeck_gifs";
+
+const memoryStore: Record<string, string> = {};
+
+function getFallbackItem(key: string): string | null {
+  if (typeof window !== "undefined" && window.localStorage) {
+    return localStorage.getItem(key);
+  }
+  return memoryStore[key] || null;
+}
+
+function setFallbackItem(key: string, value: string): void {
+  if (typeof window !== "undefined" && window.localStorage) {
+    localStorage.setItem(key, value);
+  }
+  memoryStore[key] = value;
+}
 
 /**
  * Converts a Blob or File into a pure base64 string (stripping data URLs).
@@ -230,16 +261,15 @@ export async function openKeyboardPicker(): Promise<boolean> {
   }
 }
 
-export type KeyboardTheme = "glacier" | "obsidian" | "terracotta";
+export type KeyboardTheme = "glacier" | "obsidian" | "terracotta" | "forest_champagne";
+export type KeyboardLayoutMode = "QWERTY" | "AZERTY" | "QWERTZ" | "DVORAK";
 
 /**
- * Updates the native Android keyboard theme ('glacier', 'obsidian', or 'terracotta').
+ * Updates the native Android keyboard theme ('glacier', 'obsidian', 'terracotta', or 'forest_champagne').
  * Syncs seamlessly across the Capacitor bridge and persists in SharedPreferences.
  */
 export async function setKeyboardTheme(theme: KeyboardTheme): Promise<boolean> {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("zenotap_keyboard_theme", theme);
-  }
+  setFallbackItem("zenotap_keyboard_theme", theme);
   if (!Capacitor.isNativePlatform()) {
     return true;
   }
@@ -256,20 +286,145 @@ export async function setKeyboardTheme(theme: KeyboardTheme): Promise<boolean> {
  */
 export async function getKeyboardTheme(): Promise<KeyboardTheme> {
   if (!Capacitor.isNativePlatform()) {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("zenotap_keyboard_theme");
-      if (stored === "glacier" || stored === "terracotta" || stored === "obsidian") return stored;
+    const stored = getFallbackItem("zenotap_keyboard_theme");
+    if (stored === "glacier" || stored === "terracotta" || stored === "obsidian" || stored === "forest_champagne") {
+      return stored;
     }
     return "glacier";
   }
   try {
     const res = await NativeBridge.getKeyboardTheme();
-    if (res.theme === "glacier" || res.theme === "terracotta" || res.theme === "obsidian") {
+    if (res.theme === "glacier" || res.theme === "terracotta" || res.theme === "obsidian" || res.theme === "forest_champagne") {
       return res.theme;
     }
     return "glacier";
   } catch {
     return "glacier";
+  }
+}
+
+/**
+ * Sets and persists the keyboard layout mode ('QWERTY', 'AZERTY', 'QWERTZ', 'DVORAK').
+ */
+export async function setKeyboardLayoutMode(layout: KeyboardLayoutMode): Promise<boolean> {
+  setFallbackItem("zenotap_keyboard_layout", layout);
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const res = await NativeBridge.setLayoutMode({ layout });
+    return res.success;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves the current keyboard layout mode.
+ */
+export async function getKeyboardLayoutMode(): Promise<KeyboardLayoutMode> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_keyboard_layout");
+    if (stored === "QWERTY" || stored === "AZERTY" || stored === "QWERTZ" || stored === "DVORAK") {
+      return stored;
+    }
+    return "QWERTY";
+  }
+  try {
+    const res = await NativeBridge.getLayoutMode();
+    const l = res.layout?.toUpperCase();
+    if (l === "AZERTY" || l === "QWERTZ" || l === "DVORAK") return l;
+    return "QWERTY";
+  } catch {
+    return "QWERTY";
+  }
+}
+
+/**
+ * Sets whether the top number row is visible on the keyboard.
+ */
+export async function setShowNumberRow(enabled: boolean): Promise<boolean> {
+  setFallbackItem("zenotap_show_number_row", enabled ? "1" : "0");
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const res = await NativeBridge.setShowNumberRow({ enabled });
+    return res.success;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves whether the top number row is enabled.
+ */
+export async function getShowNumberRow(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_show_number_row");
+    if (stored !== null) return stored === "1";
+    return true;
+  }
+  try {
+    const res = await NativeBridge.getShowNumberRow();
+    return res.enabled;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Sets whether predictive auto-correct is enabled.
+ */
+export async function setAutoCorrect(enabled: boolean): Promise<boolean> {
+  setFallbackItem("zenotap_auto_correct", enabled ? "1" : "0");
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const res = await NativeBridge.setAutoCorrect({ enabled });
+    return res.success;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves whether auto-correct is enabled.
+ */
+export async function getAutoCorrect(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_auto_correct");
+    if (stored !== null) return stored === "1";
+    return true;
+  }
+  try {
+    const res = await NativeBridge.getAutoCorrect();
+    return res.enabled;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Retrieves persistent clipboard vault items.
+ */
+export async function getClipboardHistory(): Promise<ClipboardVaultItemBridge[]> {
+  if (!Capacitor.isNativePlatform()) {
+    return [];
+  }
+  try {
+    const res = await NativeBridge.getClipboardHistory();
+    return res.items || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Clears unpinned or all items from the clipboard vault.
+ */
+export async function clearClipboardHistory(clearPinned = false): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const res = await NativeBridge.clearClipboardHistory({ clearPinned });
+    return res.success;
+  } catch {
+    return false;
   }
 }
 

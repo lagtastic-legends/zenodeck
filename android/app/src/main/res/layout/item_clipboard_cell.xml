@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_utility_pill"
+    android:padding="8dp"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/tv_clip_pin_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📌"
+        android:textSize="10sp"
+        android:layout_marginEnd="6dp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_clip_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textColor="#F1F5F9"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/tv_clip_timestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#64748B"
+            android:textSize="9sp" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btn_clip_pin"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginStart="4dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/btn_star"
+        android:tint="#94A3B8"
+        android:contentDescription="Pin clip" />
+
+    <ImageButton
+        android:id="@+id/btn_clip_delete"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginStart="2dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_delete"
+        android:tint="#F87171"
+        android:contentDescription="Delete clip" />
+</LinearLayout>
