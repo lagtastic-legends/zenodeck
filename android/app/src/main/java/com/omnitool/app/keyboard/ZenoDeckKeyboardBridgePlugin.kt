@@ -43,6 +43,7 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         const val PREF_KEY_LAYOUT_MODE = "keyboard_layout_mode"
         const val PREF_KEY_SHOW_NUMBER_ROW = "keyboard_show_number_row"
         const val PREF_KEY_AUTO_CORRECT = "keyboard_auto_correct"
+        const val PREF_KEY_GESTURE_TYPING = "keyboard_gesture_typing"
         const val PREF_KEY_DOUBLE_SPACE_PERIOD = "keyboard_double_space_period"
         const val PREF_KEY_CLIPBOARD_VAULT = "zenotap_clipboard_vault"
 
@@ -421,6 +422,43 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
             call.resolve(JSObject().put("enabled", enabled))
         } catch (e: Exception) {
             call.reject("Failed to get auto-correct: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets whether gesture / glide swipe typing is enabled.
+     */
+    @PluginMethod
+    fun setGestureTyping(call: PluginCall) {
+        val enabled = call.getBoolean("enabled", true) ?: true
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(PREF_KEY_GESTURE_TYPING, enabled).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "gesture_typing")
+                putExtra("value", enabled)
+            }
+            context.sendBroadcast(intent)
+
+            call.resolve(JSObject().put("success", true).put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to set gesture typing: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Gets whether gesture / glide typing is enabled.
+     */
+    @PluginMethod
+    fun getGestureTyping(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val enabled = prefs.getBoolean(PREF_KEY_GESTURE_TYPING, true)
+            call.resolve(JSObject().put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to get gesture typing: ${e.message}", e)
         }
     }
 

@@ -36,6 +36,8 @@ interface ZenoDeckNativePlugin {
   getShowNumberRow(): Promise<{ enabled: boolean }>;
   setAutoCorrect(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
   getAutoCorrect(): Promise<{ enabled: boolean }>;
+  setGestureTyping(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
+  getGestureTyping(): Promise<{ enabled: boolean }>;
   getClipboardHistory(): Promise<{ items: ClipboardVaultItemBridge[]; count: number }>;
   clearClipboardHistory(options?: { clearPinned?: boolean }): Promise<{ success: boolean }>;
 }
@@ -394,6 +396,37 @@ export async function getAutoCorrect(): Promise<boolean> {
   }
   try {
     const res = await NativeBridge.getAutoCorrect();
+    return res.enabled;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Sets whether gesture / glide swipe typing is enabled.
+ */
+export async function setGestureTyping(enabled: boolean): Promise<boolean> {
+  setFallbackItem("zenotap_gesture_typing", enabled ? "1" : "0");
+  if (!Capacitor.isNativePlatform()) return true;
+  try {
+    const res = await NativeBridge.setGestureTyping({ enabled });
+    return res.success;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves whether gesture / glide swipe typing is enabled.
+ */
+export async function getGestureTyping(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_gesture_typing");
+    if (stored !== null) return stored === "1";
+    return true;
+  }
+  try {
+    const res = await NativeBridge.getGestureTyping();
     return res.enabled;
   } catch {
     return true;

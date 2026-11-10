@@ -114,6 +114,20 @@ class ZenoDeckKeyboardService : InputMethodService() {
             "thanks", "please", "yes", "hello", "hi", "hey", "sure", "ok", "okay", "tomorrow", "today", "tonight"
         )
 
+        // Multilingual Dictionaries (French for AZERTY, German for QWERTZ, Spanish)
+        private val FRENCH_VOCABULARY = listOf(
+            "bonjour", "merci", "salut", "avec", "pour", "dans", "faire", "comme", "mais", "nous",
+            "vous", "bien", "dire", "elle", "leur", "aussi", "autre", "temps", "oui", "non", "tout"
+        )
+        private val GERMAN_VOCABULARY = listOf(
+            "hallo", "danke", "bitte", "nicht", "eine", "haben", "werden", "sein", "kann", "nach",
+            "auch", "wenn", "aber", "fuer", "wieder", "diese", "immer", "alles", "jetzt", "etwas"
+        )
+        private val SPANISH_VOCABULARY = listOf(
+            "hola", "gracias", "bueno", "amigo", "para", "con", "por", "como", "pero", "este",
+            "todo", "esta", "hacer", "tiempo", "ahora", "bien", "donde", "siempre", "mucho"
+        )
+
         // Layout Definitions
         val LAYOUT_QWERTY = listOf(
             listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
@@ -233,14 +247,16 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var currentLayout: String = "QWERTY"
     private var isShowNumberRow: Boolean = true
     private var isAutoCorrectEnabled: Boolean = true
+    private var isGestureTypingEnabled: Boolean = true
     private var isDoubleSpacePeriodEnabled: Boolean = true
     private var isShifted: Boolean = false
     private var isCapsLock: Boolean = false
     private var lastSpaceTimestamp: Long = 0L
 
-    // In-memory composing word buffer
+    // In-memory composing word buffer & Gesture Glide trajectory
     private val composingWord = StringBuilder()
     private val userWordFreq = mutableMapOf<String, Int>()
+    private val glideTrajectory = mutableListOf<String>()
 
     // Inline Popup Overlay
     private var imePopupOverlay: View? = null
@@ -1157,6 +1173,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
             currentLayout = prefs.getString(ZenoDeckKeyboardBridgePlugin.PREF_KEY_LAYOUT_MODE, "QWERTY") ?: "QWERTY"
             isShowNumberRow = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_SHOW_NUMBER_ROW, true)
             isAutoCorrectEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_AUTO_CORRECT, true)
+            isGestureTypingEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_GESTURE_TYPING, true)
             isDoubleSpacePeriodEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_DOUBLE_SPACE_PERIOD, true)
         } catch (e: Exception) {
             Log.e(TAG, "Error loading keyboard settings", e)
