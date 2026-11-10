@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -29,6 +30,11 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install Node dependencies
         run: npm install --legacy-peer-deps
 
@@ -47,7 +53,7 @@ jobs:
       - name: Build Signed Android Release APK
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 

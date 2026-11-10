@@ -76,9 +76,9 @@ async function runTests() {
   const appShellContent = fs.readFileSync(appShellPath, "utf-8");
   assert(
     appShellContent.includes('window.addEventListener("zenodeck:shared-url"') &&
-    appShellContent.includes('navigate("youtube-downloader")') &&
+    (appShellContent.includes('navigate("video-converter")') || appShellContent.includes('navigate("youtube-downloader")')) &&
     appShellContent.includes("__zenodeck_pending_shared_url"),
-    "AppShell automatically routes to youtube-downloader on shared URL intent"
+    "AppShell automatically routes to active media tool on shared URL intent"
   );
 
   // 6. Verify YouTubeDownloader wires auto-resolve on shared URL

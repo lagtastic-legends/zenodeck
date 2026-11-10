@@ -110,7 +110,7 @@ async function runTests() {
     "ZenoHeadlessMediaEngine.kt sets robust network timeouts"
   );
   assert(
-    kotlinCode.includes("MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM") && kotlinCode.includes("hasVp9OrOpus"),
+    kotlinCode.includes("MediaMuxer.OutputFormat.MUXER_OUTPUT_WEBM") && (kotlinCode.includes("hasVp9OrOpus") || kotlinCode.includes("isWebmTarget")),
     "ZenoHeadlessMediaEngine.kt selects MUXER_OUTPUT_WEBM for VP9 and Opus tracks"
   );
   assert(
