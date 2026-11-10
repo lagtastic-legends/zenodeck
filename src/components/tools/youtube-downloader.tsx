@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Youtube,
   Download,
   Zap,
   Gauge,
@@ -150,6 +149,14 @@ const DOWNLOADER_PRESETS: PresetItem[] = [
     params: { badge: "720P", isAudioOnly: false, clipEnabled: true },
   },
 ];
+
+function YouTubeIcon({ className = "size-2.5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  );
+}
 
 export function YouTubeDownloader() {
   const { engine, state: engineState, boot } = useFFmpegEngine();
@@ -1246,7 +1253,7 @@ export function YouTubeDownloader() {
       <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 scroll-smooth flex-1 min-w-0">
           <span className="flex shrink-0 items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
-            <Youtube className="size-2.5" />
+            <YouTubeIcon className="size-2.5" />
             <span>YouTube 4K</span>
           </span>
           <span className="flex shrink-0 items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400">
