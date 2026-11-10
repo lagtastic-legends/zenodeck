@@ -158,39 +158,39 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Globe className="size-4.5 text-[#7dd3fc]" />}
-          title="In-App Mini Browser & Omnibox"
-          badge="Full Web Nav 🌐"
-          description="Complete web browsing experience with back, forward, reload, and home controls, omnibox input with auto-prefixing, DuckDuckGo search fallback, and smooth live page loading progress."
+          icon={<Scissors className="size-4.5 text-violet-400" />}
+          title="WebAssembly Media Studio"
+          badge="100% Local ⚡"
+          description="High-performance video transcoding, balanced/lossless compression, audio stripping, and GIF creation using on-device WebAssembly FFmpeg and native hardware encoders with zero cloud uploads."
+          accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
+          badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
+        />
+
+        <FeatureCard
+          icon={<Headphones className="size-4.5 text-cyan-400" />}
+          title="20-Module Audio Studio"
+          badge="Pro Sound 🎧"
+          description="Sample-accurate waveform trimming, interactive audio splicing, 5-tier bass boost, modular FX rack, ringtone creator, and spatial 8D audio engine running in real-time Web Audio."
+          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-400/30"
+          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-400/30"
+        />
+
+        <FeatureCard
+          icon={<Keyboard className="size-4.5 text-[#7dd3fc]" />}
+          title="ZenoTap Glacier IME"
+          badge="Haptic Trackpad ⌨️"
+          description="Native Android custom keyboard with tactile 3D keycaps, 50% width ergonomic spacebar with horizontal cursor scrubbing, and instant direct-to-chat GIF and sticker vault injection."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
-          icon={<Download className="size-4.5 text-amber-400" />}
-          title="VidMate-Style Floating Download FAB"
-          badge="Auto-Pulsing ⚡"
-          description="High-visibility bottom-right floating action button that detects video and audio media on the current page, expanding with a glowing cyber pulse and badge when media streams are ready."
-          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
-          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        />
-
-        <FeatureCard
-          icon={<Zap className="size-4.5 text-emerald-400" />}
-          title="1-Tap Format & Quality Sheet"
-          badge="360p to 4K 60FPS 🎬"
-          description="Tapping the floating FAB instantly triggers VidmateQualitySheet, displaying 2-column grids for Direct Audio (MP3 320k / M4A) and Video Resolutions (4K 60FPS down to 360p) with exact file sizes."
+          icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
+          title="Privacy First Architecture"
+          badge="Streamlined 🛡️"
+          description="Decommissioned external network scrapers for an ultra-reliable, 100% self-contained workstation. Zero telemetry, zero tracker scripts, and full client-side execution."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        />
-
-        <FeatureCard
-          icon={<Film className="size-4.5 text-[#c8a0f0]" />}
-          title="Quick Site Portal Deck"
-          badge="8 Top Hubs 🚀"
-          description="Curated glassmorphic home deck featuring 1-tap bookmarks for YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, and SoundCloud with native cookie & CORS bypass on mobile."
-          accentClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
-          badgeClass="bg-purple-500/15 text-[#c8a0f0] border border-purple-400/30"
         />
       </div>
     </ZenoModal>

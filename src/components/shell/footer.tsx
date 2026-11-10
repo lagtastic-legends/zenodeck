@@ -3,6 +3,7 @@
 import { Cpu, ShieldCheck, Mail, MapPin, Download, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { usePwaStore } from "@/lib/pwa/pwa-store";
+import { APP_VERSION } from "@/config/version";
 
 export function AppFooter() {
   const currentYear = new Date().getFullYear();
@@ -63,7 +64,7 @@ export function AppFooter() {
               }}
               className="flex items-center gap-1 text-primary hover:underline transition-colors cursor-pointer"
             >
-              <span>v3.15.0 · What's New</span>
+              <span>v{APP_VERSION} · What's New</span>
             </button>
             <span className="text-border">·</span>
             <button

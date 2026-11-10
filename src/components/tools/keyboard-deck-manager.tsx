@@ -46,6 +46,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+import { APP_VERSION } from "@/config/version";
 import { useEffect, useState, useCallback, useId, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -769,7 +770,7 @@ export function KeyboardDeckManager() {
             <h1 className="font-headline text-base font-semibold tracking-tight text-[#e0e8f0] flex items-center gap-2">
               ZenoTap Studio &amp; Keyboard Deck
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#7dd3fc]/15 text-[#7dd3fc] border border-[#7dd3fc]/30 font-bold">
-                Glacier v3.16.0
+                Glacier v{APP_VERSION}
               </span>
             </h1>
             <p className="text-xs text-[#a0b4c4]">

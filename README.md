@@ -6,17 +6,17 @@
 
 <p align="center">
   <strong>The Heavy-Duty, 100% Client-Side WebAssembly Media & Document Workstation</strong><br />
-  <em>Featuring the Universal Media Downloader & ZenoTap 3D Tactile IME Keyboard</em>
+  <em>Featuring On-Device WebAssembly Media Engines & ZenoTap 3D Tactile IME Keyboard</em>
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.14">
-    <img src="https://img.shields.io/badge/Release-v1.0.14-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.14" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.15">
+    <img src="https://img.shields.io/badge/Release-v1.0.15-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.15" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.14/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.15/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,15 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.15 (Streamlined Media Engine & Dynamic Version Synchronization)
+
+- **Decommissioning of Defunct Downloader:** Removed external scrapers to eliminate YouTube token/cipher breakage and network timeouts, keeping the workstation 100% self-contained and on-device.
+- **Dynamic Version Synchronization:** Resolved legacy version string discrepancies across `footer.tsx` and `keyboard-deck-manager.tsx`, dynamically synchronizing all layers to official release `v1.0.15`.
+- **Focused WebAssembly Media Workstation:** Enhanced zero-cloud transcoding in Media Converter, high-efficiency compression, and instant GIF creation.
+- **20-Module Audio DSP Studio:** Full access to sample-accurate waveform trimming, interactive audio splicing, 5-tier bass boost, modular FX rack, ringtone creator, and spatial 8D audio engine.
 
 ---
 
