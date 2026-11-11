@@ -46,13 +46,14 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.18 (In-App Mini Browser, Forest & Champagne VidMate FAB & WebView OG Sniffer)
+## 💎 What's New in v1.0.18 (In-App Mini Browser, VidMate FAB & 120fps Compositor Engine)
 
 - **In-App Mini Browser & Omnibox Strip:** Embedded web browsing suite with URL normalization, DuckDuckGo search fallback, navigation controls, and 8-tile Quick Site Portal Grid (YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, SoundCloud).
 - **Deep Forest & Champagne Palette Styling:** Fully refactored interface styled with ZenoDeck's signature Deep Forest Green (`#102C26`), Champagne (`#F7E7CE`), Donkey Brown (`#A79277`), and Obsidian (`#090D0C`) palette.
 - **Pulsing VidMate-Style Download Action Button (FAB):** Persistent action button in the bottom-right corner (`bottom-5 right-5 z-30`) that glows and bounces (`bg-[#102C26] text-[#F7E7CE] border-2 border-[#F7E7CE] ring-4 ring-emerald-500/35 animate-bounce`) reading `⚡ Download Video / MP3` when streaming media is detected.
 - **Direct VidMate Quality Sheet Handoff:** Tapping the FAB automatically resolves page metadata and triggers `<VidMateQualitySheet />` for instant multi-format audio and video downloads.
 - **Native Android WebView OG & Video Sniffer:** Enhanced native bridge in `ZenoMedia3Plugin.kt` extracting `ogTitle`, `ogImage`, and `directVideoSrc` directly on `onPageFinished`.
+- **Ultra-Smooth 120fps Compositor-Only Engine:** Eliminated GPU blur thrashing (`scale: 0.94`, `opacity: 0.32`), $O(1)$ single-card layout morphing, and double-RAF deferred hydration.
 
 ---
 

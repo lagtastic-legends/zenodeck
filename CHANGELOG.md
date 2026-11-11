@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Direct VidMate Quality Sheet Handoff (`youtube-downloader.tsx`)**: Tapping the FAB automatically sets the detected media URL, triggers format resolution, and opens `<VidMateQualitySheet />`.
 - **Native Android WebView OG & Video Sniffer (`ZenoMedia3Plugin.kt`, `native-media-muxer.ts`)**: Upgraded native headless and in-app WebView stream sniffing to extract `ogTitle`, `ogImage`, and `directVideoSrc` on `onPageFinished`.
 
+### 🏎️ Ultra-Smooth 120fps Compositor-Only Engine & CI Release Hardening
+- **Zero GPU Blur Thrashing (`motion.ts`, `app-shell.tsx`)**: Completely removed `filter: blur()` and `backdrop-filter` animations on the Bento grid, resolving mobile GPU texture re-rasterization jank and delivering buttery smooth 120fps transitions using pure transform (`scale: 0.94`) and opacity (`0.32`) on hardware layers.
+- **$O(1)$ Single-Card Layout Projection (`tool-grid.tsx`)**: Optimized Framer Motion projection so only the actively tapped card binds `layoutId="zeno-shell-${tool.id}"`, eliminating $O(N)$ DOM measurement overhead across 45+ workspace tools.
+- **Double-RAF Two-Phase Hydration (`tool-launch-shell.tsx`)**: Implemented double-`requestAnimationFrame` deferred hydration (`triggerSmoothHydration`) with a 240ms safety fallback to ensure heavy tool trees only mount after the FLIP geometry completes flight.
+- **GitHub Actions CI & Updater Parity (`test-updater.ts`, `test-v1-0-18-release.ts`)**: Synchronized semantic version assertions across all 26 test suites and verified automated CI passing.
+
 ## [1.0.17] — 2026-11-11
 
 ### 🚀 120fps Native FLIP App-Launch Transitions & Recessed Hub Parallax
