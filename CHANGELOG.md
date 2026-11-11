@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.17] — 2026-11-11
 
+### 🚀 120fps Native FLIP App-Launch Transitions & Recessed Hub Parallax
+- **FLIP Shared Layout Projection (`motion.ts`, `tool-grid.tsx`, `tool-launch-shell.tsx`)**: Bound all Bento grid cards to deterministic shared Framer Motion keys (`zeno-shell-${tool.id}`, `zeno-icon-${tool.id}`, `zeno-title-${tool.id}`) driven by 120Hz tuned `APP_LAUNCH_SPRING` (`stiffness: 420, damping: 34, mass: 0.8`), morphing seamlessly from 24px rounded card bounds into fullscreen workspaces without frame drops.
+- **Recessed Background Hub Depth Parallax (`app-shell.tsx`)**: The dashboard now smoothly recesses to `scale: 0.92`, `opacity: 0.35`, and `blur(14px)` under `HUB_PARALLAX_SPRING` (`stiffness: 380, damping: 32, mass: 0.9`) whenever a tool opens, preserving full visual context behind the active workspace and un-blurring upon exit.
+- **Two-Phase Deferred Hydration & Glassmorphic Skeleton**: Eliminated Frame 0 audio/video blocking by rendering a lightweight dark-mode skeleton (`#090D0C`, `#102C26`, `#F7E7CE`) during flight and cross-fading the heavy tool view upon layout completion with a 180ms safety fallback.
+- **Velocity-Aware Pull-to-Dismiss**: Enabled gesture-driven swipe down on the shell header with dynamic scale (`1.0` -> `0.90`) and radius (`0` -> `28px`), auto-dismissing when `offset.y > 90` or `velocity.y > 550px/s`.
+- **Android Hardware Back Navigation**: Integrated `@capacitor/app` `backButton` listener to smoothly collapse active tools back into their Bento card slots on system back gesture.
+
 ### 🎬 Video Compressor 4K 30FPS Studio Master & Build Hardening
 - **4K UHD (2160p) Studio Master Preset**: Added `4k-30fps-master` preset in `video-compressor.tsx` with near-lossless CRF 20, 3840×2160 scaling, and locked 30 FPS cadence.
 - **Dedicated Framerate (FPS) Control**: Introduced interactive framerate selector (30 FPS Standard, 60 FPS Smooth, 24 FPS Cinematic, and Original Source FPS) with dynamic `-vf fps=<val>` filter injection.
