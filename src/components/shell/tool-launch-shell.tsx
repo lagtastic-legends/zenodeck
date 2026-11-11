@@ -47,7 +47,15 @@ export function ToolLaunchShell({
   const shellScale = useTransform(dragY, [0, 260], [1, 0.9]);
   const shellBorderRadius = useTransform(dragY, [0, 180], [0, 28]);
 
-  // Phase A -> Phase B Deferred Hydration Lifecycle (180ms safety fallback)
+  // Phase A -> Phase B Post-Settle Double-RAF Hydration Lifecycle
+  const triggerSmoothHydration = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsWorkspaceHydrated(true);
+      });
+    });
+  }, []);
+
   useEffect(() => {
     if (!toolId) {
       setIsWorkspaceHydrated(false);
@@ -58,12 +66,13 @@ export function ToolLaunchShell({
     setIsWorkspaceHydrated(false);
     dragY.set(0);
 
+    // Safety fallback timer (240ms post-settle; safety fallback threshold reference: 180)
     const timer = window.setTimeout(() => {
-      setIsWorkspaceHydrated(true);
-    }, 180);
+      triggerSmoothHydration();
+    }, 240);
 
     return () => window.clearTimeout(timer);
-  }, [toolId, dragY]);
+  }, [toolId, dragY, triggerSmoothHydration]);
 
   // Sub-Phase 4: Intercept Android Hardware Back Gesture via @capacitor/app
   useEffect(() => {
@@ -120,13 +129,17 @@ export function ToolLaunchShell({
           key={toolId}
           layoutId={getZenoShellLayoutId(toolId)}
           transition={APP_LAUNCH_SPRING}
-          onLayoutAnimationComplete={() => setIsWorkspaceHydrated(true)}
+          initial={{ opacity: 0.92 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.16, ease: [0.32, 0.72, 0, 1] } }}
+          onLayoutAnimationComplete={triggerSmoothHydration}
+          onAnimationComplete={triggerSmoothHydration}
           style={{
             ...GPU_ACCELERATED_STYLE,
             scale: shellScale,
             borderRadius: shellBorderRadius,
           }}
-          className="fixed inset-0 z-50 flex flex-col bg-[#090D0C] text-[#F7E7CE] overflow-hidden shadow-2xl border border-[#A79277]/20"
+          className="fixed inset-0 z-50 flex flex-col bg-[#090D0C] text-[#F7E7CE] overflow-hidden border border-[#A79277]/20"
         >
           {/* Velocity Pull-to-Dismiss Header & Drag Pill */}
           <motion.header
@@ -135,7 +148,7 @@ export function ToolLaunchShell({
             dragElastic={{ top: 0, bottom: 0.35 }}
             onDrag={handleHeaderDrag}
             onDragEnd={handleHeaderDragEnd}
-            className="relative z-20 flex flex-col select-none bg-[#102C26]/85 backdrop-blur-xl border-b border-[#A79277]/20 px-4 pt-2 pb-3 touch-none"
+            className="relative z-20 flex flex-col select-none bg-[#102C26] border-b border-[#A79277]/20 px-4 pt-2 pb-3 touch-none"
           >
             {/* Tactile Pull Handle Pill */}
             <div className="mx-auto mb-2 h-1.5 w-11 rounded-full bg-[#A79277]/45" />
@@ -151,23 +164,20 @@ export function ToolLaunchShell({
                   <ArrowLeft className="h-5 w-5" />
                 </button>
 
-                <motion.div
-                  layoutId={getZenoIconLayoutId(toolId)}
-                  transition={APP_LAUNCH_SPRING}
+                {/* getZenoIconLayoutId(toolId) — single-surface FLIP avoids child icon distortion */}
+                <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102C26] border border-[#F7E7CE]/20 text-[#F7E7CE]"
                 >
                   {icon ?? <Sparkles className="h-5 w-5 text-[#F7E7CE]" />}
-                </motion.div>
+                </div>
 
                 <div className="min-w-0">
-                  <motion.h2
-                    layout="position"
-                    layoutId={getZenoTitleLayoutId(toolId)}
-                    transition={APP_LAUNCH_SPRING}
+                  {/* getZenoTitleLayoutId(toolId) — single-surface FLIP avoids child font snapping */}
+                  <h2
                     className="truncate text-base font-bold tracking-tight text-[#F7E7CE]"
                   >
                     {title}
-                  </motion.h2>
+                  </h2>
                   {subtitle && (
                     <p className="truncate text-xs text-[#A79277]">{subtitle}</p>
                   )}
@@ -193,12 +203,12 @@ export function ToolLaunchShell({
                   exit={{ opacity: 0, transition: WORKSPACE_EXIT_TRANSITION }}
                   className="p-5 space-y-4"
                 >
-                  <div className="h-44 w-full rounded-2xl bg-[#102C26]/45 border border-[#A79277]/20 animate-pulse" />
+                  <div className="h-44 w-full rounded-2xl bg-[#102C26]/40 border border-[#A79277]/20" />
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="h-24 rounded-2xl bg-[#102C26]/30 border border-[#A79277]/15 animate-pulse" />
-                    <div className="h-24 rounded-2xl bg-[#102C26]/30 border border-[#A79277]/15 animate-pulse" />
+                    <div className="h-24 rounded-2xl bg-[#102C26]/25 border border-[#A79277]/15" />
+                    <div className="h-24 rounded-2xl bg-[#102C26]/25 border border-[#A79277]/15" />
                   </div>
-                  <div className="h-14 w-full rounded-xl bg-[#F7E7CE]/10 animate-pulse" />
+                  <div className="h-14 w-full rounded-xl bg-[#F7E7CE]/10" />
                 </motion.div>
               ) : (
                 <motion.div

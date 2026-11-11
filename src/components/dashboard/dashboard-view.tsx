@@ -91,7 +91,11 @@ function StatChip({
   );
 }
 
-export function DashboardView() {
+export function DashboardView({
+  activeOrLastToolId,
+}: {
+  activeOrLastToolId?: string | null;
+} = {}) {
   const { state, bootMs } = useFFmpegEngine();
   const { items, totalBytes } = useVault();
   const navigate = useNavStore((s) => s.navigate);
@@ -325,7 +329,7 @@ export function DashboardView() {
 
       {/* tool matrix ------------------------------------------------------ */}
       <motion.div id="tool-matrix" variants={fadeUp} initial="hidden" animate="show" custom={0.55}>
-        <ToolGrid />
+        <ToolGrid activeOrLastToolId={activeOrLastToolId} />
       </motion.div>
     </div>
   );

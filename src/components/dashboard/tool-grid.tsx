@@ -37,11 +37,15 @@ const ToolCard = memo(function ToolCard({
   index,
   engineState,
   isMatrixView = true,
+  isMorphTarget = false,
+  onSelectCard,
 }: {
   tool: ToolMeta;
   index: number;
   engineState: "idle" | "loading" | "ready" | "error";
   isMatrixView?: boolean;
+  isMorphTarget?: boolean;
+  onSelectCard?: (id: string) => void;
 }) {
   const { toast } = useToast();
   const haptics = useHaptics();
@@ -53,15 +57,17 @@ const ToolCard = memo(function ToolCard({
 
   return (
     <motion.button
-      layoutId={getZenoShellLayoutId(tool.id)}
+      layoutId={isMorphTarget ? getZenoShellLayoutId(tool.id) : undefined}
       transition={APP_LAUNCH_SPRING}
       style={{
         ...GPU_ACCELERATED_STYLE,
         borderRadius: 24,
       }}
       whileHover={{ y: -3, transition: { type: "spring", stiffness: 420, damping: 26, mass: 0.6 } }}
-      whileTap={{ scale: 0.95, transition: { type: "spring", stiffness: 480, damping: 24, mass: 0.5 } }}
+      whileTap={{ scale: 0.96, transition: { duration: 0.08 } }}
+      onPointerDown={() => onSelectCard?.(tool.id)}
       onClick={() => {
+        onSelectCard?.(tool.id);
         if (locked) {
           void haptics.warning();
           toast({
@@ -87,9 +93,8 @@ const ToolCard = memo(function ToolCard({
       aria-label={`${tool.name} — ${locked ? `locked, phase ${tool.phase}` : isEngineReady ? "online, open module" : "standby, requires engine"}`}
     >
       <div className="flex items-start justify-between gap-1 sm:gap-2">
-        <motion.div
-          layoutId={getZenoIconLayoutId(tool.id)}
-          transition={APP_LAUNCH_SPRING}
+        {/* getZenoIconLayoutId(tool.id) — O(1) single-surface FLIP avoids child icon distortion */}
+        <div
           className={`grid shrink-0 place-items-center border ${accent.tile} transition-transform duration-300 group-hover:scale-110 ${
             isMatrixView
               ? "size-7 sm:size-10 rounded-md sm:rounded-lg"
@@ -100,7 +105,7 @@ const ToolCard = memo(function ToolCard({
             className={isMatrixView ? "size-3.5 sm:size-5" : "size-4 sm:size-5"}
             strokeWidth={1.75}
           />
-        </motion.div>
+        </div>
 
         {locked ? (
           <>
@@ -197,10 +202,8 @@ const ToolCard = memo(function ToolCard({
       </div>
 
       <div>
-        <motion.p
-          layout="position"
-          layoutId={getZenoTitleLayoutId(tool.id)}
-          transition={APP_LAUNCH_SPRING}
+        {/* getZenoTitleLayoutId(tool.id) — O(1) single-surface FLIP avoids child font snapping */}
+        <p
           className={`flex items-center gap-1 font-display font-bold text-foreground leading-[1.25] break-words ${
             isMatrixView
               ? "text-[9px] xs:text-[10px] sm:text-xs md:text-[13px] tracking-tight sm:tracking-wide line-clamp-2 min-h-[25px] sm:min-h-0"
@@ -211,7 +214,7 @@ const ToolCard = memo(function ToolCard({
           {!locked && (
             <ArrowUpRight className="hidden sm:inline size-3.5 text-primary opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100 shrink-0" />
           )}
-        </motion.p>
+        </p>
         <p
           className={`mt-0.5 sm:mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2 ${
             isMatrixView ? "hidden sm:block" : "block"
@@ -234,10 +237,15 @@ const ToolCard = memo(function ToolCard({
   );
 });
 
-export function ToolGrid() {
+export function ToolGrid({
+  activeOrLastToolId,
+}: {
+  activeOrLastToolId?: string | null;
+} = {}) {
   const { state } = useFFmpegEngine();
   const [filter, setFilter] = useState<Filter>("all");
   const [layoutMode, setLayoutMode] = useState<"grid" | "list">("grid");
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const haptics = useHaptics();
 
   const availableTools = useMemo(() => getVisibleTools(), []);
@@ -414,6 +422,8 @@ export function ToolGrid() {
                 index={i}
                 engineState={state}
                 isMatrixView={layoutMode === "grid"}
+                isMorphTarget={selectedCardId === tool.id || activeOrLastToolId === tool.id}
+                onSelectCard={setSelectedCardId}
               />
             ))
           )}

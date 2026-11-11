@@ -7,7 +7,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Compass, Database, Download, Layers, Loader2, Scissors, Smartphone, Sparkles, Video } from "lucide-react";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AuthGateway } from "@/components/auth/auth-gateway";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AuroraBackground } from "@/components/shell/aurora-background";
@@ -246,8 +246,15 @@ export function AppShell() {
   const view = useNavStore((s) => s.view);
   const navigate = useNavStore((s) => s.navigate);
   const reset = useNavStore((s) => s.reset);
+  const [lastAnimatedToolId, setLastAnimatedToolId] = useState<string | null>(null);
   const isToolActive = Boolean(view && view !== "dashboard" && view !== "auth-gateway");
   const currentToolMeta = isToolActive ? TOOL_REGISTRY.find((t) => t.id === view) : null;
+
+  useEffect(() => {
+    if (isToolActive && view) {
+      setLastAnimatedToolId(view);
+    }
+  }, [isToolActive, view]);
   const { isOpen: isAiOpen, toggleOpen: toggleAi } = useAiStore();
   const { mode, user } = useAuth();
   const isGuest =
@@ -329,12 +336,12 @@ export function AppShell() {
             ) : (
               <AuthGuard>
                 <div className="relative flex-1 flex flex-col w-full min-h-0">
-                  {/* Recessed Background Bento Hub Parallax Layer */}
+                  {/* Recessed Background Bento Hub Parallax Layer (Compositor-pure, zero blur-thrashing) */}
                   <motion.div
                     animate={
                       isToolActive
-                        ? { scale: 0.92, opacity: 0.35, filter: "blur(14px)" }
-                        : { scale: 1, opacity: 1, filter: "blur(0px)" }
+                        ? { scale: 0.94, opacity: 0.32 }
+                        : { scale: 1, opacity: 1 }
                     }
                     transition={HUB_PARALLAX_SPRING}
                     style={{
@@ -344,7 +351,7 @@ export function AppShell() {
                     }}
                     className="flex-1 w-full"
                   >
-                    <DashboardView />
+                    <DashboardView activeOrLastToolId={isToolActive ? view : lastAnimatedToolId} />
                   </motion.div>
 
                   {/* 120fps Shared FLIP Tool Launch Shell */}

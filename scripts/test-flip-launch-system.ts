@@ -36,19 +36,19 @@ function assert(condition: boolean, msg: string) {
 
 // 1. Verify Spring Physics Constants
 assert(APP_LAUNCH_SPRING.type === "spring", "APP_LAUNCH_SPRING is type 'spring'");
-assert(APP_LAUNCH_SPRING.stiffness === 420, "APP_LAUNCH_SPRING stiffness is 420");
-assert(APP_LAUNCH_SPRING.damping === 34, "APP_LAUNCH_SPRING damping is 34");
-assert(APP_LAUNCH_SPRING.mass === 0.8, "APP_LAUNCH_SPRING mass is 0.8");
+assert(APP_LAUNCH_SPRING.stiffness === 360, "APP_LAUNCH_SPRING stiffness is 360");
+assert(APP_LAUNCH_SPRING.damping === 36, "APP_LAUNCH_SPRING damping is 36");
+assert(APP_LAUNCH_SPRING.mass === 0.72, "APP_LAUNCH_SPRING mass is 0.72");
 
 assert(HUB_PARALLAX_SPRING.type === "spring", "HUB_PARALLAX_SPRING is type 'spring'");
-assert(HUB_PARALLAX_SPRING.stiffness === 380, "HUB_PARALLAX_SPRING stiffness is 380");
-assert(HUB_PARALLAX_SPRING.damping === 32, "HUB_PARALLAX_SPRING damping is 32");
-assert(HUB_PARALLAX_SPRING.mass === 0.9, "HUB_PARALLAX_SPRING mass is 0.9");
+assert(HUB_PARALLAX_SPRING.stiffness === 340, "HUB_PARALLAX_SPRING stiffness is 340");
+assert(HUB_PARALLAX_SPRING.damping === 35, "HUB_PARALLAX_SPRING damping is 35");
+assert(HUB_PARALLAX_SPRING.mass === 0.8, "HUB_PARALLAX_SPRING mass is 0.8");
 
-assert(WORKSPACE_HYDRATE_TRANSITION.duration === 0.16, "WORKSPACE_HYDRATE_TRANSITION duration is 0.16s");
-assert(WORKSPACE_EXIT_TRANSITION.duration === 0.08, "WORKSPACE_EXIT_TRANSITION duration is 0.08s");
+assert(WORKSPACE_HYDRATE_TRANSITION.duration === 0.14, "WORKSPACE_HYDRATE_TRANSITION duration is 0.14s");
+assert(WORKSPACE_EXIT_TRANSITION.duration === 0.06, "WORKSPACE_EXIT_TRANSITION duration is 0.06s");
 
-assert(GPU_ACCELERATED_STYLE.willChange === "transform, border-radius", "GPU_ACCELERATED_STYLE promotes transform & border-radius");
+assert(GPU_ACCELERATED_STYLE.willChange === "transform, opacity", "GPU_ACCELERATED_STYLE promotes transform & opacity");
 assert(GPU_ACCELERATED_STYLE.transform === "translateZ(0)", "GPU_ACCELERATED_STYLE promotes hardware translateZ(0)");
 
 // 2. Verify Shared LayoutId Contract
@@ -92,7 +92,7 @@ const appShellPath = path.resolve(__dirname, "../src/components/shell/app-shell.
 const appShellContent = fs.readFileSync(appShellPath, "utf-8");
 assert(appShellContent.includes("ToolLaunchShell"), "app-shell.tsx imports and renders ToolLaunchShell");
 assert(appShellContent.includes("HUB_PARALLAX_SPRING"), "app-shell.tsx uses HUB_PARALLAX_SPRING for recessed hub");
-assert(appShellContent.includes('scale: 0.92, opacity: 0.35, filter: "blur(14px)"'), "app-shell.tsx applies 0.92 scale + blur(14px) recessed parallax");
+assert(appShellContent.includes('scale: 0.94, opacity: 0.32'), "app-shell.tsx applies 0.94 scale + opacity: 0.32 recessed parallax (no GPU blur thrashing)");
 
 console.log("\n🎉 ALL 120FPS FLIP APP-LAUNCH TRANSITION CHECKS PASSED (25/25)!");
 process.exit(0);
