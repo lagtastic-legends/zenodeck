@@ -46,6 +46,20 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
+## 💎 What's New in v1.0.20 (Native In-App Browser Fullscreen Dialog, Zero ERR_BLOCKED_BY_RESPONSE & 8K 60FPS Pipeline)
+
+- **Native In-App Browser Fullscreen Dialog (`ZenoMedia3Plugin.kt`):** Replaced sandboxed web `<iframe />` on Android with a hardware-accelerated full-screen native `Dialog` overlay (`Theme_Black_NoTitleBar_Fullscreen`). Because top-level native WebViews operate outside iframe boundaries, `X-Frame-Options: SAMEORIGIN` and `CSP: frame-ancestors 'self'` restrictions no longer block YouTube, TikTok, Instagram, Twitter/X, and Facebook (`net::ERR_BLOCKED_BY_RESPONSE` completely eliminated).
+- **ZenoDeck Chrome & VidMate Stream Sniffer:** Deep Forest Green (`#102C26`) and Champagne (`#F7E7CE`) navigation bar with Back (◀), Forward (▶), Reload (↻), live SSL URL pill, and Close (✕), plus hardware back button history traversal.
+- **Pulsing Native VidMate FAB (`⚡ DOWNLOAD VIDEO / MP3`):** Floating action button anchored at bottom-right of the native dialog. Uses real-time network interception (`shouldInterceptRequest`) and DOM evaluation (`ogTitle`, `ogImage`, `directVideoSrc`) to detect streams, pulsing when media is detected. Tapping the FAB dismisses the dialog and notifies the React app (`openVidMateSheet`), opening `<VidMateQualitySheet />` directly.
+- **8K 60FPS Full Ultra HD Media Pipeline (`innertube.ts`, `vidmate-quality-sheet.tsx`, `video-compressor.tsx`):**
+  - Expanded `YouTubeQualityOption` with `is8K` and `"8K 60FPS" | "8K"` badges, targeting Itags 571 (AV1), 272 (VP9), and 337 (60fps) up to 7680 × 4320 @ 60 FPS.
+  - Added fuchsia `8K FUHD` badges to VidMate Quality Sheet.
+  - Added `Cinema 8K 60FPS Ultra Master` preset to Universal Downloader.
+  - Added `8K FUHD (4320p)` resolution and `8K FUHD 60 FPS Master` preset (CRF 18) to the Video Compressor.
+  - Integrated `is8K?: boolean` into `TurboDownloadResult` across all chunking and native muxing paths.
+
+---
+
 ## 💎 What's New in v1.0.19 (Bento Grid Browser & Downloader, Universal Mobile Layout Fit & Edge Back Gestures)
 
 - **Bento Grid In-App Browser & Downloader Exposure:** Both the In-App Mini Browser (`in-app-browser`) and Universal Media Downloader (`youtube-downloader`) are now directly registered and visible in the Bento Dashboard with 8-tile Quick Portals, auto stream sniffer, and glowing VidMate FAB.
@@ -118,16 +132,16 @@ ZenoDeck v1.0.12 delivers a ground-up architectural overhaul of the entire 20-mo
 
 ---
 
-## 🚀 Download & Installation (v1.0.19)
+## 🚀 Download & Installation (v1.0.20)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~72.9 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~45.9 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~41.3 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~47.2 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.20/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~72.9 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.20/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~45.9 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.20/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~41.3 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.20/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~47.2 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 

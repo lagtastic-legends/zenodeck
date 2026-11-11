@@ -104,6 +104,15 @@ import { MiniBrowserView } from "./mini-browser-view";
 
 const DOWNLOADER_PRESETS: PresetItem[] = [
   {
+    id: "cinema-8k-master",
+    name: "Cinema 8K 60FPS Ultra Master",
+    description: "Lossless Full Ultra HD (4320p60) video muxed with pristine multi-channel audio.",
+    category: "studio",
+    engineTier: "Tier 2: Media3 HW",
+    chips: ["8K 60FPS", "Lossless MP4", "8K UHD"],
+    params: { badge: "8K 60FPS", isAudioOnly: false },
+  },
+  {
     id: "cinema-4k-master",
     name: "Cinema 4K 60FPS Master",
     description: "Lossless Ultra HD (2160p60) video muxed with pristine multi-channel stereo audio.",
@@ -1870,12 +1879,17 @@ export function YouTubeDownloader() {
                 <div className="absolute bottom-2 right-2 rounded-md bg-black/85 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white backdrop-blur-xs">
                   {videoInfo.durationFormatted}
                 </div>
-                {videoInfo.qualities?.some((q) => q.is4K) && (
+                {videoInfo.qualities?.some((q) => q.is8K) ? (
+                  <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md border border-fuchsia-500/40 bg-black/85 px-2 py-0.5 font-mono text-[9px] font-bold text-fuchsia-300 shadow-sm backdrop-blur-xs">
+                    <Sparkles className="size-2.5 text-fuchsia-400" />
+                    <span>8K 60FPS</span>
+                  </div>
+                ) : videoInfo.qualities?.some((q) => q.is4K) ? (
                   <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md border border-amber-500/40 bg-black/85 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-300 shadow-sm backdrop-blur-xs">
                     <Sparkles className="size-2.5 text-amber-400" />
                     <span>4K 60FPS</span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div className="flex-1 space-y-2 min-w-0">
@@ -2486,7 +2500,7 @@ export function YouTubeDownloader() {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-5 text-emerald-400" />
                     <span className="font-display text-sm sm:text-base font-bold text-foreground">
-                      DOWNLOAD READY ({downloadResult.is4K ? "4K 60FPS" : downloadResult.mimeType.split("/")[0].toUpperCase()})
+                      DOWNLOAD READY ({downloadResult.is8K ? "8K 60FPS" : downloadResult.is4K ? "4K 60FPS" : downloadResult.mimeType.split("/")[0].toUpperCase()})
                     </span>
                   </div>
                   <span className="font-mono text-xs text-emerald-400 font-bold">

@@ -172,6 +172,7 @@ export interface TurboDownloadResult {
   filename: string;
   fileSizeBytes: number;
   mimeType: string;
+  is8K?: boolean;
   is4K: boolean;
   is60fps: boolean;
   savedNativePath?: string;
@@ -567,6 +568,7 @@ export async function downloadYouTubeStream({
   }
 
   const isAudioOnly = option.isAudioOnly;
+  const is8K = Boolean(option.is8K);
   const is4K = option.is4K;
   const is60fps = option.is60fps;
 
@@ -823,6 +825,7 @@ export async function downloadYouTubeStream({
           filename: nativeRes.filename,
           fileSizeBytes: nativeRes.fileSizeBytes,
           mimeType: nativeRes.mimeType,
+          is8K,
           is4K,
           is60fps,
           savedNativePath: nativeRes.outputPath,
@@ -904,6 +907,7 @@ export async function downloadYouTubeStream({
         filename,
         fileSizeBytes: blob.size,
         mimeType: "audio/mp4",
+        is8K: false,
         is4K: false,
         is60fps: false,
       };
@@ -1021,6 +1025,7 @@ export async function downloadYouTubeStream({
           filename,
           fileSizeBytes: blob.size,
           mimeType,
+          is8K: false,
           is4K: false,
           is60fps: false,
         };
@@ -1053,6 +1058,7 @@ export async function downloadYouTubeStream({
       filename,
       fileSizeBytes: blob.size,
       mimeType: mime,
+      is8K: false,
       is4K: false,
       is60fps: false,
     };
@@ -1128,6 +1134,7 @@ export async function downloadYouTubeStream({
       filename,
       fileSizeBytes: blob.size,
       mimeType: mime,
+      is8K,
       is4K,
       is60fps,
     };
@@ -1207,6 +1214,7 @@ export async function downloadYouTubeStream({
         filename: finalFilename,
         fileSizeBytes: nativeMuxResult.fileSizeBytes,
         mimeType: targetMime,
+        is8K,
         is4K,
         is60fps,
         savedNativePath: nativeMuxResult.outputPath,
@@ -1426,6 +1434,7 @@ export async function downloadYouTubeStream({
           filename: finalFilename,
           fileSizeBytes: finalBlob.size,
           mimeType: successfulPlan.mimeType,
+          is8K,
           is4K,
           is60fps,
         };

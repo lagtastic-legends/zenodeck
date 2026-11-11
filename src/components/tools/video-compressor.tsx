@@ -30,6 +30,15 @@ import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-sel
 
 const COMPRESSOR_PRESETS: PresetItem[] = [
   {
+    id: "8k-60fps-master",
+    name: "8K FUHD 60 FPS Master",
+    description: "Full Ultra High Definition 4320p scaled to 60 FPS with mastering-grade CRF 18 for pristine 8K displays.",
+    category: "studio",
+    engineTier: "Tier 3: WebCodecs",
+    chips: ["8K (4320p)", "60 FPS", "CRF 18", "Master 8K"],
+    params: { crf: 18, resolution: "4320", fps: "60", allowUpscale: true, keepAudio: true },
+  },
+  {
     id: "4k-30fps-master",
     name: "4K UHD 30 FPS Master",
     description: "Ultra High Definition 2160p scaled to 30 FPS with high-fidelity CRF 20 for cinematic clarity.",
@@ -94,11 +103,12 @@ const COMPRESSOR_PRESETS: PresetItem[] = [
   },
 ];
 
-type Resolution = "original" | "2160" | "1440" | "1080" | "720" | "480" | "360";
+type Resolution = "original" | "4320" | "2160" | "1440" | "1080" | "720" | "480" | "360";
 type Framerate = "original" | "30" | "60" | "24";
 
 const RESOLUTION_LABELS: Record<Resolution, string> = {
   original: "Original (Source Res)",
+  "4320": "8K FUHD (4320p)",
   "2160": "4K UHD (2160p)",
   "1440": "2K QHD (1440p)",
   "1080": "1080p FHD",
@@ -159,7 +169,7 @@ export function VideoCompressor() {
     const srcExt = extOf(file.name) || "mp4";
     const virtualInputPath = `/mnt_0/input.${srcExt}`;
     const outputPath = "output.mp4";
-    const resSuffix = effectiveResolution === "2160" ? "-4k" : effectiveResolution !== "original" ? `-${effectiveResolution}p` : "";
+    const resSuffix = effectiveResolution === "4320" ? "-8k" : effectiveResolution === "2160" ? "-4k" : effectiveResolution !== "original" ? `-${effectiveResolution}p` : "";
     const fpsSuffix = fps !== "original" ? `-${fps}fps` : "";
     const outputName = `${baseName(file.name)}-compressed${resSuffix}${fpsSuffix}.mp4`;
 

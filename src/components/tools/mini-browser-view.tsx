@@ -316,9 +316,10 @@ export function MiniBrowserView({
     onTriggerVidMateSheet?.(target, pageTitle);
   };
 
-  // Listen for native media sniffing events from ZenoMedia3Plugin
+  // Listen for native media sniffing & VidMate FAB events from ZenoMedia3Plugin
   useEffect(() => {
     let sub: any = null;
+    let sheetSub: any = null;
     if (isNativeAndroidPlatform()) {
       try {
         sub = (ZenoMedia3 as any).addListener?.("mediaDetected", (data: any) => {
@@ -328,12 +329,23 @@ export function MiniBrowserView({
             checkForDownloadableMedia(data.url);
           }
         });
+        sheetSub = (ZenoMedia3 as any).addListener?.("openVidMateSheet", (data: any) => {
+          if (data?.url) {
+            setDetectedMediaUrl(data.url);
+            if (data.title) setPageTitle(data.title);
+            onMediaSelect?.(data.url);
+            onSelectMediaUrl?.(data.url, data.title);
+            onDownloadDetected?.(data.url);
+            onTriggerVidMateSheet?.(data.url, data.title);
+          }
+        });
       } catch {}
     }
     return () => {
       sub?.then?.((h: any) => h?.remove?.())?.catch?.(() => {});
+      sheetSub?.then?.((h: any) => h?.remove?.())?.catch?.(() => {});
     };
-  }, [checkForDownloadableMedia]);
+  }, [checkForDownloadableMedia, onMediaSelect, onSelectMediaUrl, onDownloadDetected, onTriggerVidMateSheet]);
 
   return (
     <div className="relative flex flex-col w-full h-[calc(100dvh-9rem)] sm:h-[700px] min-h-[500px] rounded-2xl border border-[#A79277]/30 bg-[#090D0C]/95 shadow-elevation1 overflow-hidden">
@@ -495,8 +507,60 @@ export function MiniBrowserView({
               ))}
             </div>
           </div>
+        ) : isNativeAndroidPlatform() ? (
+          /* State B: Native Android Hardware Engine Station (No X-Frame-Options blocks) */
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-4 bg-gradient-to-b from-[#102C26]/20 via-[#090D0C] to-[#102C26]/30">
+            <div className="size-16 rounded-2xl bg-[#102C26] border-2 border-[#F7E7CE] flex items-center justify-center text-[#F7E7CE] shadow-xl shadow-emerald-950/40">
+              <Globe className="size-8 animate-pulse text-[#F7E7CE]" />
+            </div>
+
+            <div className="space-y-1.5 max-w-sm">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#F7E7CE]/40 bg-[#102C26]/80 text-[#F7E7CE] font-mono text-[11px] font-bold">
+                <ShieldCheck className="size-3.5 text-[#F7E7CE]" />
+                <span>Zero Restriction Native Web Engine</span>
+              </div>
+              <h3 className="font-display text-base sm:text-lg font-bold text-[#F7E7CE] truncate">
+                {pageTitle || currentUrl}
+              </h3>
+              <p className="font-mono text-xs text-[#A79277] truncate">
+                {currentUrl}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-xs pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    (ZenoMedia3 as any).openInAppBrowser?.({ url: currentUrl });
+                  } catch {}
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#F7E7CE] bg-[#102C26] text-[#F7E7CE] font-mono text-xs font-bold shadow-md hover:bg-[#102C26]/80 active:scale-95 transition-all cursor-pointer"
+              >
+                <ExternalLink className="size-3.5 text-[#F7E7CE]" />
+                <span>Open Native Browser</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleFloatingActionDownload}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#A79277]/40 bg-[#090D0C] text-[#F7E7CE] font-mono text-xs font-semibold hover:border-[#F7E7CE]/60 active:scale-95 transition-all cursor-pointer"
+              >
+                <Zap className="size-3.5 text-[#A79277]" />
+                <span>Analyze Streams</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoHome}
+              className="text-xs font-mono text-[#A79277] hover:text-[#F7E7CE] transition-colors pt-2 cursor-pointer"
+            >
+              ← Back to Site Portals
+            </button>
+          </div>
         ) : (
-          /* State B: Embedded Sandboxed Web Viewport */
+          /* State C: Embedded Sandboxed Web Viewport (Desktop / PWA) */
           <div className="relative w-full h-full flex flex-col">
             <iframe
               ref={iframeRef}

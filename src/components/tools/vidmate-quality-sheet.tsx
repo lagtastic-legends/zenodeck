@@ -180,14 +180,15 @@ export function VidmateQualitySheet({
             <div className="flex items-center gap-1.5 px-0.5">
               <Film className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
-                Video Resolutions (360p to 4K 60FPS)
+                Video Resolutions (360p to 8K 60FPS)
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               {videoOptions.map((opt) => {
                 const isSelected = opt.id === selectedQualityId;
-                const is4K = opt.is4K || opt.badge.includes("4K");
+                const is8K = opt.is8K || opt.badge.includes("8K");
+                const is4K = !is8K && (opt.is4K || opt.badge.includes("4K"));
                 const is60fps = opt.is60fps || opt.badge.includes("60");
 
                 return (
@@ -206,12 +207,17 @@ export function VidmateQualitySheet({
                         <span className={`text-xs font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
                           {opt.badge}
                         </span>
+                        {is8K && (
+                          <span className="text-[9px] px-1 py-0.2 rounded font-extrabold bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30">
+                            8K FUHD
+                          </span>
+                        )}
                         {is4K && (
                           <span className="text-[9px] px-1 py-0.2 rounded font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">
                             UHD
                           </span>
                         )}
-                        {is60fps && !is4K && (
+                        {is60fps && !is8K && !is4K && (
                           <span className="text-[9px] px-1 py-0.2 rounded font-extrabold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
                             60FPS
                           </span>

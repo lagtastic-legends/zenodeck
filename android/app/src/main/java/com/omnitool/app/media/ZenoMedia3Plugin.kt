@@ -2,12 +2,17 @@ package com.omnitool.app.media
 
 import android.app.Dialog
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.webkit.WebChromeClient
@@ -17,6 +22,10 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.RelativeLayout
+import android.widget.TextView
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.getcapacitor.JSArray
@@ -605,11 +614,17 @@ class ZenoMedia3Plugin : Plugin() {
         }
     }
 
+    private var inAppBrowserDialog: Dialog? = null
     private var inAppBrowserWebView: WebView? = null
+    private var inAppBrowserDetectedUrl: String = ""
+    private var inAppBrowserDetectedTitle: String = ""
 
     /**
      * Native In-App Browser Manager.
-     * Coordinates navigation, handles cookies, and sniffs media streams in real-time.
+     * Launches a native full-screen hardware-accelerated Dialog with ZenoDeck chrome:
+     * - Top bar: #102C26 Forest Green, #F7E7CE accents, back/forward/reload/URL/close.
+     * - Top-level Android WebView (completely bypassing X-Frame-Options SAMEORIGIN / iframe blocks).
+     * - Floating VidMate FAB (#102C26 + #F7E7CE ring) that sniffs streams & dispatches openVidMateSheet.
      */
     @PluginMethod
     fun openInAppBrowser(call: PluginCall) {
@@ -617,128 +632,349 @@ class ZenoMedia3Plugin : Plugin() {
 
         Handler(Looper.getMainLooper()).post {
             try {
-                if (inAppBrowserWebView == null) {
-                    val webView = WebView(context).apply {
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = true
-                            databaseEnabled = true
-                            mediaPlaybackRequiresUserGesture = false
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                // If a dialog is already showing, dismiss and recreate with fresh state
+                inAppBrowserDialog?.dismiss()
+                inAppBrowserDialog = null
+                inAppBrowserWebView = null
+                inAppBrowserDetectedUrl = ""
+                inAppBrowserDetectedTitle = ""
+
+                val act = activity ?: run {
+                    call.reject("Activity unavailable")
+                    return@post
+                }
+
+                val dialog = Dialog(act, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+                dialog.window?.apply {
+                    setBackgroundDrawable(null)
+                    setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                }
+
+                val density = act.resources.displayMetrics.density
+                fun dp(v: Int): Int = (v * density).toInt()
+
+                // 1. Root Container (Obsidian #090D0C)
+                val root = RelativeLayout(act).apply {
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    setBackgroundColor(Color.parseColor("#090D0C"))
+                }
+
+                // 2. Top Navigation Bar (#102C26 Forest Green)
+                val topBar = LinearLayout(act).apply {
+                    id = View.generateViewId()
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, dp(54)).apply {
+                        addRule(RelativeLayout.ALIGN_PARENT_TOP)
+                    }
+                    setBackgroundColor(Color.parseColor("#102C26"))
+                    setPadding(dp(8), dp(4), dp(8), dp(4))
+                }
+
+                // 3. Navigation Controls
+                val backBtn = TextView(act).apply {
+                    text = "◀"
+                    setTextColor(Color.parseColor("#F7E7CE"))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                    setPadding(dp(10), dp(8), dp(10), dp(8))
+                    setOnClickListener {
+                        inAppBrowserWebView?.let { wv ->
+                            if (wv.canGoBack()) wv.goBack() else dialog.dismiss()
+                        } ?: dialog.dismiss()
+                    }
+                }
+
+                val forwardBtn = TextView(act).apply {
+                    text = "▶"
+                    setTextColor(Color.parseColor("#F7E7CE"))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                    setPadding(dp(10), dp(8), dp(10), dp(8))
+                    setOnClickListener {
+                        inAppBrowserWebView?.goForward()
+                    }
+                }
+
+                val reloadBtn = TextView(act).apply {
+                    text = "↻"
+                    setTextColor(Color.parseColor("#F7E7CE"))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+                    setPadding(dp(10), dp(8), dp(10), dp(8))
+                    setOnClickListener {
+                        inAppBrowserWebView?.reload()
+                    }
+                }
+
+                val urlText = TextView(act).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, dp(34), 1f).apply {
+                        marginStart = dp(4)
+                        marginEnd = dp(4)
+                    }
+                    gravity = Gravity.CENTER_VERTICAL
+                    isSingleLine = true
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    text = targetUrl
+                    setTextColor(Color.parseColor("#F7E7CE"))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setPadding(dp(12), 0, dp(12), 0)
+                    background = GradientDrawable().apply {
+                        setColor(Color.parseColor("#090D0C"))
+                        cornerRadius = dp(17).toFloat()
+                        setStroke(dp(1), Color.parseColor("#A79277"))
+                    }
+                }
+
+                val closeBtn = TextView(act).apply {
+                    text = "✕"
+                    setTextColor(Color.parseColor("#F7E7CE"))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+                    setPadding(dp(12), dp(8), dp(12), dp(8))
+                    setOnClickListener {
+                        dialog.dismiss()
+                    }
+                }
+
+                topBar.addView(backBtn)
+                topBar.addView(forwardBtn)
+                topBar.addView(reloadBtn)
+                topBar.addView(urlText)
+                topBar.addView(closeBtn)
+
+                // 4. Progress Bar
+                val progressBar = ProgressBar(act, null, android.R.attr.progressBarStyleHorizontal).apply {
+                    id = View.generateViewId()
+                    layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, dp(3)).apply {
+                        addRule(RelativeLayout.BELOW, topBar.id)
+                    }
+                    max = 100
+                    progress = 0
+                    visibility = View.VISIBLE
+                }
+
+                // 5. Hardware-Accelerated Native WebView
+                val webView = WebView(act).apply {
+                    id = View.generateViewId()
+                    layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT).apply {
+                        addRule(RelativeLayout.BELOW, progressBar.id)
+                    }
+                    settings.apply {
+                        javaScriptEnabled = true
+                        domStorageEnabled = true
+                        databaseEnabled = true
+                        mediaPlaybackRequiresUserGesture = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        }
+                        userAgentString = "$userAgentString ZenoDeck/1.0.20 Mobile"
+                    }
+                }
+
+                // 6. Floating VidMate FAB Button
+                val fab = TextView(act).apply {
+                    id = View.generateViewId()
+                    text = "⚡ DOWNLOAD (VIDMATE)"
+                    setTextColor(Color.parseColor("#F7E7CE"))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    gravity = Gravity.CENTER
+                    setPadding(dp(20), dp(12), dp(20), dp(12))
+                    elevation = dp(12).toFloat()
+                    background = GradientDrawable().apply {
+                        setColor(Color.parseColor("#102C26"))
+                        cornerRadius = dp(24).toFloat()
+                        setStroke(dp(2), Color.parseColor("#F7E7CE"))
+                    }
+                    layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, dp(48)).apply {
+                        addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+                        addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
+                        setMargins(dp(16), dp(16), dp(20), dp(24))
+                    }
+                    visibility = View.VISIBLE
+                }
+
+                val updateFabWithMedia = { foundUrl: String, title: String? ->
+                    inAppBrowserDetectedUrl = foundUrl
+                    if (!title.isNullOrBlank()) {
+                        inAppBrowserDetectedTitle = title
+                    }
+                    act.runOnUiThread {
+                        fab.text = "⚡ DOWNLOAD VIDEO / MP3"
+                        fab.background = GradientDrawable().apply {
+                            setColor(Color.parseColor("#102C26"))
+                            cornerRadius = dp(24).toFloat()
+                            setStroke(dp(2), Color.parseColor("#F7E7CE"))
+                        }
+                    }
+                }
+
+                fab.setOnClickListener {
+                    val mediaUrl = inAppBrowserDetectedUrl.ifEmpty { webView.url ?: targetUrl }
+                    val mediaTitle = inAppBrowserDetectedTitle.ifEmpty { webView.title ?: "Media Stream" }
+                    val eventData = JSObject().apply {
+                        put("url", mediaUrl)
+                        put("title", mediaTitle)
+                    }
+                    notifyListeners("openVidMateSheet", eventData)
+                    notifyListeners("mediaDetected", eventData)
+                    dialog.dismiss()
+                }
+
+                // Attach clients to WebView
+                webView.webChromeClient = object : WebChromeClient() {
+                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                        progressBar.progress = newProgress
+                        progressBar.visibility = if (newProgress < 100) View.VISIBLE else View.GONE
+                        val data = JSObject().apply {
+                            put("progress", newProgress)
+                            put("url", view?.url ?: "")
+                        }
+                        notifyListeners("browserProgress", data)
+                    }
+
+                    override fun onReceivedTitle(view: WebView?, title: String?) {
+                        if (!title.isNullOrBlank()) {
+                            inAppBrowserDetectedTitle = title
+                        }
+                        val data = JSObject().apply {
+                            put("title", title ?: "")
+                            put("url", view?.url ?: "")
+                        }
+                        notifyListeners("browserTitle", data)
+                    }
+                }
+
+                webView.webViewClient = object : WebViewClient() {
+                    private fun checkUrlForMedia(navUrl: String, title: String?) {
+                        val isMediaUrl = navUrl.contains("youtube.com/watch") ||
+                            navUrl.contains("youtu.be/") ||
+                            navUrl.contains("tiktok.com/") ||
+                            navUrl.contains("instagram.com/reel/") ||
+                            navUrl.contains("instagram.com/p/") ||
+                            navUrl.contains("facebook.com/watch") ||
+                            (navUrl.contains("x.com/") && navUrl.contains("/status/")) ||
+                            (navUrl.contains("twitter.com/") && navUrl.contains("/status/")) ||
+                            navUrl.contains("googlevideo.com/videoplayback") ||
+                            navUrl.endsWith(".mp4") || navUrl.endsWith(".m3u8") || navUrl.endsWith(".mp3")
+
+                        if (isMediaUrl) {
+                            updateFabWithMedia(navUrl, title)
+                            val eventData = JSObject().apply {
+                                put("url", navUrl)
+                                put("mediaType", if (navUrl.endsWith(".mp3") || navUrl.endsWith(".m4a")) "audio" else "video")
+                                put("title", title ?: "Media Detected")
                             }
-                            userAgentString = "$userAgentString ZenoDeck/1.0.14 Mobile"
+                            notifyListeners("mediaDetected", eventData)
+                        }
+                    }
+
+                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        val navUrl = request?.url?.toString() ?: ""
+                        checkUrlForMedia(navUrl, view?.title)
+                        return false
+                    }
+
+                    override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                        val reqUrl = request?.url?.toString() ?: ""
+                        if (reqUrl.contains("googlevideo.com/videoplayback") || reqUrl.contains(".m3u8") || reqUrl.contains(".mpd")) {
+                            updateFabWithMedia(reqUrl, view?.title)
+                            val eventData = JSObject().apply {
+                                put("url", reqUrl)
+                                put("mediaType", "video")
+                                put("title", view?.title ?: "Stream Detected")
+                                put("isDirectStream", true)
+                            }
+                            notifyListeners("mediaDetected", eventData)
+                        }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+
+                    override fun onPageFinished(view: WebView?, finishedUrl: String?) {
+                        super.onPageFinished(view, finishedUrl)
+                        if (finishedUrl != null) {
+                            urlText.text = finishedUrl
+                            checkUrlForMedia(finishedUrl, view?.title)
                         }
 
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                                val data = JSObject().apply {
-                                    put("progress", newProgress)
-                                    put("url", view?.url ?: "")
+                        val js = """
+                            (function() {
+                                try {
+                                    var ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
+                                    var ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+                                    var video = document.querySelector('video');
+                                    var directVideoSrc = video ? (video.currentSrc || video.src || document.querySelector('video source')?.getAttribute('src')) : null;
+                                    return JSON.stringify({
+                                        title: ogTitle || document.title,
+                                        ogTitle: ogTitle,
+                                        ogImage: ogImage,
+                                        directVideoSrc: directVideoSrc,
+                                        videoSrc: directVideoSrc
+                                    });
+                                } catch(e) {
+                                    return null;
                                 }
-                                notifyListeners("browserProgress", data)
-                            }
+                            })()
+                        """.trimIndent()
 
-                            override fun onReceivedTitle(view: WebView?, title: String?) {
-                                val data = JSObject().apply {
-                                    put("title", title ?: "")
-                                    put("url", view?.url ?: "")
-                                }
-                                notifyListeners("browserTitle", data)
-                            }
-                        }
-
-                        webViewClient = object : WebViewClient() {
-                            private fun checkUrlForMedia(navUrl: String, title: String?) {
-                                val isMediaUrl = navUrl.contains("youtube.com/watch") ||
-                                    navUrl.contains("youtu.be/") ||
-                                    navUrl.contains("tiktok.com/") ||
-                                    navUrl.contains("instagram.com/reel/") ||
-                                    navUrl.contains("instagram.com/p/") ||
-                                    navUrl.contains("facebook.com/watch") ||
-                                    (navUrl.contains("x.com/") && navUrl.contains("/status/")) ||
-                                    (navUrl.contains("twitter.com/") && navUrl.contains("/status/")) ||
-                                    navUrl.contains("googlevideo.com/videoplayback") ||
-                                    navUrl.endsWith(".mp4") || navUrl.endsWith(".m3u8") || navUrl.endsWith(".mp3")
-
-                                if (isMediaUrl) {
-                                    val eventData = JSObject().apply {
-                                        put("url", navUrl)
-                                        put("mediaType", if (navUrl.endsWith(".mp3") || navUrl.endsWith(".m4a")) "audio" else "video")
-                                        put("title", title ?: "Media Detected")
-                                    }
-                                    notifyListeners("mediaDetected", eventData)
-                                }
-                            }
-
-                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                val navUrl = request?.url?.toString() ?: ""
-                                checkUrlForMedia(navUrl, view?.title)
-                                return false
-                            }
-
-                            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-                                val reqUrl = request?.url?.toString() ?: ""
-                                if (reqUrl.contains("googlevideo.com/videoplayback") || reqUrl.contains(".m3u8") || reqUrl.contains(".mpd")) {
-                                    val eventData = JSObject().apply {
-                                        put("url", reqUrl)
-                                        put("mediaType", "video")
-                                        put("title", view?.title ?: "Stream Detected")
-                                        put("isDirectStream", true)
-                                    }
-                                    notifyListeners("mediaDetected", eventData)
-                                }
-                                return super.shouldInterceptRequest(view, request)
-                            }
-
-                            override fun onPageFinished(view: WebView?, finishedUrl: String?) {
-                                super.onPageFinished(view, finishedUrl)
-                                if (finishedUrl != null) {
-                                    checkUrlForMedia(finishedUrl, view?.title)
-                                }
-
-                                val js = """
-                                    (function() {
-                                        try {
-                                            var ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content');
-                                            var video = document.querySelector('video');
-                                            var videoSrc = video ? (video.currentSrc || video.src) : null;
-                                            return JSON.stringify({
-                                                title: ogTitle || document.title,
-                                                videoSrc: videoSrc
-                                            });
-                                        } catch(e) {
-                                            return null;
+                        view?.evaluateJavascript(js) { res ->
+                            if (!res.isNullOrBlank() && res != "null" && res != "\"null\"") {
+                                try {
+                                    val cleaned = if (res.startsWith("\"") && res.endsWith("\"")) {
+                                        org.json.JSONTokener(res).nextValue().toString()
+                                    } else res
+                                    val json = JSONObject(cleaned)
+                                    val vSrc = json.optString("directVideoSrc", json.optString("videoSrc", ""))
+                                    val title = json.optString("ogTitle", json.optString("title", view?.title ?: "Detected Video"))
+                                    if (vSrc.isNotEmpty() && vSrc.startsWith("http")) {
+                                        updateFabWithMedia(vSrc, title)
+                                        val eventData = JSObject().apply {
+                                            put("url", vSrc)
+                                            put("mediaType", "video")
+                                            put("title", title)
+                                            put("ogTitle", title)
+                                            put("ogImage", json.optString("ogImage", ""))
+                                            put("directVideoSrc", vSrc)
                                         }
-                                    })()
-                                """.trimIndent()
-
-                                view?.evaluateJavascript(js) { res ->
-                                    if (!res.isNullOrBlank() && res != "null" && res != "\"null\"") {
-                                        try {
-                                            val cleaned = if (res.startsWith("\"") && res.endsWith("\"")) {
-                                                org.json.JSONTokener(res).nextValue().toString()
-                                            } else res
-                                            val json = JSONObject(cleaned)
-                                            val vSrc = json.optString("videoSrc", "")
-                                            if (vSrc.isNotEmpty() && vSrc.startsWith("http")) {
-                                                val eventData = JSObject().apply {
-                                                    put("url", vSrc)
-                                                    put("mediaType", "video")
-                                                    put("title", json.optString("title", view?.title ?: "Detected Video"))
-                                                }
-                                                notifyListeners("mediaDetected", eventData)
-                                            }
-                                        } catch (_: Throwable) {}
+                                        notifyListeners("mediaDetected", eventData)
                                     }
-                                }
+                                } catch (_: Throwable) {}
                             }
                         }
                     }
-                    inAppBrowserWebView = webView
                 }
 
-                inAppBrowserWebView?.loadUrl(targetUrl)
+                // 7. Handle Hardware Back Button
+                dialog.setOnKeyListener { _, keyCode, event ->
+                    if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+                        if (webView.canGoBack()) {
+                            webView.goBack()
+                            true
+                        } else {
+                            dialog.dismiss()
+                            true
+                        }
+                    } else {
+                        false
+                    }
+                }
+
+                dialog.setOnDismissListener {
+                    inAppBrowserDialog = null
+                    inAppBrowserWebView = null
+                    notifyListeners("browserClosed", JSObject().apply { put("success", true) })
+                }
+
+                root.addView(topBar)
+                root.addView(progressBar)
+                root.addView(webView)
+                root.addView(fab)
+
+                dialog.setContentView(root)
+                inAppBrowserDialog = dialog
+                inAppBrowserWebView = webView
+
+                dialog.show()
+                webView.loadUrl(targetUrl)
+
                 call.resolve(JSObject().apply { put("success", true) })
             } catch (e: Throwable) {
                 Log.e(TAG, "Failed to open In-App Browser", e)
@@ -751,6 +987,8 @@ class ZenoMedia3Plugin : Plugin() {
     fun closeInAppBrowser(call: PluginCall) {
         Handler(Looper.getMainLooper()).post {
             try {
+                inAppBrowserDialog?.dismiss()
+                inAppBrowserDialog = null
                 inAppBrowserWebView?.stopLoading()
                 inAppBrowserWebView?.destroy()
                 inAppBrowserWebView = null

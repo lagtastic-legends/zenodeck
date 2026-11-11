@@ -86,11 +86,13 @@ export interface YouTubeFormatMeta {
 }
 
 export interface YouTubeQualityOption {
-  id: string; // e.g. "2160p60", "1080p60", "audio-320", "audio-256", "audio-192", "audio-128", "audio-m4a", "audio-wav"
+  id: string; // e.g. "4320p60", "4320p", "2160p60", "1080p60", "audio-320", "audio-256", "audio-192", "audio-128", "audio-m4a", "audio-wav"
   label: string;
   resolutionLabel: string;
   fps: number;
   badge:
+    | "8K 60FPS"
+    | "8K"
     | "4K 60FPS"
     | "4K"
     | "2K 60FPS"
@@ -109,6 +111,7 @@ export interface YouTubeQualityOption {
     | "WAV PCM"
     | "AUDIO"
     | string;
+  is8K?: boolean;
   is4K: boolean;
   is60fps: boolean;
   isAudioOnly: boolean;
@@ -856,6 +859,31 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
 
   // Find pre-muxed combined itag 18 early for universal fallback
   const fmt18 = parsedFormats.find((f) => f.itag === 18 && f.url);
+
+  // 0. 8K 60fps / 8K UHD (4320p) — Prioritizes Itag 571 (AV1) / 272 (VP9) / 337 (60fps)
+  const fmt8k = findFormat(3000, 4320, true, false, true);
+  if (fmt8k) {
+    const is60 = (fmt8k.fps || 0) >= 50;
+    const pairedAudio = getPairedAudio(fmt8k);
+    const vSize = fmt8k.contentLength || 0;
+    const aSize = pairedAudio?.contentLength || 0;
+    qualities.push({
+      id: is60 ? "4320p60" : "4320p",
+      label: is60 ? "8K Ultra HD 60fps" : "8K Ultra HD",
+      resolutionLabel: is60 ? "7680 × 4320 (4320p60)" : "7680 × 4320 (4320p)",
+      fps: fmt8k.fps || 30,
+      badge: is60 ? "8K 60FPS" : "8K",
+      is8K: true,
+      is4K: false,
+      is60fps: is60,
+      isAudioOnly: false,
+      container: getContainerForVideo(fmt8k),
+      approxSizeBytes: vSize + aSize,
+      videoFormat: fmt8k,
+      audioFormat: pairedAudio,
+      fallbackVideoUrl: fmt18?.url,
+    });
+  }
 
   // 1. 4K 60fps / 4K UHD (2160p) — Prioritizes VP9 itag 315/313 for 100% Android MediaMuxer compatibility
   const fmt4k = findFormat(2000, 2160, true, false, true);

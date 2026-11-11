@@ -160,11 +160,20 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Globe className="size-4.5 text-[#F7E7CE]" />}
-          title="In-App Browser & Bento Grid"
-          badge="Bento 🌐"
-          description="In-App Mini Browser & Universal Downloader now exposed directly in the Bento Dashboard with 8-tile Quick Portals and VidMate FAB."
+          title="Native Browser & VidMate FAB"
+          badge="Zero Block 🌐"
+          description="Hardware-accelerated native Android browser Dialog eliminating ERR_BLOCKED_BY_RESPONSE with real-time stream sniffer and VidMate FAB."
           accentClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
           badgeClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
+        />
+
+        <FeatureCard
+          icon={<Film className="size-4.5 text-fuchsia-400" />}
+          title="8K 60FPS Full Ultra HD"
+          badge="8K FUHD 🚀"
+          description="Client-side media pipeline now acquires and compresses up to 8K (7680 × 4320) at 60 FPS across InnerTube, VidMate Sheet, and Compressor."
+          accentClass="bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30"
+          badgeClass="bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
         />
 
         <FeatureCard
@@ -183,15 +192,6 @@ export function WhatsNewModal() {
           description="Interactive left-to-right edge swipe and step handlers to step back through web history, quality sheets, and tools before exiting."
           accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
           badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        />
-
-        <FeatureCard
-          icon={<Film className="size-4.5 text-emerald-400" />}
-          title="120fps FLIP Compositor Engine"
-          badge="120Hz ⚡"
-          description="Buttery smooth 120fps shared layout morphing, zero GPU blur thrashing, O(1) single-surface projection, and double-RAF hydration."
-          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
       </div>
     </ZenoModal>

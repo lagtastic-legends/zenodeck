@@ -5,6 +5,21 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.20] — 2026-11-12
+
+### 🌐 Native In-App Browser Fullscreen Dialog & Zero Restriction Web Engine
+- **Elimination of `net::ERR_BLOCKED_BY_RESPONSE` (`ZenoMedia3Plugin.kt`)**: Replaced sandboxed web `<iframe />` on Android with a native hardware-accelerated full-screen `Dialog` overlay (`Theme_Black_NoTitleBar_Fullscreen`). Because top-level native WebViews operate outside iframe boundaries, `X-Frame-Options: SAMEORIGIN` and `CSP: frame-ancestors 'self'` restrictions no longer block YouTube, TikTok, Instagram, Twitter/X, and Facebook.
+- **ZenoDeck Branded Native Browser Chrome**: Implemented Deep Forest Green (`#102C26`) and Champagne (`#F7E7CE`) header bar with Back (◀), Forward (▶), Reload (↻), live SSL URL pill, and Close (✕) controls, with hardware back button history traversal.
+- **Pulsing Native VidMate FAB & Stream Sniffer**: Anchored floating VidMate FAB (`⚡ DOWNLOAD VIDEO / MP3`) at bottom-right of the native dialog. Uses `shouldInterceptRequest` and JavaScript DOM inspection (`ogTitle`, `ogImage`, `directVideoSrc`) to detect streams, pulsing when media is ready, and dismissing dialog to dispatch `openVidMateSheet` to the React app.
+- **Native Engine Station View (`mini-browser-view.tsx`)**: Replaced broken iframe on mobile with an interactive zero-restriction hardware engine station with 1-click re-open, stream analysis, and seamless portal navigation.
+
+### 🚀 8K 60FPS Full Ultra HD Media Acquisition & Compression Pipeline
+- **InnerTube 8K 60FPS Support (`innertube.ts`)**: Expanded `YouTubeQualityOption` with `is8K` and `"8K 60FPS" | "8K"` badges. Added priority resolution tier for 8K 60fps (7680 × 4320) targeting Itags 571 (AV1), 272 (VP9), and 337 (60fps).
+- **VidMate Quality Sheet 8K Badge (`vidmate-quality-sheet.tsx`)**: Updated resolution section to `Video Resolutions (360p to 8K 60FPS)` with high-visibility fuchsia `8K FUHD` badges.
+- **Downloader Master Preset (`youtube-downloader.tsx`)**: Added `Cinema 8K 60FPS Ultra Master` preset (lossless 4320p60 muxed with multi-channel stereo audio) and updated download result indicators.
+- **Video Compressor 8K FUHD Master (`video-compressor.tsx`)**: Added `4320` resolution tier (`8K FUHD (4320p)`) and `8K FUHD 60 FPS Master` preset (CRF 18 mastering grade, 60 FPS).
+- **Turbo Downloader 8K State Tracking (`turbo-downloader.ts`)**: Integrated `is8K?: boolean` into `TurboDownloadResult` across all chunking and native muxing paths.
+
 ## [1.0.19] — 2026-11-11
 
 ### 🌐 In-App Browser & Universal Downloader Bento Grid Exposure
