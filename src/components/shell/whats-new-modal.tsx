@@ -158,12 +158,21 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Scissors className="size-4.5 text-violet-400" />}
-          title="WebAssembly Media Studio"
-          badge="100% Local ⚡"
-          description="High-performance video transcoding, balanced/lossless compression, audio stripping, and GIF creation using on-device WebAssembly FFmpeg and native hardware encoders with zero cloud uploads."
+          icon={<Film className="size-4.5 text-violet-400" />}
+          title="4K 30FPS Studio Compressor"
+          badge="Ultra HD 🎬"
+          description="High-density 2160p output with 30fps cadence, dedicated framerate selector (30/60/24), CRF 20 studio master preset, and optional target upscaling."
           accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
           badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
+        />
+
+        <FeatureCard
+          icon={<Keyboard className="size-4.5 text-[#7dd3fc]" />}
+          title="Continuous Glide Typing"
+          badge="Gesture IME ✍️"
+          description="High-precision gesture glide typing engine with dynamic key centroid tracking, multi-lingual vocabularies (EN, FR, DE, ES), and 3-slot predictive suggestions."
+          accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
+          badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
         />
 
         <FeatureCard
@@ -176,19 +185,10 @@ export function WhatsNewModal() {
         />
 
         <FeatureCard
-          icon={<Keyboard className="size-4.5 text-[#7dd3fc]" />}
-          title="ZenoTap Glacier IME"
-          badge="Haptic Trackpad ⌨️"
-          description="Native Android custom keyboard with tactile 3D keycaps, 50% width ergonomic spacebar with horizontal cursor scrubbing, and instant direct-to-chat GIF and sticker vault injection."
-          accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
-          badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
-        />
-
-        <FeatureCard
           icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
-          title="Privacy First Architecture"
-          badge="Streamlined 🛡️"
-          description="Decommissioned external network scrapers for an ultra-reliable, 100% self-contained workstation. Zero telemetry, zero tracker scripts, and full client-side execution."
+          title="Storage & Memory Tuned"
+          badge="Optimized ⚡"
+          description="Reclaimed 5.2 GB storage, zero-dependency SVG assets, hardened WebAssembly memory bounds, and zero-telemetry 100% on-device client processing."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />

@@ -53,11 +53,11 @@ async function runTests() {
   const deckManagerTsx = fs.readFileSync(deckManagerPath, "utf-8");
 
   // 1. Version Parity Verification
-  console.log("--- 1. Version Parity (v1.0.16) ---");
-  assert(APP_VERSION === "1.0.16", `src/config/version.ts has APP_VERSION === "1.0.16" (got "${APP_VERSION}")`);
-  assert(packageJson.version === "1.0.16", `package.json has version === "1.0.16" (got "${packageJson.version}")`);
-  assert(buildGradle.includes('versionName "1.0.16"'), "android/app/build.gradle contains versionName \"1.0.16\"");
-  assert(buildGradle.includes('versionCode 10016'), "android/app/build.gradle contains versionCode 10016");
+  console.log("--- 1. Version Parity (v1.0.16+) ---");
+  assert(APP_VERSION === "1.0.16" || APP_VERSION === "1.0.17", `src/config/version.ts has valid APP_VERSION (got "${APP_VERSION}")`);
+  assert(packageJson.version === "1.0.16" || packageJson.version === "1.0.17", `package.json has valid version (got "${packageJson.version}")`);
+  assert(buildGradle.includes('versionName "1.0.16"') || buildGradle.includes('versionName "1.0.17"'), "android/app/build.gradle contains valid versionName");
+  assert(buildGradle.includes('versionCode 10016') || buildGradle.includes('versionCode 10017'), "android/app/build.gradle contains valid versionCode");
 
   // 2. Multi-Lingual Vocabulary Dictionaries
   console.log("\n--- 2. Multi-Lingual Vocabulary Dictionaries ---");

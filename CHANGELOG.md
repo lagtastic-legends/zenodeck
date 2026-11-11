@@ -5,6 +5,45 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.17] — 2026-11-11
+
+### 🎬 Video Compressor 4K 30FPS Studio Master & Build Hardening
+- **4K UHD (2160p) Studio Master Preset**: Added `4k-30fps-master` preset in `video-compressor.tsx` with near-lossless CRF 20, 3840×2160 scaling, and locked 30 FPS cadence.
+- **Dedicated Framerate (FPS) Control**: Introduced interactive framerate selector (30 FPS Standard, 60 FPS Smooth, 24 FPS Cinematic, and Original Source FPS) with dynamic `-vf fps=<val>` filter injection.
+- **Target Resolution Ladder & 4K Mode Badge**: Extended resolution selector to support 4K UHD (`2160p`) and 2K QHD (`1440p`) with real-time UI indicator badges.
+- **Force Target / Upscale Control**: Added interactive toggle allowing users to force upscaling to 4K (`scale=-2:2160`) or enforce non-upscaling resolution ceilings (`min(ih, 2160)`).
+- **Zero-Dependency SVG YouTube Icon**: Replaced deprecated `lucide-react` `Youtube` icon with an inline standalone SVG component in `youtube-downloader.tsx`, resolving Vercel production build failures.
+- **Dynamic File Naming & Progress Feedback**: Processed outputs automatically encode resolution and framerate parameters (e.g. `video-compressed-4k-30fps.mp4`).
+
+## [1.0.16] — 2026-11-10
+
+### ✍️ ZenoTap Continuous Gesture / Glide Typing & Multi-Lingual Expansion
+- **Continuous Gesture / Glide Typing Engine**: Built gesture trajectory buffer in `ZenoDeckKeyboardService.kt` with a `22dp` drag threshold, dynamic key centroid tracking, and real-time bounding box calculation.
+- **Micro-Haptic Traversal & Floating Echo**: Added `VibrationEffect.EFFECT_TICK` haptic feedback on key boundary crossing with floating key echoes (`showKeyEcho("~ candidate", 600)`).
+- **Multi-Lingual Vocabulary Dictionaries**: Introduced built-in curated dictionaries for French (`AZERTY`), German (`QWERTZ`), Spanish, and English (`QWERTY`/`Dvorak`) with length-delta penalties and frequency boosting.
+- **Bridge & Studio Configurator Extensions**: Added `setGestureTyping` and `getGestureTyping` Capacitor bridge methods and dedicated Studio dashboard card with live testing sandbox.
+- **Repository Storage Optimization**: Safely cleaned up 48 legacy `.apk` artifacts and build caches, reclaiming **5.2 GB** of local storage.
+
+## [1.0.15] — 2026-11-10
+
+### ⌨️ Gboard-Grade Native Android Keyboard Overhaul & Version Alignment
+- **3-Candidate Predictive Suggestion Strip**: Added offline predictive text engine with curated core vocabulary, user frequency learning, and 3-slot candidate bar (`suggestion_left`, `suggestion_center` [bold primary], `suggestion_right`).
+- **Offline Contraction & Typo Auto-Correct**: Instant correction for frequent contractions and typos (`dont` -> `don't`, `cant` -> `can't`, `im` -> `I'm`, `teh` -> `the`, `recieve` -> `receive`).
+- **Double-Space Period & Sentence Capitalization**: Double-tapping space within 350ms commits `". "` with single-char auto-capitalization at the start of sentences and input fields.
+- **Dedicated Number Row & Multi-Layouts**: Added top number row (`1-0`) toggle and dynamic layout remapping for `QWERTY`, `AZERTY`, `QWERTZ`, and `Dvorak`.
+- **Forest & Champagne Theme**: Added signature `#102C26` / `#F7E7CE` theme alongside Obsidian, Terracotta, and Glacier.
+- **Multi-Category Native Emoji Panel**: 8-category emoji panel with 200+ emojis, 1-tap insertion, haptic ticks, and 24-slot recent persistence.
+- **30-Slot Persistent Clipboard Vault**: Saves up to 30 clips with pin/delete and auto-detection of media URLs.
+- **Live 60FPS Animated GIFs**: High-speed decoding via `AnimatedImageDrawable` (API 28+) inside the keyboard grid before sending via `commitContent()`.
+- **Version Numbering Resolution**: Unified all version labels to `v1.0.15` (Android `versionCode 10015`), ending legacy numbering discrepancies.
+
+## [1.0.14] — 2026-10-30
+
+### 🌐 In-App Mini Browser & Floating Downloader FAB
+- **Integrated Mini Browser (`mini-browser-view.tsx`)**: Sandboxed in-app web browser with navigation controls, address bar, bookmark presets, and tab switching.
+- **Floating VidMate-Style FAB**: Context-aware floating download button pulsing whenever media streams are detected on the active webpage.
+- **Multi-Resolution Video Sniffer**: Real-time network stream sniffer extracting DASH, HLS, MP4, and WebM video streams for direct 1-tap downloading.
+
 ## [1.0.3] — 2026-10-17
 
 ### ⚡ Downloader Hardening & CDN Failover
