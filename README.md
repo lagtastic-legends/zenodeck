@@ -46,6 +46,15 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
+## 💎 What's New in v1.0.19 (Bento Grid Browser & Downloader, Universal Mobile Layout Fit & Edge Back Gestures)
+
+- **Bento Grid In-App Browser & Downloader Exposure:** Both the In-App Mini Browser (`in-app-browser`) and Universal Media Downloader (`youtube-downloader`) are now directly registered and visible in the Bento Dashboard with 8-tile Quick Portals, auto stream sniffer, and glowing VidMate FAB.
+- **Universal Mobile Phone Layout Fit (All Form Factors):** Responsive 2-column compact grid fitting 320px–360px ultra-compact phones without horizontal overflow, dynamic `100dvh` viewport height, and safe-area insets (`env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`) protecting camera notches, Dynamic Island, and gesture bars.
+- **Multi-Section Mobile Edge Back Gestures:** Interactive left-to-right swipe-from-edge gesture (`use-edge-swipe-back.ts`) with visual edge indicator and haptic tick. Back navigation hierarchically navigates web history and tool sections before collapsing to the dashboard.
+- **Unified Hardware Back Navigation:** Unified `@capacitor/app` back listener through `useNavStore.handleBack()` 5-tier guard stack.
+
+---
+
 ## 💎 What's New in v1.0.18 (In-App Mini Browser, VidMate FAB & 120fps Compositor Engine)
 
 - **In-App Mini Browser & Omnibox Strip:** Embedded web browsing suite with URL normalization, DuckDuckGo search fallback, navigation controls, and 8-tile Quick Site Portal Grid (YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, SoundCloud).
@@ -109,16 +118,16 @@ ZenoDeck v1.0.12 delivers a ground-up architectural overhaul of the entire 20-mo
 
 ---
 
-## 🚀 Download & Installation (v1.0.18)
+## 🚀 Download & Installation (v1.0.19)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~72.8 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~45.9 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~41.3 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~47.2 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~72.9 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~45.9 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~41.3 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.19/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~47.2 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 
