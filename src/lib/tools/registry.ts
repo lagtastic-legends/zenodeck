@@ -83,7 +83,7 @@ export const TOOL_REGISTRY: ToolMeta[] = [
   {
     id: "video-compressor",
     name: "Video Compressor",
-    description: "Shrink file size with live bitrate & quality control.",
+    description: "Shrink file size or compress up to 4K 30fps with custom CRF, framerate & bitrate control.",
     category: "video",
     icon: Shrink,
     phase: 2,

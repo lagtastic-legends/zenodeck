@@ -30,13 +30,31 @@ import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-sel
 
 const COMPRESSOR_PRESETS: PresetItem[] = [
   {
+    id: "4k-30fps-master",
+    name: "4K UHD 30 FPS Master",
+    description: "Ultra High Definition 2160p scaled to 30 FPS with high-fidelity CRF 20 for cinematic clarity.",
+    category: "studio",
+    engineTier: "Tier 3: WebCodecs",
+    chips: ["4K (2160p)", "30 FPS", "CRF 20", "Cinema UHD"],
+    params: { crf: 20, resolution: "2160", fps: "30", allowUpscale: true, keepAudio: true },
+  },
+  {
+    id: "2k-1440p-quality",
+    name: "2K QHD 1440p High Res",
+    description: "Quad HD crisp 1440p resolution at 30 FPS for high-density displays.",
+    category: "studio",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["1440p", "30 FPS", "CRF 22", "Studio"],
+    params: { crf: 22, resolution: "1440", fps: "30", keepAudio: true },
+  },
+  {
     id: "discord-limit",
     name: "Discord & Slack (≤10 MB)",
     description: "Aggressive CRF 28 and AAC 128k audio designed to stay strictly under standard chat upload limits.",
     category: "social",
     engineTier: "Tier 4: Wasm MT",
     chips: ["720p", "CRF 28", "AAC Audio", "≤10MB"],
-    params: { crf: 28, resolution: "720", keepAudio: true },
+    params: { crf: 28, resolution: "720", fps: "original", keepAudio: true },
   },
   {
     id: "email-attachment",
@@ -45,7 +63,7 @@ const COMPRESSOR_PRESETS: PresetItem[] = [
     category: "social",
     engineTier: "Tier 4: Wasm MT",
     chips: ["720p", "CRF 26", "Universal"],
-    params: { crf: 26, resolution: "720", keepAudio: true },
+    params: { crf: 26, resolution: "720", fps: "original", keepAudio: true },
   },
   {
     id: "high-fidelity-master",
@@ -54,7 +72,7 @@ const COMPRESSOR_PRESETS: PresetItem[] = [
     category: "studio",
     engineTier: "Tier 3: WebCodecs",
     chips: ["Original Res", "CRF 20", "Lossless Look"],
-    params: { crf: 20, resolution: "original", keepAudio: true },
+    params: { crf: 20, resolution: "original", fps: "original", keepAudio: true },
   },
   {
     id: "balanced-mobile",
@@ -63,7 +81,7 @@ const COMPRESSOR_PRESETS: PresetItem[] = [
     category: "recommended",
     engineTier: "Tier 4: Wasm MT",
     chips: ["720p", "CRF 24", "Recommended"],
-    params: { crf: 24, resolution: "720", keepAudio: true },
+    params: { crf: 24, resolution: "720", fps: "original", keepAudio: true },
   },
   {
     id: "ultra-compact",
@@ -72,18 +90,28 @@ const COMPRESSOR_PRESETS: PresetItem[] = [
     category: "social",
     engineTier: "Tier 4: Wasm MT",
     chips: ["480p", "CRF 34", "Tiny Size"],
-    params: { crf: 34, resolution: "480", keepAudio: true },
+    params: { crf: 34, resolution: "480", fps: "original", keepAudio: true },
   },
 ];
 
-type Resolution = "original" | "1080" | "720" | "480" | "360";
+type Resolution = "original" | "2160" | "1440" | "1080" | "720" | "480" | "360";
+type Framerate = "original" | "30" | "60" | "24";
 
 const RESOLUTION_LABELS: Record<Resolution, string> = {
-  original: "Original",
-  "1080": "1080p",
-  "720": "720p",
-  "480": "480p",
-  "360": "360p",
+  original: "Original (Source Res)",
+  "2160": "4K UHD (2160p)",
+  "1440": "2K QHD (1440p)",
+  "1080": "1080p FHD",
+  "720": "720p HD",
+  "480": "480p SD",
+  "360": "360p Low",
+};
+
+const FRAMERATE_LABELS: Record<Framerate, string> = {
+  "30": "30 FPS (Standard 4K)",
+  "60": "60 FPS (Smooth)",
+  "24": "24 FPS (Cinematic)",
+  original: "Original (Source FPS)",
 };
 
 function crfLabel(crf: number): string {
@@ -100,6 +128,8 @@ export function VideoCompressor() {
   const [file, setFile] = useState<File | null>(null);
   const [crf, setCrf] = useState(28);
   const [resolution, setResolution] = useState<Resolution>("720");
+  const [fps, setFps] = useState<Framerate>("original");
+  const [allowUpscale, setAllowUpscale] = useState(false);
   const [keepAudio, setKeepAudio] = useState(true);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
@@ -109,31 +139,42 @@ export function VideoCompressor() {
     setActivePresetId(preset.id);
     if (typeof preset.params.crf === "number") setCrf(preset.params.crf);
     if (preset.params.resolution) setResolution(preset.params.resolution as Resolution);
+    if (preset.params.fps) setFps(preset.params.fps as Framerate);
+    if (typeof preset.params.allowUpscale === "boolean") setAllowUpscale(preset.params.allowUpscale);
     if (typeof preset.params.keepAudio === "boolean") setKeepAudio(preset.params.keepAudio);
   };
 
-  /* Auto-pick a sensible resolution ceiling from the source height. */
+  /* Auto-pick a sensible resolution ceiling from the source height, unless upscaling is explicitly allowed. */
   const effectiveResolution = useMemo<Resolution>(() => {
-    if (resolution !== "original" && meta?.height && Number(resolution) > meta.height) {
-      return "original"; // never upscale
+    if (resolution !== "original" && meta?.height && Number(resolution) > meta.height && !allowUpscale) {
+      return "original"; // never upscale unless explicitly requested
     }
     return resolution;
-  }, [resolution, meta]);
+  }, [resolution, meta, allowUpscale]);
 
   const output = outputs[0] ?? null;
-
 
   const start = async () => {
     if (!file) return;
     const srcExt = extOf(file.name) || "mp4";
     const virtualInputPath = `/mnt_0/input.${srcExt}`;
     const outputPath = "output.mp4";
-    const outputName = `${baseName(file.name)}-compressed.mp4`;
+    const resSuffix = effectiveResolution === "2160" ? "-4k" : effectiveResolution !== "original" ? `-${effectiveResolution}p` : "";
+    const fpsSuffix = fps !== "original" ? `-${fps}fps` : "";
+    const outputName = `${baseName(file.name)}-compressed${resSuffix}${fpsSuffix}.mp4`;
 
-    const vf =
-      effectiveResolution === "original"
-        ? null
-        : `scale=-2:'trunc(min(ih,${effectiveResolution})/2)*2'`;
+    const vfParts: string[] = [];
+    if (fps !== "original") {
+      vfParts.push(`fps=${fps}`);
+    }
+    if (effectiveResolution !== "original") {
+      if (allowUpscale) {
+        vfParts.push(`scale=-2:${effectiveResolution}`);
+      } else {
+        vfParts.push(`scale=-2:'trunc(min(ih,${effectiveResolution})/2)*2'`);
+      }
+    }
+    const vf = vfParts.length > 0 ? vfParts.join(",") : null;
 
     const shouldKeepAudio = keepAudio && meta?.hasAudio !== false;
 
@@ -150,12 +191,20 @@ export function VideoCompressor() {
       outputPath,
     ];
 
+    const passResLabel =
+      effectiveResolution === "2160"
+        ? " · 4K UHD"
+        : effectiveResolution !== "original"
+          ? ` · ≤${effectiveResolution}p`
+          : "";
+    const passFpsLabel = fps !== "original" ? ` · ${fps}fps` : "";
+
     await run({
       inputFiles: [{ file, name: `input.${srcExt}`, mountPoint: "/mnt_0" }],
       passes: [
         {
           exec: args,
-          label: `Compressing · CRF ${crf}${vf ? ` · ≤${effectiveResolution}p` : ""}`,
+          label: `Compressing · CRF ${crf}${passFpsLabel}${passResLabel}`,
         },
       ],
       read: [{ path: outputPath, mime: mimeFor("mp4"), name: outputName }],
@@ -232,17 +281,31 @@ export function VideoCompressor() {
           </div>
         </div>
 
+        {/* Resolution and Framerate selectors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Resolution cap
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Resolution target
+              </p>
+              {resolution === "2160" && (
+                <span className="font-mono text-[9px] font-bold text-pulse uppercase tracking-wider bg-pulse/10 border border-pulse/30 rounded px-1.5 py-0.5">
+                  4K UHD
+                </span>
+              )}
+            </div>
             <Select
-              value={effectiveResolution}
-              onValueChange={(v) => setResolution(v as Resolution)}
+              value={resolution}
+              onValueChange={(v) => {
+                const nextRes = v as Resolution;
+                setResolution(nextRes);
+                if (nextRes === "2160" && fps === "original") {
+                  setFps("30");
+                }
+              }}
               disabled={busy}
             >
-              <SelectTrigger className="min-h-11 font-mono text-sm" aria-label="Resolution cap">
+              <SelectTrigger className="min-h-11 font-mono text-sm" aria-label="Resolution target">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -256,18 +319,77 @@ export function VideoCompressor() {
             </Select>
           </div>
 
-          <div className="flex items-end justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 pb-4 pt-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Framerate (FPS)
+              </p>
+              {fps === "30" && (
+                <span className="font-mono text-[9px] font-bold text-neon uppercase tracking-wider bg-neon/10 border border-neon/30 rounded px-1.5 py-0.5">
+                  30 FPS
+                </span>
+              )}
+            </div>
+            <Select
+              value={fps}
+              onValueChange={(v) => setFps(v as Framerate)}
+              disabled={busy}
+            >
+              <SelectTrigger className="min-h-11 font-mono text-sm" aria-label="Framerate cap">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(FRAMERATE_LABELS) as Framerate[]).map((f) => (
+                  <SelectItem key={f} value={f} className="font-mono">
+                    {FRAMERATE_LABELS[f]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Toggles row: Audio track + Allow 4K Upscale */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 Audio track
               </p>
-              <p className="mt-1 font-mono text-[11px] text-foreground/80">
-                {keepAudio ? "keep (AAC 128k)" : "strip"}
+              <p className="mt-0.5 font-mono text-[11px] text-foreground/80">
+                {keepAudio ? "keep (AAC 192k)" : "strip audio"}
               </p>
             </div>
             <Switch checked={keepAudio} onCheckedChange={setKeepAudio} disabled={busy} aria-label="Keep audio track" />
           </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Force Target / Upscale
+              </p>
+              <p className="mt-0.5 font-mono text-[11px] text-foreground/80">
+                {allowUpscale ? "upscale to target" : "cap only (no upscale)"}
+              </p>
+            </div>
+            <Switch checked={allowUpscale} onCheckedChange={setAllowUpscale} disabled={busy} aria-label="Allow upscaling to target resolution" />
+          </div>
         </div>
+
+        {/* 4K 30FPS Active status badge */}
+        {resolution === "2160" && fps === "30" && (
+          <div className="flex items-center gap-2.5 rounded-xl border border-pulse/40 bg-pulse/10 px-3.5 py-2.5 text-xs text-foreground/90">
+            <Sparkles className="size-4 text-pulse shrink-0" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-pulse font-mono text-[11px] uppercase tracking-wider">
+                4K UHD 30 FPS Mode Configured
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                High-density 2160p output with stable 30fps cadence and ultrafast x264 encoding.
+              </p>
+            </div>
+          </div>
+        )}
 
         <motion.button
           onClick={() => void start()}
@@ -348,7 +470,7 @@ export function VideoCompressor() {
         builtinPresets={COMPRESSOR_PRESETS}
         activePresetId={activePresetId}
         onSelectPreset={handleApplyPreset}
-        currentSettings={{ crf, resolution: effectiveResolution, keepAudio }}
+        currentSettings={{ crf, resolution: effectiveResolution, fps, keepAudio, allowUpscale }}
       />
     </div>
   );
