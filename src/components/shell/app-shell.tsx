@@ -31,6 +31,16 @@ import { DesktopSidebar } from "@/components/shell/desktop-sidebar";
 import { DesktopInspector } from "@/components/shell/desktop-inspector";
 import { WorkstationRibbon } from "@/components/shell/workstation-ribbon";
 import { ToolErrorBoundary } from "@/components/shell/tool-error-boundary";
+import { ToolLaunchShell } from "@/components/shell/tool-launch-shell";
+import { TOOL_REGISTRY } from "@/lib/tools/registry";
+import {
+  HUB_PARALLAX_SPRING,
+  APP_LAUNCH_SPRING,
+  GPU_ACCELERATED_STYLE,
+  getZenoShellLayoutId,
+  getZenoIconLayoutId,
+  getZenoTitleLayoutId,
+} from "@/constants/motion";
 
 /* Dynamic code-split tool modules to control memory & isolate thread workloads */
 const MediaConverter = lazy(() => import("@/components/tools/media-converter").then((m) => ({ default: m.MediaConverter })));
@@ -146,7 +156,7 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
 };
 
 
-function ToolView({ toolId }: { toolId: string }) {
+function ToolView({ toolId, hideHeader = true }: { toolId: string; hideHeader?: boolean }) {
   const resetNav = useNavStore((s) => s.reset);
 
   const Tool = TOOL_COMPONENTS[toolId];
@@ -170,7 +180,7 @@ function ToolView({ toolId }: { toolId: string }) {
     );
   }
   return (
-    <ToolShell toolId={toolId}>
+    <ToolShell toolId={toolId} hideHeader={hideHeader}>
       <Suspense fallback={<ToolSkeleton />}>
         <Tool key={toolId} />
       </Suspense>
@@ -236,6 +246,8 @@ export function AppShell() {
   const view = useNavStore((s) => s.view);
   const navigate = useNavStore((s) => s.navigate);
   const reset = useNavStore((s) => s.reset);
+  const isToolActive = Boolean(view && view !== "dashboard" && view !== "auth-gateway");
+  const currentToolMeta = isToolActive ? TOOL_REGISTRY.find((t) => t.id === view) : null;
   const { isOpen: isAiOpen, toggleOpen: toggleAi } = useAiStore();
   const { mode, user } = useAuth();
   const isGuest =
@@ -310,36 +322,52 @@ export function AppShell() {
           <WorkstationRibbon />
 
           <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-3 py-4 sm:px-6 sm:py-8 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={view}
-                initial={{ opacity: 0, y: 12, scale: 0.994 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.996 }}
-                transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-                style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
-                className="flex-1 will-change-[transform,opacity]"
-              >
-                {/* The Auth Gateway stays reachable above the security gate —
-                 * it hosts the setup instructions (open mode) and profile
-                 * management (signed in). Every other surface is guarded. */}
-                {view === "auth-gateway" ? (
-                  <ToolShell toolId="auth-gateway">
-                    <AuthGateway />
-                  </ToolShell>
-                ) : (
-                  <AuthGuard>
-                    {view === "dashboard" ? (
-                      <DashboardView />
-                    ) : (
+            {view === "auth-gateway" ? (
+              <ToolShell toolId="auth-gateway">
+                <AuthGateway />
+              </ToolShell>
+            ) : (
+              <AuthGuard>
+                <div className="relative flex-1 flex flex-col w-full min-h-0">
+                  {/* Recessed Background Bento Hub Parallax Layer */}
+                  <motion.div
+                    animate={
+                      isToolActive
+                        ? { scale: 0.92, opacity: 0.35, filter: "blur(14px)" }
+                        : { scale: 1, opacity: 1, filter: "blur(0px)" }
+                    }
+                    transition={HUB_PARALLAX_SPRING}
+                    style={{
+                      ...GPU_ACCELERATED_STYLE,
+                      pointerEvents: isToolActive ? "none" : "auto",
+                      transformOrigin: "center top",
+                    }}
+                    className="flex-1 w-full"
+                  >
+                    <DashboardView />
+                  </motion.div>
+
+                  {/* 120fps Shared FLIP Tool Launch Shell */}
+                  <ToolLaunchShell
+                    toolId={isToolActive ? view : null}
+                    title={currentToolMeta?.name ?? (view ? view.toUpperCase() : "")}
+                    subtitle={currentToolMeta?.description}
+                    icon={
+                      currentToolMeta ? (
+                        <currentToolMeta.icon className="h-5 w-5 text-[#F7E7CE]" strokeWidth={1.75} />
+                      ) : undefined
+                    }
+                    onClose={() => reset()}
+                  >
+                    <div className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
                       <ToolErrorBoundary toolId={view}>
-                        <ToolView toolId={view} />
+                        <ToolView toolId={view} hideHeader={true} />
                       </ToolErrorBoundary>
-                    )}
-                  </AuthGuard>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                    </div>
+                  </ToolLaunchShell>
+                </div>
+              </AuthGuard>
+            )}
           </main>
 
           {/* Desktop Footer inside middle scroll container */}

@@ -15,6 +15,13 @@ import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useNavStore } from "@/lib/navigation/nav-store";
 import { ACCENT_STYLES } from "@/lib/tools/accents";
 import {
+  APP_LAUNCH_SPRING,
+  GPU_ACCELERATED_STYLE,
+  getZenoShellLayoutId,
+  getZenoIconLayoutId,
+  getZenoTitleLayoutId,
+} from "@/constants/motion";
+import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   TOOL_REGISTRY,
@@ -46,12 +53,14 @@ const ToolCard = memo(function ToolCard({
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      layoutId={getZenoShellLayoutId(tool.id)}
+      transition={APP_LAUNCH_SPRING}
+      style={{
+        ...GPU_ACCELERATED_STYLE,
+        borderRadius: 24,
+      }}
       whileHover={{ y: -3, transition: { type: "spring", stiffness: 420, damping: 26, mass: 0.6 } }}
-      whileTap={{ scale: 0.96, transition: { type: "spring", stiffness: 480, damping: 24, mass: 0.5 } }}
+      whileTap={{ scale: 0.95, transition: { type: "spring", stiffness: 480, damping: 24, mass: 0.5 } }}
       onClick={() => {
         if (locked) {
           void haptics.warning();
@@ -66,8 +75,8 @@ const ToolCard = memo(function ToolCard({
       }}
       className={`panel-hud group relative flex min-h-11 flex-col justify-between text-left shadow-tactile transition-all duration-200 min-w-0 ${
         isMatrixView
-          ? "rounded-xl sm:rounded-tactile p-2 sm:p-3.5 md:p-4 gap-1.5 sm:gap-2.5 min-h-[96px] sm:min-h-11"
-          : "rounded-tactile p-3.5 sm:p-4 gap-3"
+          ? "p-2 sm:p-3.5 md:p-4 gap-1.5 sm:gap-2.5 min-h-[96px] sm:min-h-11"
+          : "p-3.5 sm:p-4 gap-3"
       } ${
         locked
           ? "cursor-pointer hover:border-primary/35 hover:shadow-elevation1"
@@ -78,7 +87,9 @@ const ToolCard = memo(function ToolCard({
       aria-label={`${tool.name} — ${locked ? `locked, phase ${tool.phase}` : isEngineReady ? "online, open module" : "standby, requires engine"}`}
     >
       <div className="flex items-start justify-between gap-1 sm:gap-2">
-        <div
+        <motion.div
+          layoutId={getZenoIconLayoutId(tool.id)}
+          transition={APP_LAUNCH_SPRING}
           className={`grid shrink-0 place-items-center border ${accent.tile} transition-transform duration-300 group-hover:scale-110 ${
             isMatrixView
               ? "size-7 sm:size-10 rounded-md sm:rounded-lg"
@@ -89,7 +100,7 @@ const ToolCard = memo(function ToolCard({
             className={isMatrixView ? "size-3.5 sm:size-5" : "size-4 sm:size-5"}
             strokeWidth={1.75}
           />
-        </div>
+        </motion.div>
 
         {locked ? (
           <>
@@ -186,7 +197,10 @@ const ToolCard = memo(function ToolCard({
       </div>
 
       <div>
-        <p
+        <motion.p
+          layout="position"
+          layoutId={getZenoTitleLayoutId(tool.id)}
+          transition={APP_LAUNCH_SPRING}
           className={`flex items-center gap-1 font-display font-bold text-foreground leading-[1.25] break-words ${
             isMatrixView
               ? "text-[9px] xs:text-[10px] sm:text-xs md:text-[13px] tracking-tight sm:tracking-wide line-clamp-2 min-h-[25px] sm:min-h-0"
@@ -197,7 +211,7 @@ const ToolCard = memo(function ToolCard({
           {!locked && (
             <ArrowUpRight className="hidden sm:inline size-3.5 text-primary opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100 shrink-0" />
           )}
-        </p>
+        </motion.p>
         <p
           className={`mt-0.5 sm:mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2 ${
             isMatrixView ? "hidden sm:block" : "block"

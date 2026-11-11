@@ -16,9 +16,10 @@ import { TOOL_REGISTRY } from "@/lib/tools/registry";
 interface ToolShellProps {
   toolId: string;
   children: ReactNode;
+  hideHeader?: boolean;
 }
 
-export function ToolShell({ toolId, children }: ToolShellProps) {
+export function ToolShell({ toolId, children, hideHeader = false }: ToolShellProps) {
   const tool = TOOL_REGISTRY.find((t) => t.id === toolId);
   const handleBack = useNavStore((s) => s.handleBack);
   const { state, boot, engine, appendLog } = useFFmpegEngine();
@@ -56,39 +57,41 @@ export function ToolShell({ toolId, children }: ToolShellProps) {
   return (
     <div className="w-full max-w-full min-w-0 overflow-x-hidden box-border space-y-6">
       {/* header ---------------------------------------------------------- */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <motion.button
-          type="button"
-          onClick={() => void handleBack()}
-          whileHover={{ x: -3, transition: { type: "spring", stiffness: 380, damping: 28, mass: 0.7 } }}
-          whileTap={{ scale: 0.96, transition: { type: "spring", stiffness: 380, damping: 28, mass: 0.7 } }}
-          aria-label="Back to dashboard"
-          className="flex w-fit min-h-[44px] items-center gap-1.5 sm:gap-2 rounded-tactile border border-border/80 bg-card/60 px-3.5 sm:px-4 font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-muted-foreground shadow-tactile transition-all hover:border-primary/40 hover:text-foreground"
-        >
-          <ArrowLeft className="size-3.5" />
-          back
-        </motion.button>
-
-        <div className="flex flex-1 items-center gap-3 sm:gap-4">
-          <motion.div
-            layoutId={`tool-icon-${tool.id}`}
-            className={`grid size-10 sm:size-12 shrink-0 place-items-center rounded-tactile border shadow-subtle ${accent.tile}`}
+      {!hideHeader && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <motion.button
+            type="button"
+            onClick={() => void handleBack()}
+            whileHover={{ x: -3, transition: { type: "spring", stiffness: 380, damping: 28, mass: 0.7 } }}
+            whileTap={{ scale: 0.96, transition: { type: "spring", stiffness: 380, damping: 28, mass: 0.7 } }}
+            aria-label="Back to dashboard"
+            className="flex w-fit min-h-[44px] items-center gap-1.5 sm:gap-2 rounded-tactile border border-border/80 bg-card/60 px-3.5 sm:px-4 font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.16em] text-muted-foreground shadow-tactile transition-all hover:border-primary/40 hover:text-foreground"
           >
-            <Icon className="size-5 sm:size-6" strokeWidth={1.75} />
-          </motion.div>
-          <div className="min-w-0">
-            <motion.h1
-              layoutId={`tool-title-${tool.id}`}
-              className="font-display text-fluid-base sm:text-fluid-lg font-bold tracking-wide text-foreground"
+            <ArrowLeft className="size-3.5" />
+            back
+          </motion.button>
+
+          <div className="flex flex-1 items-center gap-3 sm:gap-4">
+            <motion.div
+              layoutId={`tool-icon-${tool.id}`}
+              className={`grid size-10 sm:size-12 shrink-0 place-items-center rounded-tactile border shadow-subtle ${accent.tile}`}
             >
-              {tool.name}
-            </motion.h1>
-            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm line-clamp-2 sm:line-clamp-none">
-              {tool.description}
-            </p>
+              <Icon className="size-5 sm:size-6" strokeWidth={1.75} />
+            </motion.div>
+            <div className="min-w-0">
+              <motion.h1
+                layoutId={`tool-title-${tool.id}`}
+                className="font-display text-fluid-base sm:text-fluid-lg font-bold tracking-wide text-foreground"
+              >
+                {tool.name}
+              </motion.h1>
+              <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm line-clamp-2 sm:line-clamp-none">
+                {tool.description}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* engine gate ------------------------------------------------------ */}
       {requiresEngine && state !== "ready" ? (
