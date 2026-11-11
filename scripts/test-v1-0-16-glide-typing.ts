@@ -54,10 +54,10 @@ async function runTests() {
 
   // 1. Version Parity Verification
   console.log("--- 1. Version Parity (v1.0.16+) ---");
-  assert(APP_VERSION === "1.0.16" || APP_VERSION === "1.0.17" || APP_VERSION === "1.0.18", `src/config/version.ts has valid APP_VERSION (got "${APP_VERSION}")`);
-  assert(packageJson.version === "1.0.16" || packageJson.version === "1.0.17" || packageJson.version === "1.0.18", `package.json has valid version (got "${packageJson.version}")`);
-  assert(buildGradle.includes('versionName "1.0.16"') || buildGradle.includes('versionName "1.0.17"') || buildGradle.includes('versionName "1.0.18"'), "android/app/build.gradle contains valid versionName");
-  assert(buildGradle.includes('versionCode 10016') || buildGradle.includes('versionCode 10017') || buildGradle.includes('versionCode 10018'), "android/app/build.gradle contains valid versionCode");
+  assert(APP_VERSION === "1.0.16" || APP_VERSION === "1.0.17" || APP_VERSION === "1.0.18" || APP_VERSION === "1.0.19", `src/config/version.ts has valid APP_VERSION (got "${APP_VERSION}")`);
+  assert(packageJson.version === "1.0.16" || packageJson.version === "1.0.17" || packageJson.version === "1.0.18" || packageJson.version === "1.0.19", `package.json has valid version (got "${packageJson.version}")`);
+  assert(buildGradle.includes('versionName "1.0.16"') || buildGradle.includes('versionName "1.0.17"') || buildGradle.includes('versionName "1.0.18"') || buildGradle.includes('versionName "1.0.19"'), "android/app/build.gradle contains valid versionName");
+  assert(buildGradle.includes('versionCode 10016') || buildGradle.includes('versionCode 10017') || buildGradle.includes('versionCode 10018') || buildGradle.includes('versionCode 10019'), "android/app/build.gradle contains valid versionCode");
 
   // 2. Multi-Lingual Vocabulary Dictionaries
   console.log("\n--- 2. Multi-Lingual Vocabulary Dictionaries ---");

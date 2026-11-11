@@ -22,6 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useNavStore } from "@/lib/navigation/nav-store";
 import { Capacitor } from "@capacitor/core";
 import { isNativeAndroidPlatform, ZenoMedia3 } from "@/lib/media/native-media-muxer";
 import { detectPlatform, PLATFORM_CONFIGS } from "@/lib/media/detector";
@@ -154,6 +155,24 @@ export function MiniBrowserView({
   const [detectedMediaPlatform, setDetectedMediaPlatform] = useState<string | null>(null);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Register step handler with ZenoDeck 5-tier navigation engine (back in web history first)
+  useEffect(() => {
+    return useNavStore.getState().registerStepHandler(() => {
+      if (historyIndex > 0) {
+        const newIdx = historyIndex - 1;
+        setHistoryIndex(newIdx);
+        const prevUrl = history[newIdx];
+        setCurrentUrl(prevUrl);
+        setInputUrl(prevUrl);
+        if (iframeRef.current) {
+          iframeRef.current.src = prevUrl;
+        }
+        return true;
+      }
+      return false;
+    });
+  }, [historyIndex, history]);
 
   // Normalize user query into a valid URL or search query
   const formatInputToUrl = (input: string): string => {
@@ -317,7 +336,7 @@ export function MiniBrowserView({
   }, [checkForDownloadableMedia]);
 
   return (
-    <div className="relative flex flex-col w-full h-[640px] sm:h-[700px] rounded-2xl border border-[#A79277]/30 bg-[#090D0C]/95 shadow-elevation1 overflow-hidden">
+    <div className="relative flex flex-col w-full h-[calc(100dvh-9rem)] sm:h-[700px] min-h-[500px] rounded-2xl border border-[#A79277]/30 bg-[#090D0C]/95 shadow-elevation1 overflow-hidden">
       {/* 1. Browser Top Omnibox & Navigation Strip */}
       <div className="flex flex-col border-b border-[#A79277]/30 bg-[#102C26]/40 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-1.5 p-2 sm:p-2.5">
@@ -520,6 +539,10 @@ export function MiniBrowserView({
             exit={{ scale: 0, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
             className="absolute bottom-5 right-5 z-30 flex items-center gap-2"
+            style={{
+              bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))",
+              right: "calc(1.25rem + env(safe-area-inset-right, 0px))",
+            }}
           >
             {/* Pulsing Label Pill when media detected */}
             {detectedMediaUrl && (

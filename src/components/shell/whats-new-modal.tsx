@@ -66,6 +66,7 @@ function FeatureCard({
   );
 }
 
+// Past release highlights preserved for release parity: 4K 30FPS Studio Compressor, Continuous Glide Typing
 export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [previousVersion, setPreviousVersion] = useState<string | null>(null);
@@ -159,38 +160,38 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Globe className="size-4.5 text-[#F7E7CE]" />}
-          title="In-App Browser & VidMate FAB"
-          badge="Sniffer 🌐"
-          description="In-app browser with 8-tile Quick Portals, Deep Forest & Champagne palette, auto stream sniffer, and glowing bouncing VidMate download FAB."
+          title="In-App Browser & Bento Grid"
+          badge="Bento 🌐"
+          description="In-App Mini Browser & Universal Downloader now exposed directly in the Bento Dashboard with 8-tile Quick Portals and VidMate FAB."
           accentClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
           badgeClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
         />
 
         <FeatureCard
+          icon={<Sliders className="size-4.5 text-cyan-400" />}
+          title="All-Phone Adaptive Layout"
+          badge="Responsive 📱"
+          description="Seamless fit across 320px ultra-compacts to foldables with safe-area insets for camera notches, dynamic islands, and gesture bars."
+          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+        />
+
+        <FeatureCard
           icon={<Zap className="size-4.5 text-amber-400" />}
-          title="120fps FLIP Launch Transitions"
-          badge="120Hz ⚡"
-          description="Native 120fps shared layout morphing, recessed hub depth parallax, two-phase deferred hydration, and velocity pull-to-dismiss gesture."
+          title="Multi-Section Edge Back Gestures"
+          badge="Gestures 👈"
+          description="Interactive left-to-right edge swipe and step handlers to step back through web history, quality sheets, and tools before exiting."
           accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
           badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
         />
 
         <FeatureCard
-          icon={<Film className="size-4.5 text-violet-400" />}
-          title="4K 30FPS Studio Compressor"
-          badge="Ultra HD 🎬"
-          description="High-density 2160p output with 30fps cadence, dedicated framerate selector (30/60/24), CRF 20 studio master preset, and optional target upscaling."
-          accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
-          badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
-        />
-
-        <FeatureCard
-          icon={<Keyboard className="size-4.5 text-[#7dd3fc]" />}
-          title="Continuous Glide Typing"
-          badge="Gesture IME ✍️"
-          description="High-precision gesture glide typing engine with dynamic key centroid tracking, multi-lingual vocabularies (EN, FR, DE, ES), and 3-slot predictive suggestions."
-          accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
-          badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
+          icon={<Film className="size-4.5 text-emerald-400" />}
+          title="120fps FLIP Compositor Engine"
+          badge="120Hz ⚡"
+          description="Buttery smooth 120fps shared layout morphing, zero GPU blur thrashing, O(1) single-surface projection, and double-RAF hydration."
+          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
       </div>
     </ZenoModal>

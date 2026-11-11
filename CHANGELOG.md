@@ -5,6 +5,21 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.19] — 2026-11-11
+
+### 🌐 In-App Browser & Universal Downloader Bento Grid Exposure
+- **Bento Grid Registration (`registry.ts`)**: Exposed `in-app-browser` ("In-App Browser & Sniffer") and re-registered `youtube-downloader` ("Universal Media Downloader") directly in the dashboard grid.
+- **Router Unblocking (`nav-store.ts`, `app-shell.tsx`)**: Removed legacy suppression logic, enabling instant FLIP launch transitions and code-split lazy loading into both tools from the Bento dashboard.
+
+### 📱 Universal Mobile Phone Layout Fit (All Form Factors)
+- **Safe-Area Inset Handling (`tool-launch-shell.tsx`)**: Added `pt-[calc(0.75rem+env(safe-area-inset-top,0px))]` for camera notches, dynamic islands, and status bars, and `pb-[calc(1rem+env(safe-area-inset-bottom,0px))]` for system navigation gesture pills.
+- **Responsive Screen Adaptation (`tool-grid.tsx`, `mini-browser-view.tsx`)**: Engineered 2-column compact grid fitting 320px–360px phones without horizontal overflow, dynamic `100dvh` viewport heights, and safe-margin calculation for the pulsing VidMate FAB.
+
+### 👈 Multi-Section Mobile Edge Back Gestures
+- **Interactive Left Edge Swipe (`use-edge-swipe-back.ts`)**: Touch listener detecting swipes within 40px of the screen edge (`clientX <= 40px`, threshold 75px or velocity > 0.4px/ms) with haptic feedback tick and visual edge indicator.
+- **Hierarchical Step Handlers (`mini-browser-view.tsx`, `youtube-downloader.tsx`)**: Stepping back through web browsing history and sub-sections (closing quality sheets, returning to link mode, clearing search results) before collapsing to the dashboard.
+- **Android Hardware Back Button Unification**: Fixed `ToolLaunchShell` back listener to call `useNavStore.getState().handleBack()`, preserving modals, sheets, and unsaved work guards.
+
 ## [1.0.18] — 2026-11-11
 
 ### 🌐 In-App Mini Browser & Floating VidMate Download FAB

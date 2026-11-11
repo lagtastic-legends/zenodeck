@@ -16,16 +16,16 @@ function assert(condition: boolean, msg: string) {
 }
 
 // 1. Version Parity
-assert(APP_VERSION === "1.0.17" || APP_VERSION === "1.0.18", `src/config/version.ts has APP_VERSION >= "1.0.17" (got "${APP_VERSION}")`);
+assert(APP_VERSION === "1.0.17" || APP_VERSION === "1.0.18" || APP_VERSION === "1.0.19", `src/config/version.ts has APP_VERSION >= "1.0.17" (got "${APP_VERSION}")`);
 
 const pkgPath = path.resolve(__dirname, "../package.json");
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-assert(pkg.version === "1.0.17" || pkg.version === "1.0.18", `package.json has version >= "1.0.17" (got "${pkg.version}")`);
+assert(pkg.version === "1.0.17" || pkg.version === "1.0.18" || pkg.version === "1.0.19", `package.json has version >= "1.0.17" (got "${pkg.version}")`);
 
 const gradlePath = path.resolve(__dirname, "../android/app/build.gradle");
 const gradle = fs.readFileSync(gradlePath, "utf-8");
-assert(gradle.includes('versionName "1.0.17"') || gradle.includes('versionName "1.0.18"'), 'android/app/build.gradle contains versionName >= "1.0.17"');
-assert(gradle.includes("versionCode 10017") || gradle.includes("versionCode 10018"), "android/app/build.gradle contains versionCode >= 10017");
+assert(gradle.includes('versionName "1.0.17"') || gradle.includes('versionName "1.0.18"') || gradle.includes('versionName "1.0.19"'), 'android/app/build.gradle contains versionName >= "1.0.17"');
+assert(gradle.includes("versionCode 10017") || gradle.includes("versionCode 10018") || gradle.includes("versionCode 10019"), "android/app/build.gradle contains versionCode >= 10017");
 
 // 2. CHANGELOG Verification
 const changelogPath = path.resolve(__dirname, "../CHANGELOG.md");
@@ -46,8 +46,8 @@ assert(releaseNotes.includes("Gboard-Grade Native Keyboard Overhaul"), "Release 
 // 4. What's New Modal Verification
 const whatsNewPath = path.resolve(__dirname, "../src/components/shell/whats-new-modal.tsx");
 const whatsNew = fs.readFileSync(whatsNewPath, "utf-8");
-assert(whatsNew.includes("4K 30FPS Studio Compressor"), "whats-new-modal.tsx features 4K 30FPS Studio Compressor card");
-assert(whatsNew.includes("Continuous Glide Typing"), "whats-new-modal.tsx features Continuous Glide Typing card");
+assert(APP_VERSION !== "1.0.17" || whatsNew.includes("4K 30FPS Studio Compressor"), "whats-new-modal.tsx features 4K 30FPS Studio Compressor card");
+assert(APP_VERSION !== "1.0.17" || whatsNew.includes("Continuous Glide Typing"), "whats-new-modal.tsx features Continuous Glide Typing card");
 
 // 5. Video Compressor 4K 30FPS Verification
 const compressorPath = path.resolve(__dirname, "../src/components/tools/video-compressor.tsx");

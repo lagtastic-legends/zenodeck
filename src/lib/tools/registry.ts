@@ -32,6 +32,8 @@ import {
   Waves,
   Scissors,
   Sparkles,
+  Globe,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 
@@ -70,6 +72,28 @@ export const CATEGORY_ORDER: ToolCategory[] = [
  */
 export const TOOL_REGISTRY: ToolMeta[] = [
   /* ---------------- PHASE 2 — Video & Visual Engine ---------------- */
+  {
+    id: "in-app-browser",
+    name: "In-App Browser & Sniffer",
+    description: "Browse any website, sniff 4K video & audio streams, and download via floating VidMate FAB.",
+    category: "studio",
+    icon: Globe,
+    phase: 2,
+    status: "online",
+    accent: "cyan",
+    requiresEngine: false,
+  },
+  {
+    id: "youtube-downloader",
+    name: "Universal Media Downloader",
+    description: "Download 4K videos & audio from YouTube, TikTok, Instagram, X/Twitter, and Reddit.",
+    category: "video",
+    icon: Download,
+    phase: 2,
+    status: "online",
+    accent: "red",
+    requiresEngine: true,
+  },
   {
     id: "video-converter",
     name: "Video Converter",

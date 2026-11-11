@@ -9,8 +9,10 @@ import {
   animate,
   type PanInfo,
 } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, ChevronLeft } from "lucide-react";
 import { App as CapacitorApp } from "@capacitor/app";
+import { useNavStore } from "@/lib/navigation/nav-store";
+import { useEdgeSwipeBack } from "@/hooks/use-edge-swipe-back";
 import {
   APP_LAUNCH_SPRING,
   WORKSPACE_HYDRATE_TRANSITION,
@@ -41,6 +43,14 @@ export function ToolLaunchShell({
   children,
 }: ToolLaunchShellProps) {
   const [isWorkspaceHydrated, setIsWorkspaceHydrated] = useState(false);
+
+  // Left-to-right mobile edge swipe gesture engine
+  const { swipeX, isSwiping, touchHandlers } = useEdgeSwipeBack({
+    enabled: Boolean(toolId),
+    onBack: () => {
+      void useNavStore.getState().handleBack();
+    },
+  });
 
   // Pull-to-dismiss motion values
   const dragY = useMotionValue(0);
@@ -74,7 +84,7 @@ export function ToolLaunchShell({
     return () => window.clearTimeout(timer);
   }, [toolId, dragY, triggerSmoothHydration]);
 
-  // Sub-Phase 4: Intercept Android Hardware Back Gesture via @capacitor/app
+  // Sub-Phase 4: Intercept Android Hardware Back Gesture via @capacitor/app & NavStack
   useEffect(() => {
     if (!toolId) return;
 
@@ -82,7 +92,7 @@ export function ToolLaunchShell({
     let isMounted = true;
 
     CapacitorApp.addListener("backButton", () => {
-      onClose();
+      void useNavStore.getState().handleBack();
     })
       .then((handle) => {
         if (isMounted) {
@@ -134,6 +144,7 @@ export function ToolLaunchShell({
           exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.16, ease: [0.32, 0.72, 0, 1] } }}
           onLayoutAnimationComplete={triggerSmoothHydration}
           onAnimationComplete={triggerSmoothHydration}
+          {...touchHandlers}
           style={{
             ...GPU_ACCELERATED_STYLE,
             scale: shellScale,
@@ -141,6 +152,21 @@ export function ToolLaunchShell({
           }}
           className="fixed inset-0 z-50 flex flex-col bg-[#090D0C] text-[#F7E7CE] overflow-hidden border border-[#A79277]/20"
         >
+          {/* Edge Swipe Back Chevron Indicator */}
+          <AnimatePresence>
+            {isSwiping && swipeX > 8 && (
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: Math.min(1, swipeX / 40), x: Math.min(swipeX * 0.4, 20) }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.1 }}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-[#102C26]/95 border border-[#F7E7CE]/40 text-[#F7E7CE] shadow-2xl backdrop-blur-md pointer-events-none"
+              >
+                <ChevronLeft className="h-6 w-6 animate-pulse" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Velocity Pull-to-Dismiss Header & Drag Pill */}
           <motion.header
             drag="y"
@@ -148,7 +174,7 @@ export function ToolLaunchShell({
             dragElastic={{ top: 0, bottom: 0.35 }}
             onDrag={handleHeaderDrag}
             onDragEnd={handleHeaderDragEnd}
-            className="relative z-20 flex flex-col select-none bg-[#102C26] border-b border-[#A79277]/20 px-4 pt-2 pb-3 touch-none"
+            className="relative z-20 flex flex-col select-none bg-[#102C26] border-b border-[#A79277]/20 px-3 sm:px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-3 touch-none"
           >
             {/* Tactile Pull Handle Pill */}
             <div className="mx-auto mb-2 h-1.5 w-11 rounded-full bg-[#A79277]/45" />
@@ -157,7 +183,7 @@ export function ToolLaunchShell({
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={() => void useNavStore.getState().handleBack()}
                   aria-label="Back to ZenoDeck Hub"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#090D0C]/60 border border-[#A79277]/30 text-[#F7E7CE] active:scale-95 transition-transform cursor-pointer"
                 >
@@ -193,7 +219,7 @@ export function ToolLaunchShell({
           </motion.header>
 
           {/* Two-Phase Deferred Hydration Body */}
-          <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="relative flex-1 overflow-y-auto overflow-x-hidden pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
             <AnimatePresence mode="sync">
               {!isWorkspaceHydrated ? (
                 <motion.div

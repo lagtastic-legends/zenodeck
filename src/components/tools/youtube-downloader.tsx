@@ -338,6 +338,39 @@ export function YouTubeDownloader() {
     };
   }, []);
 
+  // Multi-section step handler for hardware back & edge-swipe back navigation
+  useEffect(() => {
+    return useNavStore.getState().registerStepHandler(() => {
+      // 1. Close open sheets / modals first
+      if (isQualitySheetOpen) {
+        setIsQualitySheetOpen(false);
+        return true;
+      }
+      if (isPresetModalOpen) {
+        setIsPresetModalOpen(false);
+        return true;
+      }
+      // 2. Return from sub-views (subtitles, vault) to primary downloader
+      if (activeViewTab !== "downloader") {
+        setActiveViewTab("downloader");
+        return true;
+      }
+      // 3. In-app browser mode -> return to quick link mode
+      if (downloaderMode === "in-app-browser") {
+        setDownloaderMode("quick-link");
+        return true;
+      }
+      // 4. If viewing video details or results, clear back to input
+      if (videoInfo || downloadResult) {
+        setVideoInfo(null);
+        setDownloadResult(null);
+        setProgress(null);
+        return true;
+      }
+      return false; // let back bubble to close the tool
+    });
+  }, [isQualitySheetOpen, isPresetModalOpen, activeViewTab, downloaderMode, videoInfo, downloadResult]);
+
   // Handle Escape key and body scroll locking for subtitle transcript preview modal
   useEffect(() => {
     if (!isPreviewOpen) return;

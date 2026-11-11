@@ -70,6 +70,8 @@ const KeyboardDeckTool = lazy(() => import("@/components/tools/keyboard-deck-man
 const UnifiedAudioStudio = lazy(() => import("@/components/audio/UnifiedAudioStudio").then((m) => ({ default: m.UnifiedAudioStudio })));
 const AudioEffectsPanel = lazy(() => import("@/components/audio/AudioEffectsPanel").then((m) => ({ default: m.AudioEffectsPanel })));
 const MacroStudioView = lazy(() => import("@/components/macros/MacroStudioView").then((m) => ({ default: m.MacroStudioView })));
+const MiniBrowserView = lazy(() => import("@/components/tools/mini-browser-view").then((m) => ({ default: m.MiniBrowserView })));
+const YouTubeDownloader = lazy(() => import("@/components/tools/youtube-downloader").then((m) => ({ default: m.YouTubeDownloader })));
 
 const AudioDspTool = () => <UnifiedAudioStudio initialToolId="spatial-8d" />;
 const VocalRemoverTool = () => <UnifiedAudioStudio initialToolId="vocal-remover" />;
@@ -116,6 +118,8 @@ function ToolSkeleton() {
 
 /** tool id → module implementation (grows every phase) */
 const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
+  "in-app-browser": MiniBrowserView,
+  "youtube-downloader": YouTubeDownloader,
   "video-converter": MediaConverter,
   "video-compressor": VideoCompressor,
   "video-mute": VideoMute,
