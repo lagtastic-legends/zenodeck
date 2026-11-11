@@ -158,6 +158,24 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
+          icon={<Globe className="size-4.5 text-[#F7E7CE]" />}
+          title="In-App Browser & VidMate FAB"
+          badge="Sniffer 🌐"
+          description="In-app browser with 8-tile Quick Portals, Deep Forest & Champagne palette, auto stream sniffer, and glowing bouncing VidMate download FAB."
+          accentClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
+          badgeClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
+        />
+
+        <FeatureCard
+          icon={<Zap className="size-4.5 text-amber-400" />}
+          title="120fps FLIP Launch Transitions"
+          badge="120Hz ⚡"
+          description="Native 120fps shared layout morphing, recessed hub depth parallax, two-phase deferred hydration, and velocity pull-to-dismiss gesture."
+          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
+        />
+
+        <FeatureCard
           icon={<Film className="size-4.5 text-violet-400" />}
           title="4K 30FPS Studio Compressor"
           badge="Ultra HD 🎬"
@@ -173,24 +191,6 @@ export function WhatsNewModal() {
           description="High-precision gesture glide typing engine with dynamic key centroid tracking, multi-lingual vocabularies (EN, FR, DE, ES), and 3-slot predictive suggestions."
           accentClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
           badgeClass="bg-sky-500/15 text-[#7dd3fc] border border-sky-400/30"
-        />
-
-        <FeatureCard
-          icon={<Headphones className="size-4.5 text-cyan-400" />}
-          title="20-Module Audio Studio"
-          badge="Pro Sound 🎧"
-          description="Sample-accurate waveform trimming, interactive audio splicing, 5-tier bass boost, modular FX rack, ringtone creator, and spatial 8D audio engine running in real-time Web Audio."
-          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-400/30"
-          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-400/30"
-        />
-
-        <FeatureCard
-          icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
-          title="Storage & Memory Tuned"
-          badge="Optimized ⚡"
-          description="Reclaimed 5.2 GB storage, zero-dependency SVG assets, hardened WebAssembly memory bounds, and zero-telemetry 100% on-device client processing."
-          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
       </div>
     </ZenoModal>

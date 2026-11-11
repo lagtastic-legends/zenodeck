@@ -5,6 +5,15 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.18] — 2026-11-11
+
+### 🌐 In-App Mini Browser & Floating VidMate Download FAB
+- **In-App Mini Browser & Omnibox Strip (`mini-browser-view.tsx`)**: Upgraded browser view with URL normalization, DuckDuckGo search fallback, navigation controls, and 8-tile Quick Site Portal Grid (YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, SoundCloud).
+- **Deep Forest & Champagne Palette Styling**: Styled container, omnibox, quick portals, and status strip using ZenoDeck's signature Deep Forest Green (`#102C26`), Champagne (`#F7E7CE`), Donkey Brown (`#A79277`), and Obsidian (`#090D0C`) palette.
+- **Pulsing VidMate-Style Download Action Button (FAB)**: Persistent action button in bottom-right corner (`bottom-5 right-5 z-30`) with glowing Forest & Champagne pulse (`bg-[#102C26] text-[#F7E7CE] border-2 border-[#F7E7CE] ring-4 ring-emerald-500/35 animate-bounce`) reading `⚡ Download Video / MP3` when streaming media is detected.
+- **Direct VidMate Quality Sheet Handoff (`youtube-downloader.tsx`)**: Tapping the FAB automatically sets the detected media URL, triggers format resolution, and opens `<VidMateQualitySheet />`.
+- **Native Android WebView OG & Video Sniffer (`ZenoMedia3Plugin.kt`, `native-media-muxer.ts`)**: Upgraded native headless and in-app WebView stream sniffing to extract `ogTitle`, `ogImage`, and `directVideoSrc` on `onPageFinished`.
+
 ## [1.0.17] — 2026-11-11
 
 ### 🚀 120fps Native FLIP App-Launch Transitions & Recessed Hub Parallax

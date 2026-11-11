@@ -27,9 +27,12 @@ import { isNativeAndroidPlatform, ZenoMedia3 } from "@/lib/media/native-media-mu
 import { detectPlatform, PLATFORM_CONFIGS } from "@/lib/media/detector";
 
 export interface MiniBrowserViewProps {
-  onMediaSelect: (url: string) => void;
-  onDownloadDetected: (url: string) => void;
+  initialUrl?: string;
   activeUrl?: string;
+  onMediaSelect?: (url: string) => void;
+  onSelectMediaUrl?: (url: string, title?: string) => void;
+  onDownloadDetected?: (url: string) => void;
+  onTriggerVidMateSheet?: (url: string, title?: string) => void;
 }
 
 interface BookmarkItem {
@@ -127,17 +130,21 @@ const QUICK_PORTALS: BookmarkItem[] = [
 ];
 
 export function MiniBrowserView({
-  onMediaSelect,
-  onDownloadDetected,
+  initialUrl,
   activeUrl,
+  onMediaSelect,
+  onSelectMediaUrl,
+  onDownloadDetected,
+  onTriggerVidMateSheet,
 }: MiniBrowserViewProps) {
   const haptics = useHaptics();
 
+  const startUrl = initialUrl || activeUrl || "";
   // Navigation State
-  const [currentUrl, setCurrentUrl] = useState<string>(activeUrl || "");
-  const [inputUrl, setInputUrl] = useState<string>(activeUrl || "");
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [currentUrl, setCurrentUrl] = useState<string>(startUrl);
+  const [inputUrl, setInputUrl] = useState<string>(startUrl);
+  const [history, setHistory] = useState<string[]>(startUrl ? [startUrl] : []);
+  const [historyIndex, setHistoryIndex] = useState<number>(startUrl ? 0 : -1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [pageTitle, setPageTitle] = useState<string>("");
@@ -284,8 +291,10 @@ export function MiniBrowserView({
     const target = detectedMediaUrl || currentUrl;
     if (!target) return;
     void haptics.medium();
-    onMediaSelect(target);
-    onDownloadDetected(target);
+    onMediaSelect?.(target);
+    onSelectMediaUrl?.(target, pageTitle);
+    onDownloadDetected?.(target);
+    onTriggerVidMateSheet?.(target, pageTitle);
   };
 
   // Listen for native media sniffing events from ZenoMedia3Plugin
@@ -308,9 +317,9 @@ export function MiniBrowserView({
   }, [checkForDownloadableMedia]);
 
   return (
-    <div className="relative flex flex-col w-full h-[640px] sm:h-[700px] rounded-2xl border border-border/80 bg-background/95 shadow-elevation1 overflow-hidden">
+    <div className="relative flex flex-col w-full h-[640px] sm:h-[700px] rounded-2xl border border-[#A79277]/30 bg-[#090D0C]/95 shadow-elevation1 overflow-hidden">
       {/* 1. Browser Top Omnibox & Navigation Strip */}
-      <div className="flex flex-col border-b border-border/70 bg-card/70 backdrop-blur-md shrink-0">
+      <div className="flex flex-col border-b border-[#A79277]/30 bg-[#102C26]/40 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-1.5 p-2 sm:p-2.5">
           {/* Navigation Controls */}
           <div className="flex items-center gap-0.5 shrink-0">
@@ -318,7 +327,7 @@ export function MiniBrowserView({
               type="button"
               onClick={handleGoBack}
               disabled={historyIndex <= 0}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/70 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+              className="p-1.5 rounded-lg text-[#F7E7CE]/70 hover:text-[#F7E7CE] hover:bg-[#102C26]/80 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
               title="Back"
             >
               <ArrowLeft className="size-4" />
@@ -328,7 +337,7 @@ export function MiniBrowserView({
               type="button"
               onClick={handleGoForward}
               disabled={historyIndex >= history.length - 1}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/70 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+              className="p-1.5 rounded-lg text-[#F7E7CE]/70 hover:text-[#F7E7CE] hover:bg-[#102C26]/80 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
               title="Forward"
             >
               <ArrowRight className="size-4" />
@@ -338,10 +347,10 @@ export function MiniBrowserView({
               type="button"
               onClick={handleReload}
               disabled={!currentUrl}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/70 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
+              className="p-1.5 rounded-lg text-[#F7E7CE]/70 hover:text-[#F7E7CE] hover:bg-[#102C26]/80 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
               title="Reload"
             >
-              <RotateCcw className={`size-3.5 ${isLoading ? "animate-spin text-primary" : ""}`} />
+              <RotateCcw className={`size-3.5 ${isLoading ? "animate-spin text-[#F7E7CE]" : ""}`} />
             </button>
 
             <button
@@ -349,8 +358,8 @@ export function MiniBrowserView({
               onClick={handleGoHome}
               className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                 !currentUrl
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
+                  ? "bg-[#102C26] text-[#F7E7CE] border border-[#F7E7CE]/30"
+                  : "text-[#F7E7CE]/70 hover:text-[#F7E7CE] hover:bg-[#102C26]/80"
               }`}
               title="Browser Home"
             >
@@ -360,11 +369,11 @@ export function MiniBrowserView({
 
           {/* Omnibox URL Form */}
           <form onSubmit={handleSubmitUrl} className="flex-1 relative flex items-center min-w-0">
-            <div className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-muted-foreground">
+            <div className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-[#A79277]">
               {currentUrl.startsWith("https://") ? (
                 <ShieldCheck className="size-3.5 text-emerald-400" />
               ) : (
-                <Search className="size-3.5 text-primary" />
+                <Search className="size-3.5 text-[#F7E7CE]" />
               )}
             </div>
 
@@ -373,7 +382,7 @@ export function MiniBrowserView({
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               placeholder="Search or enter web address (e.g. youtube.com, tiktok.com)…"
-              className="w-full h-8 sm:h-9 pl-8 pr-16 rounded-xl border border-border/80 bg-background/80 font-mono text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary/40 transition-all truncate"
+              className="w-full h-8 sm:h-9 pl-8 pr-16 rounded-xl border border-[#A79277]/40 bg-[#090D0C]/80 font-mono text-xs text-[#F7E7CE] placeholder:text-[#A79277]/60 focus:border-[#F7E7CE] focus:outline-hidden focus:ring-1 focus:ring-[#F7E7CE]/40 transition-all truncate"
             />
 
             <div className="absolute right-1.5 flex items-center gap-1">
@@ -384,7 +393,7 @@ export function MiniBrowserView({
                     setInputUrl("");
                     void haptics.light();
                   }}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer"
+                  className="p-1 rounded-md text-[#A79277] hover:text-[#F7E7CE] hover:bg-[#102C26] transition-all cursor-pointer"
                   title="Clear"
                 >
                   <X className="size-3.5" />
@@ -393,7 +402,7 @@ export function MiniBrowserView({
 
               <button
                 type="submit"
-                className="px-2 py-1 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-mono text-[10px] font-bold uppercase transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#102C26] hover:bg-[#102C26]/90 text-[#F7E7CE] border border-[#A79277]/40 font-mono text-[10px] font-bold uppercase transition-all cursor-pointer"
                 title="Navigate"
               >
                 Go
@@ -404,12 +413,12 @@ export function MiniBrowserView({
 
         {/* Live Loading Progress Bar */}
         {isLoading && (
-          <div className="w-full h-0.5 bg-secondary overflow-hidden">
+          <div className="w-full h-0.5 bg-[#102C26] overflow-hidden">
             <motion.div
               initial={{ width: "0%" }}
               animate={{ width: `${loadingProgress}%` }}
               transition={{ ease: "easeInOut", duration: 0.2 }}
-              className="h-full bg-gradient-to-r from-primary via-emerald-400 to-cyan-400"
+              className="h-full bg-gradient-to-r from-[#102C26] via-[#A79277] to-[#F7E7CE]"
             />
           </div>
         )}
@@ -421,14 +430,14 @@ export function MiniBrowserView({
         {!currentUrl ? (
           <div className="w-full h-full p-4 sm:p-6 overflow-y-auto space-y-5">
             <div className="text-center space-y-1.5 pt-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary font-mono text-[11px] font-semibold">
-                <Globe className="size-3.5 animate-spin" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#A79277]/40 bg-[#102C26]/60 text-[#F7E7CE] font-mono text-[11px] font-semibold">
+                <Globe className="size-3.5 animate-spin text-[#F7E7CE]" />
                 <span>In-App Mini Browser & Stream Sniffer</span>
               </div>
-              <h3 className="font-display text-lg sm:text-xl font-bold text-foreground">
+              <h3 className="font-display text-lg sm:text-xl font-bold text-[#F7E7CE]">
                 Browse, Sniff & Download Media
               </h3>
-              <p className="font-mono text-xs text-muted-foreground max-w-md mx-auto">
+              <p className="font-mono text-xs text-[#A79277] max-w-md mx-auto">
                 Visit video sites directly. The floating VidMate action button will detect streaming media and open quality options automatically.
               </p>
             </div>
@@ -440,7 +449,7 @@ export function MiniBrowserView({
                   key={portal.id}
                   type="button"
                   onClick={() => navigateTo(portal.url)}
-                  className={`group relative flex flex-col justify-between p-3.5 rounded-2xl border border-border/70 bg-gradient-to-br ${portal.gradient} hover:border-primary/50 hover:bg-card/90 transition-all duration-200 cursor-pointer text-left shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98]`}
+                  className={`group relative flex flex-col justify-between p-3.5 rounded-2xl border border-[#A79277]/30 bg-gradient-to-br from-[#102C26]/60 via-[#090D0C]/80 to-[#102C26]/30 hover:border-[#F7E7CE]/50 hover:bg-[#102C26]/80 transition-all duration-200 cursor-pointer text-left shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98]`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div
@@ -450,16 +459,16 @@ export function MiniBrowserView({
                       {portal.iconText}
                     </div>
 
-                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-background/80 border border-border/60 text-muted-foreground group-hover:text-primary transition-colors">
+                    <span className="font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-[#090D0C]/80 border border-[#A79277]/30 text-[#A79277] group-hover:text-[#F7E7CE] transition-colors">
                       {portal.badge}
                     </span>
                   </div>
 
                   <div>
-                    <h4 className="font-display text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                    <h4 className="font-display text-xs sm:text-sm font-bold text-[#F7E7CE] group-hover:text-[#F7E7CE] transition-colors truncate">
                       {portal.name}
                     </h4>
-                    <p className="font-mono text-[10px] text-muted-foreground truncate">
+                    <p className="font-mono text-[10px] text-[#A79277] truncate">
                       {portal.category}
                     </p>
                   </div>
@@ -484,16 +493,16 @@ export function MiniBrowserView({
 
             {/* Desktop Notice Banner */}
             {!isNativeAndroidPlatform() && (
-              <div className="absolute top-2 left-2 right-2 p-2 rounded-xl border border-primary/30 bg-background/90 backdrop-blur-md flex items-center justify-between text-[11px] font-mono text-muted-foreground shadow-sm">
+              <div className="absolute top-2 left-2 right-2 p-2 rounded-xl border border-[#A79277]/30 bg-[#090D0C]/90 backdrop-blur-md flex items-center justify-between text-[11px] font-mono text-[#A79277] shadow-sm">
                 <span className="truncate">
-                  Browsing: <strong className="text-foreground">{currentUrl}</strong>
+                  Browsing: <strong className="text-[#F7E7CE]">{currentUrl}</strong>
                 </span>
                 <button
                   type="button"
                   onClick={() => window.open(currentUrl, "_blank")}
-                  className="flex items-center gap-1 text-primary hover:underline shrink-0 ml-2"
+                  className="flex items-center gap-1 text-[#F7E7CE] hover:underline shrink-0 ml-2 cursor-pointer"
                 >
-                  <ExternalLink className="size-3" />
+                  <ExternalLink className="size-3 text-[#A79277]" />
                   <span>Open Tab</span>
                 </button>
               </div>
@@ -510,16 +519,16 @@ export function MiniBrowserView({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0, opacity: 0, y: 20 }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="absolute bottom-4 right-4 z-50 flex items-center gap-2"
+            className="absolute bottom-5 right-5 z-30 flex items-center gap-2"
           >
             {/* Pulsing Label Pill when media detected */}
             {detectedMediaUrl && (
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 backdrop-blur-md shadow-lg font-mono text-xs font-bold"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#F7E7CE]/40 bg-[#102C26] text-[#F7E7CE] backdrop-blur-md shadow-lg font-mono text-xs font-bold"
               >
-                <Sparkles className="size-3.5 animate-pulse text-emerald-400" />
+                <Sparkles className="size-3.5 animate-pulse text-[#F7E7CE]" />
                 <span>⚡ {detectedMediaPlatform || "Media"} Ready</span>
               </motion.div>
             )}
@@ -528,22 +537,25 @@ export function MiniBrowserView({
             <button
               type="button"
               onClick={handleFloatingActionDownload}
-              className={`relative group size-14 sm:size-16 rounded-full text-white shadow-xl active:scale-95 transition-all duration-300 flex items-center justify-center cursor-pointer border-2 ${
+              className={`relative group h-14 sm:h-16 px-5 sm:px-6 rounded-full shadow-2xl active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
                 detectedMediaUrl
-                  ? "bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 border-white/40 shadow-red-500/50 hover:shadow-red-500/70 scale-105 sm:scale-110 ring-4 ring-primary/40 animate-pulse"
-                  : "bg-card/80 backdrop-blur-md border-border/80 text-muted-foreground hover:text-foreground hover:bg-card shadow-black/40 opacity-80 hover:opacity-100"
+                  ? "bg-[#102C26] text-[#F7E7CE] border-2 border-[#F7E7CE] ring-4 ring-emerald-500/35 animate-bounce shadow-emerald-950/60"
+                  : "bg-[#102C26]/80 backdrop-blur-md border border-[#A79277]/40 text-[#F7E7CE]/80 hover:text-[#F7E7CE] hover:border-[#F7E7CE]/50 shadow-black/40"
               }`}
               title={detectedMediaUrl ? "Download Detected Media" : "Sniff Media on Current Page"}
             >
               {/* Pulsing Concentric Ring when Media is Detected */}
               {detectedMediaUrl && (
-                <span className="absolute -inset-1.5 rounded-full bg-red-500/30 animate-ping opacity-75 pointer-events-none" />
+                <span className="absolute -inset-1.5 rounded-full bg-[#102C26]/40 ring-2 ring-[#F7E7CE]/30 animate-ping opacity-75 pointer-events-none" />
               )}
 
-              <div className="relative flex flex-col items-center justify-center">
-                <Download className={`size-6 sm:size-7 ${detectedMediaUrl ? "text-white" : "text-primary"} group-hover:translate-y-0.5 transition-transform`} />
-                <span className="font-mono text-[9px] font-extrabold uppercase tracking-tighter mt-0.5">
-                  {detectedMediaUrl ? "VIDMATE" : "SNIFF"}
+              <Download className={`size-5 sm:size-6 ${detectedMediaUrl ? "text-[#F7E7CE] animate-pulse" : "text-[#A79277]"} group-hover:translate-y-0.5 transition-transform`} />
+              <div className="flex flex-col items-start leading-none text-left">
+                <span className="font-mono text-[11px] sm:text-xs font-extrabold uppercase tracking-tight text-[#F7E7CE]">
+                  {detectedMediaUrl ? "⚡ Download Video / MP3" : "Sniff Media"}
+                </span>
+                <span className="font-mono text-[8px] text-[#A79277] font-semibold mt-0.5">
+                  {detectedMediaUrl ? "VidMate Pro Engine" : "VIDMATE"}
                 </span>
               </div>
             </button>

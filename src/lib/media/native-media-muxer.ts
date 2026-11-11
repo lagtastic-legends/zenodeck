@@ -48,6 +48,9 @@ export interface ZenoMedia3PluginInterface {
     streamUrls?: string[];
     userAgent?: string;
     playerResponseJson?: string;
+    ogTitle?: string;
+    ogImage?: string;
+    directVideoSrc?: string;
     error?: string;
   }>;
   openInAppBrowser(options: { url: string }): Promise<{ success: boolean }>;
@@ -335,6 +338,9 @@ export async function sniffStreamViaWebView(url: string): Promise<{
   streamUrls?: string[];
   userAgent?: string;
   playerResponseJson?: string;
+  ogTitle?: string;
+  ogImage?: string;
+  directVideoSrc?: string;
   error?: string;
 }> {
   if (!isNativeAndroidPlatform()) {

@@ -1357,7 +1357,7 @@ export function YouTubeDownloader() {
       {activeViewTab === "downloader" && (
         <div className="space-y-4">
           {/* Dual Downloader Mode Toggle: Quick Link vs In-App Browser */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl border border-border/70 bg-card/60 w-full sm:w-auto sm:inline-flex shadow-xs">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl border border-[#A79277]/30 bg-[#090D0C]/80 w-full sm:w-auto sm:inline-flex shadow-xs">
             <button
               type="button"
               onClick={() => {
@@ -1366,12 +1366,12 @@ export function YouTubeDownloader() {
               }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
                 downloaderMode === "quick-link"
-                  ? "bg-primary/20 text-primary border border-primary/40 shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-[#102C26] text-[#F7E7CE] border border-[#F7E7CE]/40 shadow-xs"
+                  : "text-[#A79277] hover:text-[#F7E7CE]"
               }`}
             >
-              <Zap className="size-3.5" />
-              <span>Quick Link / Paste</span>
+              <Zap className="size-3.5 text-[#F7E7CE]" />
+              <span>🔗 Paste Link</span>
             </button>
 
             <button
@@ -1382,13 +1382,13 @@ export function YouTubeDownloader() {
               }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
                 downloaderMode === "in-app-browser"
-                  ? "bg-gradient-to-r from-red-600/25 via-rose-500/20 to-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-[#102C26] text-[#F7E7CE] border border-[#F7E7CE]/40 shadow-xs"
+                  : "text-[#A79277] hover:text-[#F7E7CE]"
               }`}
             >
-              <Globe className="size-3.5 text-amber-400" />
-              <span>In-App Browser</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/25 text-[9px] font-bold text-amber-300 border border-amber-500/30">
+              <Globe className="size-3.5 text-[#F7E7CE]" />
+              <span>🌐 In-App Browser</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-[#102C26] text-[9px] font-bold text-[#F7E7CE] border border-[#F7E7CE]/30">
                 FAB Sniffer
               </span>
             </button>
@@ -1397,9 +1397,15 @@ export function YouTubeDownloader() {
           {downloaderMode === "in-app-browser" ? (
             <MiniBrowserView
               activeUrl={inputUrl}
+              initialUrl={inputUrl}
               onMediaSelect={(url) => setInputUrl(url)}
               onDownloadDetected={(url) => {
                 setInputUrl(url);
+                void handleResolve(url);
+              }}
+              onTriggerVidMateSheet={(url) => {
+                setInputUrl(url);
+                setIsQualitySheetOpen(true);
                 void handleResolve(url);
               }}
             />

@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.17">
-    <img src="https://img.shields.io/badge/Release-v1.0.17-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.17" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.18">
+    <img src="https://img.shields.io/badge/Release-v1.0.18-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.18" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.17/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,16 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.18 (In-App Mini Browser, Forest & Champagne VidMate FAB & WebView OG Sniffer)
+
+- **In-App Mini Browser & Omnibox Strip:** Embedded web browsing suite with URL normalization, DuckDuckGo search fallback, navigation controls, and 8-tile Quick Site Portal Grid (YouTube, TikTok, Instagram, Facebook, X/Twitter, Reddit, Vimeo, SoundCloud).
+- **Deep Forest & Champagne Palette Styling:** Fully refactored interface styled with ZenoDeck's signature Deep Forest Green (`#102C26`), Champagne (`#F7E7CE`), Donkey Brown (`#A79277`), and Obsidian (`#090D0C`) palette.
+- **Pulsing VidMate-Style Download Action Button (FAB):** Persistent action button in the bottom-right corner (`bottom-5 right-5 z-30`) that glows and bounces (`bg-[#102C26] text-[#F7E7CE] border-2 border-[#F7E7CE] ring-4 ring-emerald-500/35 animate-bounce`) reading `⚡ Download Video / MP3` when streaming media is detected.
+- **Direct VidMate Quality Sheet Handoff:** Tapping the FAB automatically resolves page metadata and triggers `<VidMateQualitySheet />` for instant multi-format audio and video downloads.
+- **Native Android WebView OG & Video Sniffer:** Enhanced native bridge in `ZenoMedia3Plugin.kt` extracting `ogTitle`, `ogImage`, and `directVideoSrc` directly on `onPageFinished`.
 
 ---
 
@@ -98,16 +108,16 @@ ZenoDeck v1.0.12 delivers a ground-up architectural overhaul of the entire 20-mo
 
 ---
 
-## 🚀 Download & Installation (v1.0.17)
+## 🚀 Download & Installation (v1.0.18)
 
 All release binaries are signed with release keys, shrunk with ProGuard/R8, and ready for installation:
 
 | Platform / Target | Download Link | Target Device | Binary Size |
 | :--- | :--- | :--- | :--- |
-| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.17/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~72.8 MB** |
-| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.17/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~45.9 MB** |
-| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.17/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~41.3 MB** |
-| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.17/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~47.2 MB** |
+| **📱 Universal Android APK** | [**app-universal-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-universal-release.apk) | All Android Phones & Tablets (ARM64, ARMv7, x86_64) | **~72.8 MB** |
+| **⚡ ARM64-v8a APK** | [**app-arm64-v8a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-arm64-v8a-release.apk) | Modern 64-bit Android Phones (Pixel, Samsung, OnePlus) | **~45.9 MB** |
+| **📱 ARMv7a APK** | [**app-armeabi-v7a-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-armeabi-v7a-release.apk) | Legacy 32-bit Android Phones | **~41.3 MB** |
+| **💻 x86_64 APK** | [**app-x86_64-release.apk**](https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-x86_64-release.apk) | Android Tablets, Chromebooks & Emulators | **~47.2 MB** |
 | **🍏 Apple iOS Web Clip** | [**zenodeck.mobileconfig**](https://omni-tool-two.vercel.app/api/ios-profile) | iPhone & iPad (Standalone Fullscreen PWA) | **~0.1 MB** |
 | **🌐 Web Application** | [**omni-tool-two.vercel.app**](https://omni-tool-two.vercel.app) | Instant Browser Access (Desktop Chrome, Edge, Safari) | Cloud |
 

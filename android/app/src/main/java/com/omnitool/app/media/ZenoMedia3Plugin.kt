@@ -484,6 +484,9 @@ class ZenoMedia3Plugin : Plugin() {
                 val interceptedUrls = Collections.synchronizedList(mutableListOf<String>())
                 val isResolved = AtomicBoolean(false)
                 val timeoutHandler = Handler(Looper.getMainLooper())
+                var extractedOgTitle: String? = null
+                var extractedOgImage: String? = null
+                var extractedDirectVideoSrc: String? = null
 
                 webView.settings.apply {
                     javaScriptEnabled = true
@@ -503,6 +506,15 @@ class ZenoMedia3Plugin : Plugin() {
                             put("userAgent", webViewUa)
                             if (!finalJson.isNullOrBlank() && finalJson != "null" && finalJson != "\"null\"") {
                                 put("playerResponseJson", finalJson)
+                            }
+                            if (!extractedOgTitle.isNullOrBlank() && extractedOgTitle != "null") {
+                                put("ogTitle", extractedOgTitle)
+                            }
+                            if (!extractedOgImage.isNullOrBlank() && extractedOgImage != "null") {
+                                put("ogImage", extractedOgImage)
+                            }
+                            if (!extractedDirectVideoSrc.isNullOrBlank() && extractedDirectVideoSrc != "null") {
+                                put("directVideoSrc", extractedDirectVideoSrc)
                             }
                         }
                         call.resolve(res)
@@ -541,6 +553,36 @@ class ZenoMedia3Plugin : Plugin() {
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
+                        val metaScript = """
+                            (function() {
+                                try {
+                                    var ogT = document.querySelector('meta[property="og:title"]')?.content || document.title || "";
+                                    var ogI = document.querySelector('meta[property="og:image"]')?.content || "";
+                                    var vid = document.querySelector('video')?.src || document.querySelector('video source')?.src || "";
+                                    return JSON.stringify({ ogTitle: ogT, ogImage: ogI, directVideoSrc: vid });
+                                } catch(e) {
+                                    return null;
+                                }
+                            })()
+                        """.trimIndent()
+                        view?.evaluateJavascript(metaScript) { metaRes ->
+                            if (!metaRes.isNullOrBlank() && metaRes != "null" && metaRes != "\"null\"") {
+                                try {
+                                    val cleaned = if (metaRes.startsWith("\"") && metaRes.endsWith("\"")) {
+                                        JSONObject(org.json.JSONTokener(metaRes).nextValue().toString())
+                                    } else {
+                                        JSONObject(metaRes)
+                                    }
+                                    val t = cleaned.optString("ogTitle")
+                                    if (t.isNotBlank()) extractedOgTitle = t
+                                    val img = cleaned.optString("ogImage")
+                                    if (img.isNotBlank()) extractedOgImage = img
+                                    val v = cleaned.optString("directVideoSrc")
+                                    if (v.isNotBlank()) extractedDirectVideoSrc = v
+                                } catch (_: Throwable) {}
+                            }
+                        }
+
                         view?.evaluateJavascript("(function(){ try { return JSON.stringify(window.ytInitialPlayerResponse || null); } catch(e){ return null; } })()") { res ->
                             if (!res.isNullOrBlank() && res != "null" && res != "\"null\"") {
                                 timeoutHandler.postDelayed({
