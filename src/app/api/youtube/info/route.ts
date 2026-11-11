@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveYouTubeVideo, extractYouTubeId } from "@/lib/youtube/innertube";
+import { resolveYouTubeVideo, extractYouTubeId, resolveYouTubeWebFallback } from "@/lib/youtube/innertube";
 import { resolveMediaWithPython } from "@/lib/media/python-engine";
 import { extractTikTokMedia } from "@/lib/media/extractors/tiktok";
 import { extractTwitterMedia } from "@/lib/media/extractors/twitter";
@@ -261,8 +261,13 @@ async function handleResolve(urlOrId: string, clientIp?: string) {
     }
 
     default: {
-      if (platform === "youtube") {
-        return await resolveYouTubeVideo(urlOrId, clientIp);
+      if (platform === "youtube" || extractYouTubeId(urlOrId)) {
+        try {
+          return await resolveYouTubeVideo(urlOrId, clientIp);
+        } catch (ytFinalErr: any) {
+          console.warn("Direct resolve failed in route, invoking resolveYouTubeWebFallback:", ytFinalErr?.message);
+          return await resolveYouTubeWebFallback(urlOrId, ytFinalErr?.message);
+        }
       }
       throw new Error(
         `Unable to extract media for platform: ${platform}. Please check the URL or try again.`

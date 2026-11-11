@@ -211,6 +211,7 @@ export function YouTubeDownloader() {
   // Preset Selector Modal State
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [isQualitySheetOpen, setIsQualitySheetOpen] = useState(false);
+  const [isWebPlayerOpen, setIsWebPlayerOpen] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string>("smooth-1080p-mobile");
 
   const handleApplyDownloaderPreset = (preset: PresetItem) => {
@@ -616,6 +617,18 @@ export function YouTubeDownloader() {
             }
           } catch (directErr: any) {
             if (!lastErrorMessage) lastErrorMessage = directErr?.message || "";
+          }
+
+          if (!data || !data.videoId || !Array.isArray(data.qualities) || data.qualities.length === 0) {
+            try {
+              const { resolveYouTubeWebFallback } = await import("@/lib/youtube/innertube");
+              const webFallback = await resolveYouTubeWebFallback(videoId, lastErrorMessage);
+              if (webFallback && webFallback.videoId && Array.isArray(webFallback.qualities) && webFallback.qualities.length > 0) {
+                data = webFallback;
+              }
+            } catch (fbErr: any) {
+              if (!lastErrorMessage) lastErrorMessage = fbErr?.message || "";
+            }
           }
         }
       }
@@ -1547,7 +1560,7 @@ export function YouTubeDownloader() {
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-xs font-mono text-red-300 shadow-elevation1">
             <div className="flex items-start gap-3">
               <AlertCircle className="size-5 shrink-0 text-red-400 mt-0.5" />
-              <div className="space-y-1 flex-1 min-w-0">
+              <div className="space-y-2 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-display font-bold text-sm text-red-200">
                     {resolveError.toLowerCase().includes("bot") || resolveError.includes("LOGIN_REQUIRED")
@@ -1557,9 +1570,34 @@ export function YouTubeDownloader() {
                 </div>
                 <p className="text-xs text-red-200/80 leading-relaxed font-sans">
                   {resolveError.toLowerCase().includes("bot") || resolveError.includes("LOGIN_REQUIRED")
-                    ? "YouTube has restricted access for this video from the cloud. Please try a different quality tier or video."
+                    ? "YouTube has restricted access for this video from the cloud. Please try a different quality tier, use the In-App Mini Browser sniffer, or download the Android APK for unthrottled streaming."
                     : resolveError}
                 </p>
+
+                {/* Web Action Fallbacks */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDownloaderMode("in-app-browser");
+                      void haptics.light();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#F7E7CE]/40 bg-[#102C26] text-[#F7E7CE] font-mono text-xs font-semibold hover:bg-[#102C26]/80 transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <Globe className="size-3.5 text-[#F7E7CE]" />
+                    <span>🌐 Open in Mini Browser & Sniffer</span>
+                  </button>
+
+                  <a
+                    href="https://github.com/lagtastic-legends/zenodeck/releases/latest"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-semibold hover:bg-emerald-500/30 transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <Download className="size-3.5 text-emerald-400" />
+                    <span>📱 Get Android APK (8K 60FPS)</span>
+                  </a>
+                </div>
               </div>
               <button
                 type="button"
@@ -1913,6 +1951,68 @@ export function YouTubeDownloader() {
                     <span>🎬 Powered by yt-dlp Video Engine • Need MP3/M4A audio? Tap Convert Video to Audio right after downloading</span>
                   </div>
                 </div>
+
+                {/* Cloud Restriction Notice & Web Player Console for Web App */}
+                {videoInfo.isCloudRestricted && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs font-mono text-amber-200 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-4 text-amber-400 shrink-0" />
+                      <span className="font-bold text-amber-200">
+                        Web App Cloud Notice (Datacenter Restricted)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-200/80 font-sans leading-relaxed">
+                      YouTube restricts direct file extraction from cloud datacenters. You can stream in the Web Player preview below, browse with the In-App Browser sniffer, or download the ZenoDeck Android APK for direct 8K 60FPS downloads.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsWebPlayerOpen(!isWebPlayerOpen);
+                          void haptics.light();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#F7E7CE]/40 bg-[#102C26] text-[#F7E7CE] font-mono text-xs font-bold hover:bg-[#102C26]/80 transition-all cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <Film className="size-3 text-[#F7E7CE]" />
+                        <span>{isWebPlayerOpen ? "Hide Web Player" : "▶ Watch in Web Player"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDownloaderMode("in-app-browser");
+                          void haptics.light();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#A79277]/40 bg-[#090D0C] text-[#F7E7CE] font-mono text-xs font-semibold hover:border-[#F7E7CE]/60 transition-all cursor-pointer active:scale-95"
+                      >
+                        <Globe className="size-3 text-[#A79277]" />
+                        <span>Open in Mini Browser</span>
+                      </button>
+
+                      <a
+                        href="https://github.com/lagtastic-legends/zenodeck/releases/latest"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 font-mono text-xs font-semibold hover:bg-emerald-500/30 transition-all cursor-pointer active:scale-95"
+                      >
+                        <Download className="size-3 text-emerald-400" />
+                        <span>Get Android APK (8K 60FPS)</span>
+                      </a>
+                    </div>
+
+                    {isWebPlayerOpen && (
+                      <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-[#A79277]/40 shadow-xl bg-black mt-2">
+                        <iframe
+                          src={`https://www.youtube-nocookie.com/embed/${videoInfo.videoId}?autoplay=1&enablejsapi=1`}
+                          title={videoInfo.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full border-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
