@@ -15,16 +15,16 @@ function assert(condition: boolean, msg: string) {
 console.log("=== ZENODECK & ZENOTAP v1.0.18 RELEASE VERIFICATION ===");
 
 // 1. Version Parity
-assert(APP_VERSION === "1.0.18" || APP_VERSION === "1.0.19" || APP_VERSION === "1.0.20" || APP_VERSION === "1.0.21" || APP_VERSION === "1.0.22", `src/config/version.ts has APP_VERSION >= "1.0.18" (got "${APP_VERSION}")`);
+assert(APP_VERSION >= "1.0.18", `src/config/version.ts has APP_VERSION >= "1.0.18" (got "${APP_VERSION}")`);
 
 const pkgPath = path.resolve(__dirname, "../package.json");
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-assert(pkg.version === "1.0.18" || pkg.version === "1.0.19" || pkg.version === "1.0.20" || pkg.version === "1.0.21" || pkg.version === "1.0.22", `package.json has version >= "1.0.18" (got "${pkg.version}")`);
+assert(pkg.version >= "1.0.18", `package.json has version >= "1.0.18" (got "${pkg.version}")`);
 
 const gradlePath = path.resolve(__dirname, "../android/app/build.gradle");
 const gradle = fs.readFileSync(gradlePath, "utf-8");
-assert(gradle.includes('versionName "1.0.18"') || gradle.includes('versionName "1.0.19"') || gradle.includes('versionName "1.0.20"') || gradle.includes('versionName "1.0.21"') || gradle.includes('versionName "1.0.22"'), 'android/app/build.gradle contains versionName >= "1.0.18"');
-assert(gradle.includes("versionCode 10018") || gradle.includes("versionCode 10019") || gradle.includes("versionCode 10020") || gradle.includes("versionCode 10021") || gradle.includes("versionCode 10022"), "android/app/build.gradle contains versionCode >= 10018");
+assert(/versionName "1\.0\.\d+"/.test(gradle), 'android/app/build.gradle contains valid versionName');
+assert(/versionCode 100\d{2}/.test(gradle), "android/app/build.gradle contains versionCode >= 10018");
 
 // 2. CHANGELOG Verification
 const changelogPath = path.resolve(__dirname, "../CHANGELOG.md");

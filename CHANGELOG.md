@@ -5,6 +5,29 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.23] — 2026-11-14
+
+### 📱 Universal Smartphone & Multi-Architecture Phone Support
+- **Full Android CPU Architecture Matrix (`android/app/build.gradle`)**: Configured optimized native ABI packaging across all phone hardware tiers:
+  - `arm64-v8a`: Peak execution performance on all modern 64-bit flagships (Samsung Galaxy, Google Pixel, OnePlus, Xiaomi).
+  - `armeabi-v7a`: Maximum battery and memory efficiency on 32-bit budget and legacy devices.
+  - `x86_64`: Hardware-accelerated execution on Android emulators, ChromeOS laptops, and x86 devices.
+  - `Universal APK`: Single master binary (`universalApk true`) deployable across any device running Android 7.0+ (API 24 to 36).
+- **Responsive Screen Form-Factor Adaptation**:
+  - **Compact Phones (320px–360px)**: Restructured audio deck actions and topbar headers into symmetrical non-wrapping grids, ensuring zero horizontal overflow or button truncation on devices like iPhone SE and folded cover displays.
+  - **Standard Flagship Phones (375px–414px)**: Pixel-perfect proportions with strict $\ge 44\text{px}$ touch targets meeting WCAG 2.2 accessibility guidelines.
+  - **Phablet & Ultra Devices (430px–480px)**: Dynamic font scaling, wide waveform tracks, and expanded parameter sliders.
+  - **Foldables & Tablets (600px+)**: Responsive grid expansion (`grid-cols-1 md:grid-cols-2`) rendering In-Point and Out-Point consoles side-by-side without vertical crowding.
+- **Notch, Punch-Hole & Gesture Navigation Protection**:
+  - Configured `viewport-fit=cover` and `interactiveWidget=resizes-content` with CSS environment safe-area padding (`env(safe-area-inset-left)`, `env(safe-area-inset-right)`, `env(safe-area-inset-top)`), preventing UI obstruction from virtual keyboards, punch-holes, and gesture navigation bars.
+
+### 🎛️ Precision Audio Cutter Elastic Deadlock Engine (`PrecisionAudioCutterDeck.tsx`)
+- **Anti-Deadlock Elastic Sliding Mechanics**: Permanently resolved the 50ms cross-clamping pinch deadlock where Start Offset and End Timestamp met at the track boundary (`00:29.95` vs `00:30.00`). Advancing In-Point past Out-Point now smoothly pushes `endSec` ahead, preserving a healthy cut window without freezing or reverting inputs. Decreasing Out-Point past In-Point likewise slides `startSec` backward.
+- **Probed Duration Auto-Sync (`UnifiedAudioStudio.tsx`)**: Switching tools to Trimmer or Audio Editor now dynamically binds `endSec` to the probed audio duration (`meta.durationSec`), eliminating false 30-second truncations on long tracks.
+- **Collapsed Region Warning & Quick-Expand**: Displays an interactive badge (`⚠️ Collapsed (0.05s) — Expand`) in the telemetry HUD when a selection is pinched below 0.1s, restoring a full 30s or full-track range in a single tap.
+- **Two-Digit Centisecond Padded Steppers**: Fixed single-digit zero-millisecond formatting; centiseconds strictly format `.00` to `.99` with dedicated `▲`/`▼` micro-steppers, keyboard arrow navigation, and auto-select on focus.
+- **Symmetrical Non-Wrapping Grids**: Organized into Tier 1 (Navigation: 3 columns) and Tier 2 (Micro-Nudges: 4 columns), ensuring both In-Point and Out-Point cards maintain identical heights across all mobile screens.
+
 ## [1.0.22] — 2026-11-14
 
 ### 📥 Universal Download Manager & Background Queuing Engine
