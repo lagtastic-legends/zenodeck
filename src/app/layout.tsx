@@ -135,13 +135,32 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var p = localStorage.getItem('omni_theme_preference');
-                var t = p ? JSON.parse(p).state?.theme : null;
-                if (t === 'terracotta') {
-                  document.documentElement.setAttribute('data-theme', 'terracotta');
+                var isNativePlatform = Boolean(
+                  (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                  window.location.protocol === 'capacitor:' ||
+                  window.location.protocol === 'ionic:' ||
+                  "${process.env.NEXT_PUBLIC_MOBILE_EXPORT}" === "1"
+                );
+                if (isNativePlatform) {
+                  document.documentElement.setAttribute('data-platform', 'apk');
+                  document.documentElement.setAttribute('data-theme', 'precision');
                   document.documentElement.classList.remove('dark');
                   document.documentElement.classList.add('light');
                   document.documentElement.style.colorScheme = 'light';
+                } else {
+                  var p = localStorage.getItem('omni_theme_preference');
+                  var t = p ? JSON.parse(p).state?.theme : null;
+                  if (t === 'terracotta') {
+                    document.documentElement.setAttribute('data-theme', 'terracotta');
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                    document.documentElement.style.colorScheme = 'light';
+                  } else {
+                    document.documentElement.setAttribute('data-theme', 'cyber');
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                    document.documentElement.style.colorScheme = 'dark';
+                  }
                 }
               } catch (e) {}
             `,
@@ -149,7 +168,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} ${ebGaramond.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-[100dvh] w-full max-w-[100vw] overflow-x-clip pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]`}
+        className={`${orbitron.variable} ${spaceGrotesk.variable} ${geistMono.variable} ${ebGaramond.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]`}
       >
         <AnalyticsProvider />
         {children}

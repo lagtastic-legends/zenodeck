@@ -21,6 +21,7 @@ export function ThemeToggle() {
   }
 
   const isTerracotta = theme === "terracotta";
+  const isPrecision = theme === "precision";
 
   return (
     <motion.button
@@ -28,21 +29,43 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       whileTap={{ scale: 0.92 }}
       title={
-        isTerracotta
+        isPrecision
+          ? "Precision Engineering M3 Workstation (Click to switch)"
+          : isTerracotta
           ? "Terracotta 60-30-10 Studio Palette (Click to switch to Cyber Dark)"
           : "Cyber Dark Palette (Click to switch to Terracotta 60-30-10 Studio)"
       }
       aria-label="Toggle Theme"
       className={cn(
         "relative flex h-8 items-center gap-2 rounded-full border px-2.5 font-mono text-[10px] font-bold tracking-wider transition-all duration-300",
-        isTerracotta
+        isPrecision
+          ? "border-[#bfc8ce] bg-[#e7eff3] text-[#151d20] shadow-xs hover:border-[#006889]"
+          : isTerracotta
           ? "border-[#DFD3C2] bg-[#FAF5EE] text-[#342A24] shadow-sm hover:border-[#C2652A]/60"
           : "border-border/70 bg-card/60 text-muted-foreground hover:border-primary/50 hover:text-foreground"
       )}
     >
       {/* 60-30-10 Color harmony swatch */}
       <span className="flex items-center -space-x-0.5">
-        {isTerracotta ? (
+        {isPrecision ? (
+          <>
+            {/* 60% Canvas */}
+            <span
+              className="size-2 rounded-full bg-[#f3fbff] border border-[#bfc8ce]"
+              title="60% Optical Light Canvas"
+            />
+            {/* 30% Slate / Tonal */}
+            <span
+              className="size-2 rounded-full bg-[#4c626c]"
+              title="30% Slate Tonal Structural"
+            />
+            {/* 10% Cyan Primary Hero */}
+            <span
+              className="size-2 rounded-full bg-[#006889] shadow-[0_0_6px_#006889]"
+              title="10% Oceanic Cyan Primary"
+            />
+          </>
+        ) : isTerracotta ? (
           <>
             {/* 60% Canvas */}
             <span
@@ -70,11 +93,11 @@ export function ThemeToggle() {
       </span>
 
       <span className="hidden sm:inline uppercase">
-        {isTerracotta ? "Terracotta" : "Cyber"}
+        {isPrecision ? "Precision" : isTerracotta ? "Terracotta" : "Cyber"}
       </span>
 
       <span className="sm:hidden">
-        {isTerracotta ? "🎨" : "⚡"}
+        {isPrecision ? "📐" : isTerracotta ? "🎨" : "⚡"}
       </span>
     </motion.button>
   );

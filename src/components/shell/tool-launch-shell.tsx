@@ -150,7 +150,7 @@ export function ToolLaunchShell({
             scale: shellScale,
             borderRadius: shellBorderRadius,
           }}
-          className="fixed inset-0 z-50 flex flex-col bg-[#090D0C] text-[#F7E7CE] overflow-hidden border border-[#A79277]/20"
+          className="fixed inset-0 z-50 flex flex-col bg-background text-foreground overflow-hidden border border-border/40"
         >
           {/* Edge Swipe Back Chevron Indicator */}
           <AnimatePresence>
@@ -160,7 +160,7 @@ export function ToolLaunchShell({
                 animate={{ opacity: Math.min(1, swipeX / 40), x: Math.min(swipeX * 0.4, 20) }}
                 exit={{ opacity: 0, x: -16 }}
                 transition={{ duration: 0.1 }}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-[#102C26]/95 border border-[#F7E7CE]/40 text-[#F7E7CE] shadow-2xl backdrop-blur-md pointer-events-none"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-card/95 border border-border text-foreground shadow-2xl backdrop-blur-md pointer-events-none"
               >
                 <ChevronLeft className="h-6 w-6 animate-pulse" />
               </motion.div>
@@ -174,38 +174,38 @@ export function ToolLaunchShell({
             dragElastic={{ top: 0, bottom: 0.35 }}
             onDrag={handleHeaderDrag}
             onDragEnd={handleHeaderDragEnd}
-            className="relative z-20 flex flex-col select-none bg-[#102C26] border-b border-[#A79277]/20 px-3 sm:px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-3 touch-none"
+            className="relative z-20 flex flex-col select-none bg-card border-b border-border/60 px-3 sm:px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-3 touch-none shadow-xs"
           >
             {/* Tactile Pull Handle Pill */}
-            <div className="mx-auto mb-2 h-1.5 w-11 rounded-full bg-[#A79277]/45" />
+            <div className="mx-auto mb-2 h-1.5 w-11 rounded-full bg-muted-foreground/35" />
 
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={() => void useNavStore.getState().handleBack()}
                   aria-label="Back to ZenoDeck Hub"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#090D0C]/60 border border-[#A79277]/30 text-[#F7E7CE] active:scale-95 transition-transform cursor-pointer"
+                  className="flex h-10 w-10 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full bg-background/80 border border-border/80 text-foreground active:scale-95 transition-transform cursor-pointer shadow-xs"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
 
                 {/* getZenoIconLayoutId(toolId) — single-surface FLIP avoids child icon distortion */}
                 <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#102C26] border border-[#F7E7CE]/20 text-[#F7E7CE]"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 border border-primary/25 text-primary"
                 >
-                  {icon ?? <Sparkles className="h-5 w-5 text-[#F7E7CE]" />}
+                  {icon ?? <Sparkles className="h-5 w-5 text-primary" />}
                 </div>
 
                 <div className="min-w-0">
                   {/* getZenoTitleLayoutId(toolId) — single-surface FLIP avoids child font snapping */}
                   <h2
-                    className="truncate text-base font-bold tracking-tight text-[#F7E7CE]"
+                    className="truncate text-base font-bold tracking-tight text-foreground font-display"
                   >
                     {title}
                   </h2>
                   {subtitle && (
-                    <p className="truncate text-xs text-[#A79277]">{subtitle}</p>
+                    <p className="truncate text-xs text-muted-foreground font-mono">{subtitle}</p>
                   )}
                 </div>
               </div>
@@ -229,12 +229,12 @@ export function ToolLaunchShell({
                   exit={{ opacity: 0, transition: WORKSPACE_EXIT_TRANSITION }}
                   className="p-5 space-y-4"
                 >
-                  <div className="h-44 w-full rounded-2xl bg-[#102C26]/40 border border-[#A79277]/20" />
+                  <div className="h-44 w-full rounded-2xl bg-card/40 border border-border/40" />
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="h-24 rounded-2xl bg-[#102C26]/25 border border-[#A79277]/15" />
-                    <div className="h-24 rounded-2xl bg-[#102C26]/25 border border-[#A79277]/15" />
+                    <div className="h-24 rounded-2xl bg-card/25 border border-border/25" />
+                    <div className="h-24 rounded-2xl bg-card/25 border border-border/25" />
                   </div>
-                  <div className="h-14 w-full rounded-xl bg-[#F7E7CE]/10" />
+                  <div className="h-14 w-full rounded-xl bg-card/30 border border-border/30" />
                 </motion.div>
               ) : (
                 <motion.div

@@ -16,6 +16,8 @@
         <item name="android:windowBackground">@color/splashBackground</item>
         <item name="android:statusBarColor">@color/splashBackground</item>
         <item name="android:navigationBarColor">@color/splashBackground</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <!-- SplashScreen Theme for Android 5.0 to Android 11 (API 21 - 30) -->
@@ -27,5 +29,7 @@
         <item name="android:windowBackground">@drawable/splash_layer</item>
         <item name="android:statusBarColor">@color/splashBackground</item>
         <item name="android:navigationBarColor">@color/splashBackground</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

@@ -217,6 +217,88 @@
   --shadow-elevation-floating: 0 24px 50px -8px rgba(52, 42, 36, 0.20), 0 10px 20px -4px rgba(52, 42, 36, 0.10), inset 0 1px 2px 0 rgba(255, 255, 255, 0.9);
 }
 
+/* ------------------------------------------------------------------ */
+/* Precision Engineering Theme (Material Design 3 Workstation)        */
+/* Adopted ONLY for native Android APK builds & mobile Capacitor shell*/
+/* ------------------------------------------------------------------ */
+
+[data-theme="precision"],
+[data-platform="apk"] {
+  color-scheme: light;
+
+  /* Optical-Grade Base Canvas */
+  --background: #f3fbff;
+  --foreground: #151d20;
+
+  /* Surface Container (Level 1 Docked Containers / Property Sheets) */
+  --card: #e7eff3;
+  --card-foreground: #151d20;
+
+  /* Surface Container Lowest (Waveform / Viewport / Popover Canvas) */
+  --popover: #ffffff;
+  --popover-foreground: #151d20;
+
+  /* Oceanic Cyan Primary (Action / Core Interactive Triggers) */
+  --primary: #006889;
+  --primary-foreground: #ffffff;
+
+  /* Secondary Slate-Teal */
+  --secondary: #cee6f3;
+  --secondary-foreground: #061e28;
+
+  /* Surface Container Low & On-Surface Variant */
+  --muted: #edf5f9;
+  --muted-foreground: #3f484d;
+
+  /* Primary-Fixed Luminous Accent / Loop Selector */
+  --accent: #bfeaff;
+  --accent-foreground: #001f2b;
+
+  /* M3 Standard Error */
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+
+  /* Hairline Outline Variant */
+  --border: #bfc8ce;
+  --input: #dce4e8;
+  --ring: #006687;
+
+  /* Charts & Telemetry */
+  --chart-1: #006889;
+  --chart-2: #4c626c;
+  --chart-3: #48436c;
+  --chart-4: #86d0f5;
+  --chart-5: #605b85;
+
+  /* Sidebar Tokens */
+  --sidebar: #edf5f9;
+  --sidebar-foreground: #151d20;
+  --sidebar-primary: #006889;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #cee6f3;
+  --sidebar-accent-foreground: #061e28;
+  --sidebar-border: #bfc8ce;
+  --sidebar-ring: #006687;
+
+  /* Chromatic Accents mapped to Precision Tokens */
+  --neon: #006889;
+  --plasma: #48436c;
+  --pulse: #006687;
+  --abyss: #f3fbff;
+
+  /* Font Families */
+  --font-sans: "Roboto Flex", var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Roboto Flex", var(--font-space-grotesk), sans-serif;
+  --font-mono: "Geist", var(--font-geist-mono), monospace;
+
+  /* M3 Tonal Surface Shadows & Hairlines */
+  --shadow-subtle: 0 1px 2px rgba(19, 29, 34, 0.04);
+  --shadow-tactile: 0 1px 3px rgba(19, 29, 34, 0.08), 0 1px 2px rgba(19, 29, 34, 0.04);
+  --shadow-elevation-1: 0 1px 3px rgba(19, 29, 34, 0.08), 0 1px 2px rgba(19, 29, 34, 0.04);
+  --shadow-elevation-2: 0 4px 8px 3px rgba(19, 29, 34, 0.08), 0 1px 3px rgba(19, 29, 34, 0.12);
+  --shadow-elevation-floating: 0 8px 16px 4px rgba(19, 29, 34, 0.10);
+}
+
 :root {
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
@@ -276,7 +358,19 @@ textarea {
 [data-theme="terracotta"] a,
 [data-theme="terracotta"] input,
 [data-theme="terracotta"] select,
-[data-theme="terracotta"] textarea {
+[data-theme="terracotta"] textarea,
+[data-theme="precision"] button,
+[data-theme="precision"] [role="button"],
+[data-theme="precision"] a,
+[data-theme="precision"] input,
+[data-theme="precision"] select,
+[data-theme="precision"] textarea,
+[data-platform="apk"] button,
+[data-platform="apk"] [role="button"],
+[data-platform="apk"] a,
+[data-platform="apk"] input,
+[data-platform="apk"] select,
+[data-platform="apk"] textarea {
   color-scheme: light;
 }
 
@@ -294,6 +388,17 @@ optgroup {
   color-scheme: light;
   background-color: #F3ECE0;
   color: #342A24;
+}
+
+[data-theme="precision"] select,
+[data-theme="precision"] option,
+[data-theme="precision"] optgroup,
+[data-platform="apk"] select,
+[data-platform="apk"] option,
+[data-platform="apk"] optgroup {
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #151d20;
 }
 
 /* Universal smooth momentum scrolling */
@@ -366,6 +471,28 @@ body,
     border-color var(--duration-normal) var(--ease-out-expo);
 }
 
+[data-theme="precision"] .panel-hud,
+[data-theme="precision"] .glass-panel,
+[data-platform="apk"] .panel-hud,
+[data-platform="apk"] .glass-panel {
+  background:
+    linear-gradient(
+      180deg,
+      #edf5f9 0%,
+      #e7eff3 100%
+    );
+  border: 1px solid #bfc8ce;
+  box-shadow: 0 1px 3px rgba(19, 29, 34, 0.08), 0 1px 2px rgba(19, 29, 34, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  transition:
+    transform var(--duration-normal) var(--ease-out-expo),
+    box-shadow var(--duration-normal) var(--ease-out-expo),
+    border-color var(--duration-normal) var(--ease-out-expo);
+}
+
 /* Engineering blueprint grid with radial focus vignette */
 .bg-hud-grid {
   background-image:
@@ -383,6 +510,14 @@ body,
   background-size: 44px 44px;
 }
 
+[data-theme="precision"] .bg-hud-grid,
+[data-platform="apk"] .bg-hud-grid {
+  background-image:
+    linear-gradient(rgba(0, 104, 137, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 104, 137, 0.06) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
 /* Atmospheric aurora vignette */
 .aurora-vignette {
   background: radial-gradient(ellipse 75% 60% at 50% 40%, transparent 40%, oklch(0.07 0.012 295 / 0.85) 100%);
@@ -390,6 +525,11 @@ body,
 
 [data-theme="terracotta"] .aurora-vignette {
   background: radial-gradient(ellipse 75% 60% at 50% 40%, transparent 55%, rgba(223, 211, 194, 0.45) 100%);
+}
+
+[data-theme="precision"] .aurora-vignette,
+[data-platform="apk"] .aurora-vignette {
+  background: radial-gradient(ellipse 75% 60% at 50% 30%, transparent 45%, rgba(211, 219, 224, 0.5) 100%);
 }
 
 /* Subtle CRT scanline texture for physical feel */
@@ -464,6 +604,20 @@ body,
     inset 0 0 16px -10px rgba(217, 119, 54, 0.22);
 }
 
+[data-theme="precision"] .glow-box-violet,
+[data-platform="apk"] .glow-box-violet {
+  box-shadow:
+    0 0 0 1px rgba(0, 104, 137, 0.25),
+    0 4px 16px -2px rgba(0, 79, 104, 0.14);
+}
+
+[data-theme="precision"] .glow-box-cyan,
+[data-platform="apk"] .glow-box-cyan {
+  box-shadow:
+    0 0 0 1px rgba(0, 104, 137, 0.3),
+    0 4px 18px -2px rgba(0, 104, 137, 0.18);
+}
+
 /* Fluid typography utilities */
 .text-fluid-xs { font-size: var(--text-fluid-xs); }
 .text-fluid-sm { font-size: var(--text-fluid-sm); }
@@ -475,7 +629,7 @@ body,
 .text-fluid-hero { font-size: var(--text-fluid-hero); }
 
 /* ------------------------------------------------------------------ */
-/* 4. MOBILE-NATIVE ERGONOMICS (THE THUMB ZONE)                       */
+/* 4. MOBILE-NATIVE ERGONOMICS & PHONE LAYOUT PERFECTION (APK & ALL PHONES) */
 /* ------------------------------------------------------------------ */
 
 /* Minimum ergonomic tap target */
@@ -492,12 +646,12 @@ body,
 /* Universal mobile viewport constraints */
 html,
 body {
-  overflow-x: clip;
+  overflow-x: hidden;
   max-width: 100vw;
   min-height: 100dvh;
 }
 
-/* Safe-area padding helpers for notches and dynamic islands */
+/* Safe-area padding helpers for notches, punch-holes and dynamic islands */
 .safe-pb {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
 }
@@ -509,6 +663,62 @@ body {
 .safe-px {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* ------------------------------------------------------------------ */
+/* APK Platform Overrides (Adopted ONLY for Android APKs)             */
+/* ------------------------------------------------------------------ */
+
+[data-platform="apk"] {
+  /* Prevent rubber-band and accidental overscroll in Android WebView */
+  overscroll-behavior-y: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection inside inputs, textareas, and code readouts */
+[data-platform="apk"] input,
+[data-platform="apk"] textarea,
+[data-platform="apk"] [contenteditable="true"],
+[data-platform="apk"] code,
+[data-platform="apk"] pre {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Strict Touch Target Ergonomics on APK (44px - 48px minimum) */
+[data-platform="apk"] button:not(.no-touch-target),
+[data-platform="apk"] [role="button"]:not(.no-touch-target),
+[data-platform="apk"] a:not(.no-touch-target) {
+  min-height: 44px;
+}
+
+/* Tabular Numerics for All Telemetry & Timecodes */
+[data-platform="apk"] .font-mono,
+[data-platform="apk"] [data-telemetry] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* Hide scrollbars cleanly on native mobile APK for app-like surface */
+[data-platform="apk"] ::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+[data-platform="apk"] * {
+  scrollbar-width: none !important;
+}
+
+/* Phone screen responsive safety: Never allow horizontal overflow on any phone */
+@media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    position: relative;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -542,6 +752,18 @@ body {
     #EDE3D4 0%,
     rgba(194, 101, 42, 0.15) 50%,
     #EDE3D4 100%
+  );
+  background-size: 200% 100%;
+  animation: organic-shimmer 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+[data-theme="precision"] .skeleton-organic,
+[data-platform="apk"] .skeleton-organic {
+  background: linear-gradient(
+    90deg,
+    #edf5f9 0%,
+    rgba(0, 104, 137, 0.14) 50%,
+    #edf5f9 100%
   );
   background-size: 200% 100%;
   animation: organic-shimmer 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -591,6 +813,17 @@ body {
     rgba(194, 101, 42, 0.9),
     rgba(150, 66, 40, 0.9)
   );
+}
+
+[data-theme="precision"] .scroll-hud {
+  scrollbar-color: #bfc8ce transparent;
+}
+[data-theme="precision"] .scroll-hud::-webkit-scrollbar-thumb {
+  background: #bfc8ce;
+  border-radius: 999px;
+}
+[data-theme="precision"] .scroll-hud::-webkit-scrollbar-thumb:hover {
+  background: #70787e;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -58,7 +58,7 @@ function StatChip({
       style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
       className={cn(
         "panel-hud group relative flex items-center gap-2.5 sm:gap-3 rounded-tactile px-3 py-2.5 sm:px-4 sm:py-3.5 shadow-tactile transition-shadow duration-200 hover:shadow-elevation1 hover:border-primary/40 cursor-default",
-        isNative && "gap-2 sm:gap-2.5 md:gap-3 px-2.5 py-2 sm:px-3 sm:py-2.5 md:px-4 md:py-3"
+        isNative && "gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3 px-2 xs:px-2.5 py-2 sm:px-3 sm:py-2.5 md:px-4 md:py-3"
       )}
     >
       <div

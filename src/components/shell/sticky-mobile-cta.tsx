@@ -35,7 +35,7 @@ export function StickyMobileCta() {
         aria-label="Mobile Quick Actions"
         className="fixed bottom-0 left-0 right-0 z-30 sm:hidden border-t border-border/80 bg-background/85 backdrop-blur-xl px-3 sm:px-4 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pl-[calc(env(safe-area-inset-left)+0.75rem)] pr-[calc(env(safe-area-inset-right)+0.75rem)] shadow-elevation2"
       >
-        <div className="mx-auto flex max-w-md items-center justify-between gap-2.5">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-2">
           {/* Quick Tool Explorer CTA */}
           <motion.button
             type="button"
@@ -43,7 +43,7 @@ export function StickyMobileCta() {
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: "spring", stiffness: 450, damping: 22 }}
-            className="flex flex-1 min-h-[44px] items-center justify-center gap-2 rounded-tactile bg-primary py-2.5 px-3.5 font-display text-[11px] font-bold uppercase tracking-wider text-primary-foreground shadow-tactile active:shadow-none"
+            className="flex flex-1 min-h-[44px] items-center justify-center gap-2 rounded-full bg-primary py-2.5 px-3 font-display text-[11px] font-bold uppercase tracking-wider text-primary-foreground shadow-tactile active:shadow-none"
           >
             <Wrench className="size-3.5 shrink-0" />
             <span>Tools</span>
@@ -56,7 +56,7 @@ export function StickyMobileCta() {
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: "spring", stiffness: 450, damping: 22 }}
-            className="group flex min-h-[44px] items-center justify-center gap-1.5 rounded-tactile border border-border/80 bg-card/70 py-2.5 px-4 font-mono text-[11px] font-medium text-muted-foreground shadow-tactile hover:text-foreground hover:border-primary/40 transition-colors"
+            className="group flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-border/80 bg-card/80 py-2.5 px-3.5 font-mono text-[11px] font-medium text-muted-foreground shadow-tactile hover:text-foreground hover:border-primary/40 transition-colors"
           >
             <SearchLottieIcon className="size-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
             <span>Search</span>
@@ -69,7 +69,7 @@ export function StickyMobileCta() {
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: "spring", stiffness: 450, damping: 22 }}
-            className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-tactile border border-border/80 bg-card/70 py-2.5 px-4 font-mono text-[11px] font-medium text-neon shadow-tactile hover:border-neon/40"
+            className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-border/80 bg-card/80 py-2.5 px-3.5 font-mono text-[11px] font-medium text-neon shadow-tactile hover:border-neon/40"
           >
             <Database className="size-3.5 shrink-0" />
             <span>Vault</span>

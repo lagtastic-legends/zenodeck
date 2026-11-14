@@ -5,6 +5,32 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.24] — 2026-11-14
+
+### 📐 Precision Engineering M3 Workstation Design (Exclusive to Android APK)
+- **Google Stitch Precision Engineering Integration (`DESIGN.md`)**:
+  - Adopted the official **Precision Engineering** Material Design 3 (M3) Workstation design system exclusively for native Android APK builds, maintaining optical clarity and high information density across long editing sessions.
+  - **Tonal Color Architecture**: Applied base optical canvas (`#f3fbff`), docked surface containers (`#e7eff3`) with hairline outline separation (`#bfc8ce`), and oceanic cyan interactive anchors (`#006889`).
+  - **Pill Geometry Mandate**: Replaced rigid square buttons with full-pill geometry (`border-radius: 9999px`) across primary action buttons, filter chips, category selectors, and bottom quick-action docks.
+  - **Tabular Numeric Telemetry (`Geist Mono`)**: Configured strict `font-variant-numeric: tabular-nums` across all real-time counters, download transfer rates, and audio SMPTE timecodes to completely eliminate layout jitter during 60 FPS playback.
+  - **Native Android System Bar Synchronization**: Updated native Android `colors.xml` and `styles.xml` with `#f3fbff` background styling and enabled `android:windowLightStatusBar = true` and `android:windowLightNavigationBar = true` for high-contrast native system icons.
+  - **Zero-Flicker Pre-Hydration Init**: Implemented a synchronous `<head>` script in `layout.tsx` that instantly applies `data-platform="apk"` and `data-theme="precision"` before first paint, preventing theme flash.
+  - **Web Platform Isolation**: Web browser environments remain 100% on their existing dark `cyber` and `terracotta` themes without interference.
+
+### 📱 Universal Smartphone & Multi-Phone Form-Factor Perfection
+- **Ultra-Compact Phone Scaling (320px–360px, e.g. Galaxy Z Fold Cover, iPhone SE)**:
+  - Flex-responsive top bar ensuring brand text (`text-xs sm:text-base truncate`), compact engine dot indicator (`size-2`), and status pills fit without line wraps.
+  - Restructured dashboard stat chips and 2-column matrix tiles with compact touch padding (`px-2 xs:px-2.5 py-2`), ensuring zero text truncation or clipping on narrow viewports.
+- **Ergonomic Touch Boundaries & Thumb Zone**:
+  - Strict $44\text{px} - 48\text{px}$ minimum hit-target enforcement across all interactive buttons, tabs, and switches meeting WCAG 2.2 touch target criteria.
+  - Bottom padding (`pb-[calc(env(safe-area-inset-bottom)+0.75rem)]`) for full clearance above Android gesture navigation pills.
+- **Notch, Punch-Hole & Safe-Area Inset Protection**:
+  - Dynamic viewport padding via `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)` across headers, modals, floating toolbars, and tool workspace shells.
+- **Zero Horizontal Overflow Guarantee**:
+  - Enforced `overflow-x: hidden` and `max-w-[100vw]` across the root HTML and body, eliminating horizontal drift and rubber-banding on all phone models.
+- **Semantic Tool Workspace Shell Modernization (`ToolLaunchShell.tsx`)**:
+  - Replaced legacy hardcoded green-black colors (`#090D0C`, `#102C26`, `#F7E7CE`) with semantic design variables (`bg-background`, `bg-card`, `text-foreground`, `border-border/60`), enabling the tool workspace to natively adopt the Precision Engineering M3 palette on APK.
+
 ## [1.0.23] — 2026-11-14
 
 ### 📱 Universal Smartphone & Multi-Architecture Phone Support

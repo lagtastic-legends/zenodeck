@@ -88,22 +88,22 @@ export function TopBar() {
     >
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-1.5 sm:gap-3 px-2 sm:px-6">
         {/* Brand */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink min-w-0">
           <motion.div
             initial={{ rotate: -90, opacity: 0 }}
             animate={{ rotate: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 18 }}
-            className="relative grid size-9 sm:size-10 place-items-center rounded-xl border border-primary/40 overflow-hidden glow-box-violet shrink-0"
+            className="relative grid size-8 sm:size-10 place-items-center rounded-xl border border-primary/40 overflow-hidden glow-box-violet shrink-0"
           >
             <img src="/logo.jpg" alt="ZenoDeck" className="w-full h-full object-cover" />
           </motion.div>
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="font-display text-sm sm:text-base font-bold tracking-[0.2em] sm:tracking-[0.32em] text-foreground">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <span className="font-display text-xs sm:text-base font-bold tracking-[0.16em] sm:tracking-[0.32em] text-foreground truncate">
               ZENODECK
             </span>
-            {/* Green Engine Status Pill (28px height, visible on mobile) */}
+            {/* Green Engine Status Pill (Compact on compact mobile, full on tablet/desktop) */}
             <div
-              className="inline-flex h-[28px] min-w-[28px] items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-2 shrink-0 shadow-xs"
+              className="inline-flex h-[26px] sm:h-[28px] min-w-[26px] sm:min-w-[28px] items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-1.5 sm:px-2 shrink-0 shadow-xs"
               role="status"
               aria-live="polite"
               title={`Engine Status: ${meta.label}`}
@@ -156,15 +156,15 @@ export function TopBar() {
 
           <ThemeToggle />
 
-          {/* Audio Toggle (38px, visible on mobile) */}
+          {/* Audio Toggle */}
           <div className="flex shrink-0">
-            <AudioToggle className="w-[38px] h-[38px] p-0 justify-center shrink-0" />
+            <AudioToggle className="w-[34px] sm:w-[38px] h-[34px] sm:h-[38px] p-0 justify-center shrink-0" />
           </div>
 
           {/* Search Palette (Hidden on mobile < 768px, available in bottom dock) */}
           <SearchPalette triggerClassName="hidden md:flex" />
 
-          {/* Privacy Shield Button (36px, visible on mobile) */}
+          {/* Privacy Shield Button */}
           <button
             type="button"
             onClick={() => {
@@ -172,7 +172,7 @@ export function TopBar() {
                 window.dispatchEvent(new CustomEvent("omni:show-permissions"));
               }
             }}
-            className="grid w-[36px] h-[36px] place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
+            className="grid w-[34px] sm:w-[36px] h-[34px] sm:h-[36px] place-items-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground cursor-pointer shrink-0"
             title="Manage Device Permissions"
             aria-label="Manage Device Permissions"
           >

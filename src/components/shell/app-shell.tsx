@@ -365,7 +365,7 @@ export function AppShell() {
                     subtitle={currentToolMeta?.description}
                     icon={
                       currentToolMeta ? (
-                        <currentToolMeta.icon className="h-5 w-5 text-[#F7E7CE]" strokeWidth={1.75} />
+                        <currentToolMeta.icon className="h-5 w-5 text-primary" strokeWidth={1.75} />
                       ) : undefined
                     }
                     onClose={() => reset()}

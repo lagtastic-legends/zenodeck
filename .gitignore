@@ -58,5 +58,6 @@ scratch/
 dist/
 *.apk
 *.aab
+*.zip
 public/ffmpeg/ffmpeg-core.wasm
 .agents/
