@@ -5,6 +5,18 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.22] — 2026-11-14
+
+### 📥 Universal Download Manager & Background Queuing Engine
+- **Persistent Download Queue Store (`download-queue-store.ts`)**: Engineered a persistent Zustand state machine synchronized to `localStorage` with memory fallback. Robustly tracks multi-platform streaming jobs across the entire lifecycle: `queued`, `resolving`, `downloading`, `paused`, `completed`, `failed`, and `cancelled`. On session reload or unexpected navigation, interrupted downloads automatically reset to `"queued"` to resume cleanly without corrupting media files.
+- **Sequential FIFO Queue Runner (`download-queue-runner.ts`)**: Built background coordinator executing media streams in strict order. Integrates dynamic `PauseController` and `AbortController` instances, managing parallel chunk fetches for YouTube (`downloadYouTubeStream`) and multi-platform media (`downloadUniversalMedia`). Automatically records finished downloads in the History Vault (`useHistoryStore`) and triggers native Android (`@capacitor/local-notifications`) and web browser (`Notification` API) alerts (`notifyJobSuccess` / `notifyJobError`).
+- **Interactive Download Manager Deck (`download-manager-view.tsx`)**: High-performance dashboard featuring:
+  - **Real-Time Telemetry HUD**: Instantaneous network throughput in MB/s, total downloaded byte volume, active downloading task counter, and global Pause All / Resume All toggles.
+  - **Active Task Progress Card**: Live animated progress bar with percentage readout, active transfer rate, dynamic estimated time remaining (ETA), and direct Pause / Cancel buttons.
+  - **Dynamic Priority Steppers**: `Move Up` (▲) and `Move Down` (▼) controls allowing dynamic real-time reordering of scheduled downloads in the FIFO queue.
+  - **Multi-State Filtering & Recovery**: Instant filtering by `All`, `In Queue`, `Finished`, and `Failed`, with 1-click retry on failure, audio track auditioning in the Mini Player, and direct device file export.
+- **Universal Downloader 4-Tab Unification (`youtube-downloader.tsx`)**: Expanded view switcher to 4 seamless tabs (`[ ⚡ Downloader ] · [ 📥 Queue (Live Count) ] · [ 💬 Subtitles ] · [ 🗄️ Vault ]`) with pulsing count badges for active background items. Added dedicated `[ 📥 Add to Queue ]` buttons to both the primary downloader controls and the VidMate format bottom sheet (`vidmate-quality-sheet.tsx`).
+
 ## [1.0.21] — 2026-11-14
 
 ### 🎵 Precision Audio Cutter & Waveform Splicer Deck
