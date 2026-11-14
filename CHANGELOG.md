@@ -5,6 +5,26 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.25] — 2026-11-14
+
+### 🎛️ Precision Audio Cutter M3 Workstation Adaptation (Exclusive to Android APK)
+- **Precision Engineering M3 Architecture for Audio Workstation (`PrecisionAudioCutterDeck.tsx`)**:
+  - Replaced all 21 raw hardcoded dark hex colors (`#090D0C`, `#102C26`, `#F7E7CE`, `#A79277`) with semantic design variables (`bg-card`, `bg-background`, `bg-secondary`, `border-border/70`, `text-foreground`).
+  - **APK Light Workstation Palette**: Under `data-platform="apk"` / `data-theme="precision"`, renders on an optical-grade `#f3fbff` canvas with `#e7eff3` surface containers, high-contrast `#ffffff` digit micro-steppers with `#151d20` bold tabular numerics, Oceanic Cyan (`#006889`) waveform bars, and contrast-ring handles.
+  - **High-Contrast Telemetry Badges**: Engineered accessible `text-emerald-700` (In-Point) and `text-rose-700` (Out-Point) text on light `#edf5f9` containers for WCAG 2.2 AAA legibility.
+  - **Web Platform Theme Isolation**: Desktop and mobile web browser visits (`data-theme="cyber"`) strictly retain the obsidian & champagne gold dark theme via `dark:` variants with zero visual regression.
+
+### 📱 Universal Smartphone Touch & Viewport Ergonomics
+- **Micro-Stepper Distortion Shield**: Attached `no-touch-target` to up/down chevron buttons, preventing Android's $44\text{px}$ minimum button rule from vertically stretching micro-steppers while preserving $24\text{px}$ touch pads.
+- **Wider Scrubber Thumb Targets**: Widened interactive waveform scrubber handles to $24\text{px}$ touch hit targets (`w-6 -ml-3`) with smooth pointer capture, preventing touch-drag misses on phone screens.
+- **Symmetrical Non-Wrapping Grids**: Action triggers (3 columns) and micro-nudging buttons (4 columns) fit seamlessly on compact $320\text{px} - 360\text{px}$ screens (e.g. Galaxy Z Fold outer, iPhone SE) without text clipping or awkward wrapping.
+- **Tactile Full-Pill Geometry**: Migrated all transport buttons, action triggers, range presets, and audio audition controls to fluid full-pill geometry (`rounded-full`).
+
+### 🛠️ Audio Duration Probing & Anti-Deadlock Fixes
+- **Audio Duration Probing in Dropzone (`drop-zone.tsx`)**: Resolved bug where `preview === "none"` silently aborted `probeAudioDuration(file)` and `onProbed?.(m)` for audio files, ensuring full audio duration metadata is immediately extracted upon drag-and-drop or file pick.
+- **Native Audio Metadata Capture (`UnifiedAudioStudio.tsx`)**: Added `onLoadedMetadata` event listener to native audio element to synchronize decoded duration and prevent selection clamping to 30s.
+- **Sub-Unit Overflow Auto-Zeroing**: Eliminating bouncing when setting boundary timestamps (e.g. `29.95s` vs `30.00s`), with atomic two-way elastic sliding and one-click full track reset (`[⏮ Reset Full]` and `⚠️ Collapsed — Reset Full`).
+
 ## [1.0.24] — 2026-11-14
 
 ### 📐 Precision Engineering M3 Workstation Design (Exclusive to Android APK)
