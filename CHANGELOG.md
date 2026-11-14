@@ -5,7 +5,7 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.26] — 2026-11-14
+## [1.0.27] — 2026-11-14
 
 ### 📐 Precision M3 Mobile Layout Transformation & Cyber Workstation Preservation
 - **M3 Segmented Capsule Action Selector (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `whitespace-nowrap shrink-0` to the audio toggle label text span.
 - **Precision Design Switching in Web App (`src/lib/theme/theme-store.ts`)**:
   - Enabled switching between Cyber Design and Precision Design directly in the web app via `ThemeToggle`, allowing users to test both designs in desktop and mobile web browsers.
+
+## [1.0.26] — 2026-11-14
 
 ### 🎨 Dual Cyber & Precision Design Engine & High-Contrast Text Shield (APK & Web)
 - **Decoupled Platform Ergonomics from Theme Palettes (`src/app/globals.css`)**:
