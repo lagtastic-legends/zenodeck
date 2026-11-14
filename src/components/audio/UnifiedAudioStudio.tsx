@@ -799,6 +799,11 @@ export function UnifiedAudioStudio({
     void haptics.light();
     setActiveEffect(toolId);
     const defaults = getDefaultAudioParams(toolId);
+    if ((toolId === "trimmer" || toolId === "audio-editor") && duration > 0) {
+      defaults.endSec = duration;
+    } else if (toolId === "ringtone-maker" && duration > 0) {
+      defaults.endSec = Math.min(30, duration);
+    }
     setParams(initialParamOverrides ? { ...defaults, ...initialParamOverrides } : defaults);
     setShowGridDrawer(false);
   };

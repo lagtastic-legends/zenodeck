@@ -207,6 +207,7 @@ export function PrecisionAudioCutterDeck({
   const startSec = Math.max(0, Number(params.startSec || 0));
   const effectiveDuration = Math.max(duration || 30, startSec + 0.1);
   const endSec = Math.min(effectiveDuration, Math.max(startSec + 0.05, Number(params.endSec ?? effectiveDuration)));
+  const selectionLength = Math.max(0, endSec - startSec);
   const cutMode = (params.cutMode as "keep" | "cut" | "silence" | "fade_only") || "keep";
   const fadeInSec = Number(params.fadeInSec || 0);
   const fadeOutSec = Number(params.fadeOutSec || 0);
@@ -229,23 +230,35 @@ export function PrecisionAudioCutterDeck({
   const endComponents = useMemo(() => splitSecondsToComponents(endSec), [endSec]);
   const displayHours = isLongAudio || startComponents.hours > 0 || endComponents.hours > 0 || showHours;
 
-  // Update Start Cutpoint safely
+  // Update Start Cutpoint safely with elastic forward push to prevent deadlocks
   const updateStartCutpoint = useCallback(
     (newSec: number) => {
-      const clamped = Math.max(0, Math.min(endSec - 0.05, newSec));
-      updateParam("startSec", Math.round(clamped * 100) / 100);
-      onSeek(clamped);
+      const targetStart = Math.max(0, Math.min(effectiveDuration - 0.05, newSec));
+      if (targetStart >= endSec - 0.05) {
+        // Automatically push endSec forward so the handles never deadlock
+        const pushWindow = Math.max(1.0, selectionLength || 5.0);
+        const pushedEnd = Math.min(effectiveDuration, targetStart + pushWindow);
+        updateParam("endSec", Math.round(pushedEnd * 100) / 100);
+      }
+      updateParam("startSec", Math.round(targetStart * 100) / 100);
+      onSeek(targetStart);
     },
-    [endSec, updateParam, onSeek]
+    [effectiveDuration, endSec, selectionLength, updateParam, onSeek]
   );
 
-  // Update End Cutpoint safely
+  // Update End Cutpoint safely with elastic backward push to prevent deadlocks
   const updateEndCutpoint = useCallback(
     (newSec: number) => {
-      const clamped = Math.min(effectiveDuration, Math.max(startSec + 0.05, newSec));
-      updateParam("endSec", Math.round(clamped * 100) / 100);
+      const targetEnd = Math.min(effectiveDuration, Math.max(0.05, newSec));
+      if (targetEnd <= startSec + 0.05) {
+        // Automatically push startSec backwards so the handles never deadlock
+        const pushWindow = Math.max(1.0, selectionLength || 5.0);
+        const pushedStart = Math.max(0, targetEnd - pushWindow);
+        updateParam("startSec", Math.round(pushedStart * 100) / 100);
+      }
+      updateParam("endSec", Math.round(targetEnd * 100) / 100);
     },
-    [effectiveDuration, startSec, updateParam]
+    [effectiveDuration, startSec, selectionLength, updateParam]
   );
 
   // Nudge Helpers
@@ -356,7 +369,6 @@ export function PrecisionAudioCutterDeck({
   };
 
   // Calculate resulting duration based on cut mode
-  const selectionLength = Math.max(0, endSec - startSec);
   const resultDuration = useMemo(() => {
     if (cutMode === "keep") return selectionLength;
     if (cutMode === "cut") return Math.max(0.1, effectiveDuration - selectionLength);
@@ -593,6 +605,19 @@ export function PrecisionAudioCutterDeck({
           <span className="font-mono text-[11px] text-[#A79277] hidden sm:inline">
             ({Math.round((selectionLength / effectiveDuration) * 100)}% of total track)
           </span>
+          {selectionLength <= 0.1 && (
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.medium();
+                applyPresetRange(effectiveDuration > 30 ? "first30" : "full");
+              }}
+              className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/50 text-amber-300 font-mono text-[10px] font-bold animate-pulse cursor-pointer hover:bg-amber-500/30 flex items-center gap-1"
+              title="Expand collapsed selection"
+            >
+              <span>⚠️ Collapsed ({selectionLength.toFixed(2)}s) — Expand</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
