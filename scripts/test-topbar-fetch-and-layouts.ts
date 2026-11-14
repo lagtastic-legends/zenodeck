@@ -40,8 +40,8 @@ async function runTests() {
     "Engine status pill is visible on mobile at 28px height"
   );
   assert(
-    (topBarCode.includes('w-[38px] h-[38px]') || topBarCode.includes('w-[34px] sm:w-[38px] h-[34px] sm:h-[38px]')) && topBarCode.includes("<AudioToggle"),
-    "Audio toggle button is visible on mobile with 38px touch target"
+    (topBarCode.includes('w-[38px] h-[38px]') || topBarCode.includes('w-[34px] sm:w-[38px] h-[34px] sm:h-[38px]') || topBarCode.includes('w-[34px] sm:w-auto')) && topBarCode.includes("<AudioToggle"),
+    "Audio toggle button is visible on mobile with 34px-38px touch target and responsive desktop width"
   );
   assert(
     (topBarCode.includes('w-[36px] h-[36px]') || topBarCode.includes('w-[34px] sm:w-[36px] h-[34px] sm:h-[36px]')) && topBarCode.includes("ShieldCheck"),

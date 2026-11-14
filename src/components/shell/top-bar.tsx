@@ -158,7 +158,7 @@ export function TopBar() {
 
           {/* Audio Toggle */}
           <div className="flex shrink-0">
-            <AudioToggle className="w-[34px] sm:w-[38px] h-[34px] sm:h-[38px] p-0 justify-center shrink-0" />
+            <AudioToggle className="w-[34px] sm:w-auto h-[34px] sm:h-8 p-0 sm:px-2.5 justify-center shrink-0" />
           </div>
 
           {/* Search Palette (Hidden on mobile < 768px, available in bottom dock) */}

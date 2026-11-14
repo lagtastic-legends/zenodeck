@@ -62,12 +62,14 @@ export const useThemeStore = create<ThemeState>()(
         set({ theme });
       },
       toggleTheme: () => {
-        const isApk = isApkPlatform();
+        const current = get().theme;
         let next: OmniTheme;
-        if (isApk) {
-          next = get().theme === "precision" ? "cyber" : "precision";
+        if (current === "cyber") {
+          next = "precision";
+        } else if (current === "precision") {
+          next = "cyber";
         } else {
-          next = get().theme === "cyber" ? "terracotta" : "cyber";
+          next = "cyber";
         }
         applyThemeToDom(next);
         set({ theme: next });

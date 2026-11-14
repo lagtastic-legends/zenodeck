@@ -37,7 +37,7 @@ export function AudioToggle({ className }: { className?: string }) {
       ) : (
         <Volume2 className="size-3.5 shrink-0" />
       )}
-      <span className="hidden sm:inline uppercase">
+      <span className="hidden sm:inline uppercase whitespace-nowrap shrink-0">
         {isAudioMuted ? "Muted" : "Audio"}
       </span>
     </motion.button>
