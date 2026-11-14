@@ -32,9 +32,14 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ChevronUp,
+  ChevronDown,
   Crosshair,
   Maximize2,
   Minimize2,
+  Play,
+  Pause,
+  RotateCcw,
 } from "lucide-react";
 import { useHaptics } from "@/hooks/use-haptics";
 import {
@@ -43,6 +48,135 @@ import {
   parseTimestampToSeconds,
   type TimestampComponents,
 } from "@/lib/audio-dsp";
+
+interface TimeDigitSegmentProps {
+  label: string;
+  value: number;
+  digits?: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (val: number) => void;
+  disabled?: boolean;
+  accent?: "emerald" | "rose" | "primary";
+}
+
+function TimeDigitSegment({
+  label,
+  value,
+  digits = 2,
+  min,
+  max,
+  step = 1,
+  onChange,
+  disabled = false,
+  accent = "primary",
+}: TimeDigitSegmentProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localText, setLocalText] = useState(String(value).padStart(digits, "0"));
+
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalText(String(value).padStart(digits, "0"));
+    }
+  }, [value, digits, isEditing]);
+
+  const handleIncrement = () => {
+    if (disabled) return;
+    const next = value + step > max ? min : value + step;
+    onChange(next);
+  };
+
+  const handleDecrement = () => {
+    if (disabled) return;
+    const next = value - step < min ? max : value - step;
+    onChange(next);
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    const parsed = parseInt(localText, 10);
+    if (isNaN(parsed)) {
+      setLocalText(String(value).padStart(digits, "0"));
+    } else {
+      const clamped = Math.max(min, Math.min(max, parsed));
+      onChange(clamped);
+      setLocalText(String(clamped).padStart(digits, "0"));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      handleIncrement();
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      handleDecrement();
+    } else if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
+
+  const accentRing =
+    accent === "emerald"
+      ? "focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/25 text-emerald-300"
+      : accent === "rose"
+      ? "focus-within:border-rose-500/80 focus-within:ring-2 focus-within:ring-rose-500/25 text-rose-300"
+      : "focus-within:border-primary/80 focus-within:ring-2 focus-within:ring-primary/25 text-primary";
+
+  return (
+    <div className="flex flex-col items-center select-none group">
+      {/* Up Stepper Button */}
+      <button
+        type="button"
+        onClick={handleIncrement}
+        disabled={disabled}
+        aria-label={`Increment ${label}`}
+        className="w-11 sm:w-13 h-5 flex items-center justify-center rounded-t-md bg-secondary/40 hover:bg-secondary/80 border border-b-0 border-border/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+      >
+        <ChevronUp className="size-3.5" />
+      </button>
+
+      {/* Digit Display Box */}
+      <div
+        className={`w-11 sm:w-13 h-10 flex items-center justify-center bg-[#090D0C] border border-border/70 ${accentRing} transition-all relative`}
+      >
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={isEditing ? localText : String(value).padStart(digits, "0")}
+          onFocus={(e) => {
+            setIsEditing(true);
+            e.target.select();
+          }}
+          onChange={(e) => setLocalText(e.target.value.replace(/\D/g, "").slice(0, digits))}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          aria-label={label}
+          className="w-full h-full text-center bg-transparent font-mono text-base sm:text-lg font-black tracking-widest text-foreground focus:outline-hidden tabular-nums"
+        />
+      </div>
+
+      {/* Down Stepper Button */}
+      <button
+        type="button"
+        onClick={handleDecrement}
+        disabled={disabled}
+        aria-label={`Decrement ${label}`}
+        className="w-11 sm:w-13 h-5 flex items-center justify-center rounded-b-md bg-secondary/40 hover:bg-secondary/80 border border-t-0 border-border/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+      >
+        <ChevronDown className="size-3.5" />
+      </button>
+
+      {/* Label (HR / MIN / SEC / MS) */}
+      <span className="font-mono text-[9px] font-bold text-muted-foreground tracking-wider uppercase mt-1">
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export interface PrecisionAudioCutterDeckProps {
   duration: number;
@@ -79,6 +213,7 @@ export function PrecisionAudioCutterDeck({
   const boostDb = Number(params.boostDb || 0);
 
   const isLongAudio = duration >= 3600;
+  const [showHours, setShowHours] = useState(false);
 
   // Active dragging handle ("start" | "end" | "playhead" | null)
   const [draggingHandle, setDraggingHandle] = useState<"start" | "end" | "playhead" | null>(null);
@@ -92,6 +227,7 @@ export function PrecisionAudioCutterDeck({
   // Direct Time Inputs Local State
   const startComponents = useMemo(() => splitSecondsToComponents(startSec), [startSec]);
   const endComponents = useMemo(() => splitSecondsToComponents(endSec), [endSec]);
+  const displayHours = isLongAudio || startComponents.hours > 0 || endComponents.hours > 0 || showHours;
 
   // Update Start Cutpoint safely
   const updateStartCutpoint = useCallback(
@@ -444,291 +580,360 @@ export function PrecisionAudioCutterDeck({
         </div>
       </div>
 
-      {/* 3. Dual Precision Time Consoles: Start Offset vs End Timestamp */}
+      {/* 3. Selected Cutout Telemetry & Play HUD */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-xl bg-[#090D0C]/90 border border-[#A79277]/30 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-[#F7E7CE]">
+            <Scissors className="size-3.5 text-primary" />
+            <span>Selected Region:</span>
+          </span>
+          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-primary/20 text-[#F7E7CE] border border-primary/30">
+            {formatAdaptiveTimestamp(selectionLength, { forceHours: displayHours })} ({selectionLength.toFixed(2)}s)
+          </span>
+          <span className="font-mono text-[11px] text-[#A79277] hidden sm:inline">
+            ({Math.round((selectionLength / effectiveDuration) * 100)}% of total track)
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              onSeek(startSec);
+            }}
+            className="px-3 py-1.5 rounded-lg bg-[#102C26] hover:bg-[#102C26]/80 text-[#F7E7CE] border border-[#A79277]/40 flex items-center gap-1.5 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+            title="Jump to In-Point and audition selected cut"
+          >
+            <Play className="size-3 text-[#F7E7CE] fill-current" />
+            <span>Play Cut</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              setLoopRegion(!loopRegion);
+            }}
+            className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98] ${
+              loopRegion
+                ? "border-primary bg-primary/20 text-[#F7E7CE] shadow-glow"
+                : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground"
+            }`}
+            title="Toggle playback looping within selected region"
+          >
+            <Repeat className="size-3" />
+            <span>Loop: {loopRegion ? "ON" : "OFF"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Dual Precision Time Consoles: Start Offset vs End Timestamp */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Console A: Start Offset (In-Point) */}
-        <div className="p-3.5 rounded-xl border border-border/70 bg-card/50 space-y-3">
+        <div className="p-3.5 rounded-xl border border-emerald-500/30 hover:border-emerald-500/50 bg-card/60 space-y-3.5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
               <span>📍 Start Offset (In-Point)</span>
             </span>
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-primary/40 bg-primary/10 text-primary">
-              {formatAdaptiveTimestamp(startSec, { forceHours: isLongAudio })}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {!displayHours && (
+                <button
+                  type="button"
+                  onClick={() => setShowHours(true)}
+                  className="px-1.5 py-0.5 rounded border border-border/60 bg-secondary/30 hover:bg-secondary font-mono text-[9px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  title="Expand to show hours"
+                >
+                  +HR
+                </button>
+              )}
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-emerald-500/40 bg-emerald-500/15 text-emerald-300">
+                {formatAdaptiveTimestamp(startSec, { forceHours: displayHours })}
+              </span>
+            </div>
           </div>
 
-          {/* Segmented Inputs: HH : MM : SS . ms */}
-          <div className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-[#090D0C] border border-border/60">
-            {isLongAudio && (
+          {/* Segmented Inputs: HH : MM : SEC . MS with Micro-Steppers */}
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-[#090D0C] border border-border/70 shadow-inner">
+            {displayHours && (
               <>
-                <div className="flex flex-col items-center">
-                  <input
-                    type="number"
-                    min={0}
-                    max={99}
-                    value={startComponents.hours}
-                    onChange={(e) => handleStartComponentChange("hours", parseInt(e.target.value) || 0)}
-                    disabled={busy}
-                    aria-label="Start Hours"
-                    className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-                  />
-                  <span className="font-mono text-[9px] text-muted-foreground mt-0.5">HR</span>
-                </div>
-                <span className="font-mono font-bold text-muted-foreground text-sm pb-3">:</span>
+                <TimeDigitSegment
+                  label="HR"
+                  value={startComponents.hours}
+                  min={0}
+                  max={99}
+                  onChange={(v) => handleStartComponentChange("hours", v)}
+                  disabled={busy}
+                  accent="emerald"
+                />
+                <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
               </>
             )}
 
-            <div className="flex flex-col items-center">
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={startComponents.minutes}
-                onChange={(e) => handleStartComponentChange("minutes", parseInt(e.target.value) || 0)}
-                disabled={busy}
-                aria-label="Start Minutes"
-                className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-              />
-              <span className="font-mono text-[9px] text-muted-foreground mt-0.5">MIN</span>
-            </div>
-            <span className="font-mono font-bold text-muted-foreground text-sm pb-3">:</span>
+            <TimeDigitSegment
+              label="MIN"
+              value={startComponents.minutes}
+              min={0}
+              max={59}
+              onChange={(v) => handleStartComponentChange("minutes", v)}
+              disabled={busy}
+              accent="emerald"
+            />
+            <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
 
-            <div className="flex flex-col items-center">
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={startComponents.seconds}
-                onChange={(e) => handleStartComponentChange("seconds", parseInt(e.target.value) || 0)}
-                disabled={busy}
-                aria-label="Start Seconds"
-                className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-              />
-              <span className="font-mono text-[9px] text-muted-foreground mt-0.5">SEC</span>
-            </div>
-            <span className="font-mono font-bold text-muted-foreground text-sm pb-3">.</span>
+            <TimeDigitSegment
+              label="SEC"
+              value={startComponents.seconds}
+              min={0}
+              max={59}
+              onChange={(v) => handleStartComponentChange("seconds", v)}
+              disabled={busy}
+              accent="emerald"
+            />
+            <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">.</span>
 
-            <div className="flex flex-col items-center">
-              <input
-                type="number"
-                min={0}
-                max={990}
-                step={50}
-                value={Math.round(startComponents.milliseconds / 10)}
-                onChange={(e) => handleStartComponentChange("milliseconds", (parseInt(e.target.value) || 0) * 10)}
-                disabled={busy}
-                aria-label="Start Centiseconds"
-                className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-              />
-              <span className="font-mono text-[9px] text-muted-foreground mt-0.5">MS</span>
-            </div>
+            <TimeDigitSegment
+              label="MS"
+              value={Math.round(startComponents.milliseconds / 10)}
+              digits={2}
+              min={0}
+              max={99}
+              step={5}
+              onChange={(v) => handleStartComponentChange("milliseconds", v * 10)}
+              disabled={busy}
+              accent="emerald"
+            />
           </div>
 
-          {/* Quick Jump & Micro-Nudge Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  void haptics.light();
-                  updateStartCutpoint(0);
-                }}
-                className="px-2 py-1 rounded-md border border-border/60 bg-background/80 hover:bg-secondary font-mono text-[10px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-                title="Jump to Start (0:00)"
-              >
-                ⏮ 0:00
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void haptics.light();
-                  updateStartCutpoint(currentTime);
-                }}
-                className="px-2 py-1 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 font-mono text-[10px] text-primary transition-all cursor-pointer"
-                title="Set Start to Playhead Position"
-              >
-                📍 At Playhead
-              </button>
-            </div>
+          {/* Row 1: Action Triggers (Grid of 3) */}
+          <div className="grid grid-cols-3 gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                updateStartCutpoint(0);
+              }}
+              className="h-8 px-2 rounded-lg border border-border/60 bg-secondary/30 hover:bg-secondary/70 font-mono text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              title="Jump to track start (00:00)"
+            >
+              <RotateCcw className="size-3" />
+              <span>0:00</span>
+            </button>
 
-            {/* Steppers */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => nudgeStart(-1.0)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge -1.0s"
-              >
-                -1s
-              </button>
-              <button
-                type="button"
-                onClick={() => nudgeStart(-0.1)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge -100ms"
-              >
-                -0.1s
-              </button>
-              <button
-                type="button"
-                onClick={() => nudgeStart(0.1)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge +100ms"
-              >
-                +0.1s
-              </button>
-              <button
-                type="button"
-                onClick={() => nudgeStart(1.0)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge +1.0s"
-              >
-                +1s
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                updateStartCutpoint(currentTime);
+              }}
+              className="h-8 px-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 font-mono text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              title="Snap In-Point to Current Playhead"
+            >
+              <Crosshair className="size-3" />
+              <span>Playhead</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                onSeek(startSec);
+              }}
+              className="h-8 px-2 rounded-lg border border-emerald-500/30 bg-secondary/40 hover:bg-secondary/80 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              title="Audition audio starting from this In-Point"
+            >
+              <Play className="size-3 text-emerald-400 fill-emerald-400" />
+              <span>Audition</span>
+            </button>
+          </div>
+
+          {/* Row 2: Micro-Nudge Grid (Grid of 4) */}
+          <div className="grid grid-cols-4 gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => nudgeStart(-1.0)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge In-Point -1.0s"
+            >
+              -1s
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeStart(-0.1)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge In-Point -100ms"
+            >
+              -0.1s
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeStart(0.1)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge In-Point +100ms"
+            >
+              +0.1s
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeStart(1.0)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge In-Point +1.0s"
+            >
+              +1s
+            </button>
           </div>
         </div>
 
         {/* Console B: End Timestamp (Out-Point) */}
-        <div className="p-3.5 rounded-xl border border-border/70 bg-card/50 space-y-3">
+        <div className="p-3.5 rounded-xl border border-rose-500/30 hover:border-rose-500/50 bg-card/60 space-y-3.5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
               <span>🏁 End Timestamp (Out-Point)</span>
             </span>
-            <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-primary/40 bg-primary/10 text-primary">
-              {formatAdaptiveTimestamp(endSec, { forceHours: isLongAudio })}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {!displayHours && (
+                <button
+                  type="button"
+                  onClick={() => setShowHours(true)}
+                  className="px-1.5 py-0.5 rounded border border-border/60 bg-secondary/30 hover:bg-secondary font-mono text-[9px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  title="Expand to show hours"
+                >
+                  +HR
+                </button>
+              )}
+              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-rose-500/40 bg-rose-500/15 text-rose-300">
+                {formatAdaptiveTimestamp(endSec, { forceHours: displayHours })}
+              </span>
+            </div>
           </div>
 
-          {/* Segmented Inputs: HH : MM : SS . ms */}
-          <div className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-[#090D0C] border border-border/60">
-            {isLongAudio && (
+          {/* Segmented Inputs: HH : MM : SEC . MS with Micro-Steppers */}
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-[#090D0C] border border-border/70 shadow-inner">
+            {displayHours && (
               <>
-                <div className="flex flex-col items-center">
-                  <input
-                    type="number"
-                    min={0}
-                    max={99}
-                    value={endComponents.hours}
-                    onChange={(e) => handleEndComponentChange("hours", parseInt(e.target.value) || 0)}
-                    disabled={busy}
-                    aria-label="End Hours"
-                    className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-                  />
-                  <span className="font-mono text-[9px] text-muted-foreground mt-0.5">HR</span>
-                </div>
-                <span className="font-mono font-bold text-muted-foreground text-sm pb-3">:</span>
+                <TimeDigitSegment
+                  label="HR"
+                  value={endComponents.hours}
+                  min={0}
+                  max={99}
+                  onChange={(v) => handleEndComponentChange("hours", v)}
+                  disabled={busy}
+                  accent="rose"
+                />
+                <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
               </>
             )}
 
-            <div className="flex flex-col items-center">
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={endComponents.minutes}
-                onChange={(e) => handleEndComponentChange("minutes", parseInt(e.target.value) || 0)}
-                disabled={busy}
-                aria-label="End Minutes"
-                className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-              />
-              <span className="font-mono text-[9px] text-muted-foreground mt-0.5">MIN</span>
-            </div>
-            <span className="font-mono font-bold text-muted-foreground text-sm pb-3">:</span>
+            <TimeDigitSegment
+              label="MIN"
+              value={endComponents.minutes}
+              min={0}
+              max={59}
+              onChange={(v) => handleEndComponentChange("minutes", v)}
+              disabled={busy}
+              accent="rose"
+            />
+            <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
 
-            <div className="flex flex-col items-center">
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={endComponents.seconds}
-                onChange={(e) => handleEndComponentChange("seconds", parseInt(e.target.value) || 0)}
-                disabled={busy}
-                aria-label="End Seconds"
-                className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-              />
-              <span className="font-mono text-[9px] text-muted-foreground mt-0.5">SEC</span>
-            </div>
-            <span className="font-mono font-bold text-muted-foreground text-sm pb-3">.</span>
+            <TimeDigitSegment
+              label="SEC"
+              value={endComponents.seconds}
+              min={0}
+              max={59}
+              onChange={(v) => handleEndComponentChange("seconds", v)}
+              disabled={busy}
+              accent="rose"
+            />
+            <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">.</span>
 
-            <div className="flex flex-col items-center">
-              <input
-                type="number"
-                min={0}
-                max={990}
-                step={50}
-                value={Math.round(endComponents.milliseconds / 10)}
-                onChange={(e) => handleEndComponentChange("milliseconds", (parseInt(e.target.value) || 0) * 10)}
-                disabled={busy}
-                aria-label="End Centiseconds"
-                className="w-12 h-9 text-center rounded-md border border-border/60 bg-background font-mono text-sm font-bold text-foreground focus:border-primary focus:outline-hidden"
-              />
-              <span className="font-mono text-[9px] text-muted-foreground mt-0.5">MS</span>
-            </div>
+            <TimeDigitSegment
+              label="MS"
+              value={Math.round(endComponents.milliseconds / 10)}
+              digits={2}
+              min={0}
+              max={99}
+              step={5}
+              onChange={(v) => handleEndComponentChange("milliseconds", v * 10)}
+              disabled={busy}
+              accent="rose"
+            />
           </div>
 
-          {/* Quick Jump & Micro-Nudge Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  void haptics.light();
-                  updateEndCutpoint(currentTime);
-                }}
-                className="px-2 py-1 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 font-mono text-[10px] text-primary transition-all cursor-pointer"
-                title="Set End to Playhead Position"
-              >
-                📍 At Playhead
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void haptics.light();
-                  updateEndCutpoint(effectiveDuration);
-                }}
-                className="px-2 py-1 rounded-md border border-border/60 bg-background/80 hover:bg-secondary font-mono text-[10px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-                title="Snap to Full Track End"
-              >
-                ⏭ Full End
-              </button>
-            </div>
+          {/* Row 1: Action Triggers (Grid of 3) */}
+          <div className="grid grid-cols-3 gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                updateEndCutpoint(currentTime);
+              }}
+              className="h-8 px-2 rounded-lg border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 font-mono text-[11px] font-semibold text-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              title="Snap Out-Point to Current Playhead"
+            >
+              <Crosshair className="size-3" />
+              <span>Playhead</span>
+            </button>
 
-            {/* Steppers */}
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => nudgeEnd(-1.0)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge -1.0s"
-              >
-                -1s
-              </button>
-              <button
-                type="button"
-                onClick={() => nudgeEnd(-0.1)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge -100ms"
-              >
-                -0.1s
-              </button>
-              <button
-                type="button"
-                onClick={() => nudgeEnd(0.1)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge +100ms"
-              >
-                +0.1s
-              </button>
-              <button
-                type="button"
-                onClick={() => nudgeEnd(1.0)}
-                className="px-1.5 py-1 rounded bg-secondary hover:bg-secondary/80 font-mono text-[10px] text-foreground cursor-pointer"
-                title="Nudge +1.0s"
-              >
-                +1s
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                updateEndCutpoint(effectiveDuration);
+              }}
+              className="h-8 px-2 rounded-lg border border-border/60 bg-secondary/30 hover:bg-secondary/70 font-mono text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              title="Snap Out-Point to Full Track End"
+            >
+              <ChevronsRight className="size-3" />
+              <span>Full End</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                void haptics.light();
+                onSeek(Math.max(0, endSec - 2.0));
+              }}
+              className="h-8 px-2 rounded-lg border border-rose-500/30 bg-secondary/40 hover:bg-secondary/80 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              title="Audition tail audio leading up to Out-Point"
+            >
+              <Play className="size-3 text-rose-400 fill-rose-400" />
+              <span>Audition</span>
+            </button>
+          </div>
+
+          {/* Row 2: Micro-Nudge Grid (Grid of 4) */}
+          <div className="grid grid-cols-4 gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => nudgeEnd(-1.0)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge Out-Point -1.0s"
+            >
+              -1s
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeEnd(-0.1)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge Out-Point -100ms"
+            >
+              -0.1s
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeEnd(0.1)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge Out-Point +100ms"
+            >
+              +0.1s
+            </button>
+            <button
+              type="button"
+              onClick={() => nudgeEnd(1.0)}
+              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              title="Nudge Out-Point +1.0s"
+            >
+              +1s
+            </button>
           </div>
         </div>
       </div>
