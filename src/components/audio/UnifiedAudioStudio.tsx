@@ -70,7 +70,9 @@ import {
 } from "@/lib/audio-dsp";
 import { PrecisionAudioCutterDeck } from "@/components/audio/PrecisionAudioCutterDeck";
 import { formatBytes } from "@/lib/format";
-import type { VideoMeta } from "@/lib/media/probe";
+import { probeAudioDuration, probeHasAudio, type VideoMeta } from "@/lib/media/probe";
+import { useToast } from "@/hooks/use-toast";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 
 const AUDIO_STUDIO_PRESETS: PresetItem[] = [
@@ -239,10 +241,27 @@ export function UnifiedAudioStudio({
     processAudio,
     reset,
   } = useAudioProcessor();
+  const { toast } = useToast();
 
   /* File state */
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState(0);
+
+  /* Consume handoff from other workstation modules */
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType || "audio/mp3" });
+      setFile(f);
+      probeAudioDuration(f)
+        .then((d) => {
+          handleProbed({ durationSec: d, width: 0, height: 0 });
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   /* Active Effect and Parameters */
   const [activeEffect, setActiveEffect] = useState<AudioEffectType>(() =>
@@ -870,6 +889,17 @@ export function UnifiedAudioStudio({
   /* Execute WASM Processing */
   const handleRunProcessing = async () => {
     if (!file || busy) return;
+    if (file.size < 256 * 1024 && !file.name.endsWith(".wav")) {
+      const hasAudio = await probeHasAudio(file).catch(() => true);
+      if (!hasAudio) {
+        toast({
+          title: "Incomplete or Silent Media File",
+          description: "This file is incomplete or lacks an audio stream to edit.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     void haptics.medium();
     if (audioRef.current && isPlaying) {
       audioRef.current.pause();

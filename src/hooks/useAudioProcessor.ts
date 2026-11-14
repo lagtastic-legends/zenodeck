@@ -22,6 +22,7 @@ import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useUIAudio } from "@/hooks/useUIAudio";
 import { useNavStore } from "@/lib/navigation/nav-store";
+import { probeHasAudio } from "@/lib/media/probe";
 import {
   type AudioEffectType,
   type AudioFormat,
@@ -155,13 +156,37 @@ export function useAudioProcessor() {
         return null;
       }
 
-      // 2. File size safety bounds check
+      // 2. File size & stream validity safety checks
       if (file.size > SIZE_BLOCK_BYTES) {
         const msg = `Audio file size (${(file.size / (1024 * 1024 * 1024)).toFixed(2)} GB) exceeds the 20 GB processing limit.`;
         setError(msg);
         setPhase("error");
         void haptics.error();
         return null;
+      }
+
+      if (file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|mkv|avi|3gp)$/i.test(file.name)) {
+        const hasAudio = await probeHasAudio(file).catch(() => true);
+        if (!hasAudio) {
+          const msg = "This media file contains no audio stream to edit (silent or video-only video).";
+          setError(msg);
+          setPhase("error");
+          void haptics.error();
+          playError();
+          return null;
+        }
+      }
+
+      if (file.size < 256 * 1024 && !file.name.endsWith(".wav")) {
+        const hasAudio = await probeHasAudio(file).catch(() => true);
+        if (!hasAudio) {
+          const msg = "This file appears to be an incomplete or corrupted fragment with no valid audio track.";
+          setError(msg);
+          setPhase("error");
+          void haptics.error();
+          playError();
+          return null;
+        }
       }
 
       // 3. Ensure FFmpeg engine is booted
@@ -249,7 +274,7 @@ export function useAudioProcessor() {
         const outArgs = audioOutputArgs(outputFormat, kbps);
 
         const hasComplexFilter = filters.some((f) => f.includes("[") || f.includes(";"));
-        const execArgs: string[] = ["-i", virtualInputPath];
+        const execArgs: string[] = ["-i", virtualInputPath, "-vn"];
         if (hasComplexFilter) {
           const filterComplex = filters.join(";");
           execArgs.push("-filter_complex", filterComplex, "-map", "[outa]");
@@ -266,22 +291,41 @@ export function useAudioProcessor() {
         setProgress(25);
         await new Promise((resolve) => setTimeout(resolve, 25));
 
-        // 7. Track FFmpeg progress event
+        // 7. Track FFmpeg progress and log events
         const onEngineProgress = ({ progress: p }: { progress: number }) => {
           if (p >= 0 && p <= 1) {
             setProgress(Math.round(25 + p * 65));
           }
         };
 
+        const capturedLogs: string[] = [];
+        const onEngineLog = ({ message }: { message?: string }) => {
+          if (message) capturedLogs.push(message);
+        };
+
         activeEngine.on("progress", onEngineProgress);
+        activeEngine.on("log", onEngineLog);
 
         try {
           const exitCode = await activeEngine.exec(execArgs);
           if (exitCode !== 0) {
-            throw new Error(`FFmpeg exited with error code ${exitCode}.`);
+            const isSilentStream = capturedLogs.some((l) =>
+              /does not contain any stream|matches no streams|Cannot find a matching stream|filter.*matching stream was not found|Stream map '0:a'/i.test(l)
+            );
+            if (isSilentStream) {
+              throw new Error("The source file contains no audio stream to edit (silent or video-only media).");
+            }
+            const isCorrupt = capturedLogs.some((l) =>
+              /moov atom not found|Invalid data found when processing input|EBML header parsing failed|unexpected end of file|error reading header/i.test(l)
+            );
+            if (isCorrupt) {
+              throw new Error("Source audio file is incomplete or corrupted (e.g. interrupted download). Please re-download.");
+            }
+            throw new Error(`FFmpeg exited with error code ${exitCode}. Check engine log for details.`);
           }
         } finally {
           activeEngine.off("progress", onEngineProgress);
+          activeEngine.off("log", onEngineLog);
         }
 
         // 8. Read result from WASM Virtual FS

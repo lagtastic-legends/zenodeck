@@ -8,7 +8,7 @@
 
 import { motion } from "framer-motion";
 import { AudioLines, Scissors } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DropZone } from "@/components/media/drop-zone";
 import { OutputCard } from "@/components/media/output-card";
 import { ProcessingStatus } from "@/components/media/processing-status";
@@ -20,6 +20,8 @@ import {
   ParamSlider,
 } from "@/components/audio/param-controls";
 import { useMediaJob } from "@/hooks/use-media-job";
+import { useToast } from "@/hooks/use-toast";
+import { useWorkstationStore } from "@/hooks/useWorkstationStore";
 import { formatAdaptiveTimestamp } from "@/lib/audio-dsp";
 import {
   audioOutputArgs,
@@ -27,9 +29,10 @@ import {
   type AudioFormat,
 } from "@/lib/audio/filters";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
-import type { VideoMeta } from "@/lib/media/probe";
+import { probeHasAudio, probeVideo, type VideoMeta } from "@/lib/media/probe";
 
 export function AudioEditor() {
+  const { toast } = useToast();
   const job = useMediaJob();
   const { phase, busy, progress, passIndex, passCount, passLabel, elapsedMs, error, outputs, run, reset } = job;
 
@@ -47,6 +50,19 @@ export function AudioEditor() {
   const [fadeOut, setFadeOut] = useState(0);
   const [format, setFormat] = useState<AudioFormat>("mp3");
   const [kbps, setKbps] = useState("256");
+
+  useEffect(() => {
+    const handoff = useWorkstationStore.getState().consumeHandoffFile();
+    if (handoff?.file) {
+      const f = handoff.file instanceof File
+        ? handoff.file
+        : new File([handoff.file], handoff.filename, { type: handoff.mimeType || "audio/mp3" });
+      setFile(f);
+      probeVideo(f)
+        .then((m) => handleProbed(m))
+        .catch(() => {});
+    }
+  }, []);
 
   const handleProbed = (m: VideoMeta) => {
     setDuration(m.durationSec);
@@ -84,6 +100,17 @@ export function AudioEditor() {
 
   const startJob = async () => {
     if (!file || !valid) return;
+    if (file.size < 256 * 1024 && !file.name.endsWith(".wav")) {
+      const hasAudio = await probeHasAudio(file).catch(() => true);
+      if (!hasAudio) {
+        toast({
+          title: "Incomplete or Silent File",
+          description: "This file is incomplete or lacks an audio track to edit.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const srcExt = extOf(file.name) || "mp3";
     const virtualInputPath = `/mnt_0/input.${srcExt}`;
     const k = Number(kbps);
@@ -93,6 +120,7 @@ export function AudioEditor() {
         {
           exec: [
             "-i", virtualInputPath,
+            "-vn",
             "-af", projection.filters.length > 0 ? projection.filters.join(",") : "anull",
             ...audioOutputArgs(format, k),
             `output.${format}`,
