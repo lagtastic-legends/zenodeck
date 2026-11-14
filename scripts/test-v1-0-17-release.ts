@@ -16,16 +16,16 @@ function assert(condition: boolean, msg: string) {
 }
 
 // 1. Version Parity
-assert(APP_VERSION === "1.0.17" || APP_VERSION === "1.0.18" || APP_VERSION === "1.0.19" || APP_VERSION === "1.0.20", `src/config/version.ts has APP_VERSION >= "1.0.17" (got "${APP_VERSION}")`);
+assert(APP_VERSION === "1.0.17" || APP_VERSION === "1.0.18" || APP_VERSION === "1.0.19" || APP_VERSION === "1.0.20" || APP_VERSION === "1.0.21", `src/config/version.ts has APP_VERSION >= "1.0.17" (got "${APP_VERSION}")`);
 
 const pkgPath = path.resolve(__dirname, "../package.json");
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-assert(pkg.version === "1.0.17" || pkg.version === "1.0.18" || pkg.version === "1.0.19" || pkg.version === "1.0.20", `package.json has version >= "1.0.17" (got "${pkg.version}")`);
+assert(pkg.version === "1.0.17" || pkg.version === "1.0.18" || pkg.version === "1.0.19" || pkg.version === "1.0.20" || pkg.version === "1.0.21", `package.json has version >= "1.0.17" (got "${pkg.version}")`);
 
 const gradlePath = path.resolve(__dirname, "../android/app/build.gradle");
 const gradle = fs.readFileSync(gradlePath, "utf-8");
-assert(gradle.includes('versionName "1.0.17"') || gradle.includes('versionName "1.0.18"') || gradle.includes('versionName "1.0.19"') || gradle.includes('versionName "1.0.20"'), 'android/app/build.gradle contains versionName >= "1.0.17"');
-assert(gradle.includes("versionCode 10017") || gradle.includes("versionCode 10018") || gradle.includes("versionCode 10019") || gradle.includes("versionCode 10020"), "android/app/build.gradle contains versionCode >= 10017");
+assert(gradle.includes('versionName "1.0.17"') || gradle.includes('versionName "1.0.18"') || gradle.includes('versionName "1.0.19"') || gradle.includes('versionName "1.0.20"') || gradle.includes('versionName "1.0.21"'), 'android/app/build.gradle contains versionName >= "1.0.17"');
+assert(gradle.includes("versionCode 10017") || gradle.includes("versionCode 10018") || gradle.includes("versionCode 10019") || gradle.includes("versionCode 10020") || gradle.includes("versionCode 10021"), "android/app/build.gradle contains versionCode >= 10017");
 
 // 2. CHANGELOG Verification
 const changelogPath = path.resolve(__dirname, "../CHANGELOG.md");

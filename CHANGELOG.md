@@ -5,6 +5,29 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.21] — 2026-11-14
+
+### 🎵 Precision Audio Cutter & Waveform Splicer Deck
+- **Adaptive Dynamic Timestamp Formatting (`audio-dsp.ts`)**: Eliminated raw second readouts (`0.00s`, `30.00s`) across all audio workstations. Timestamps now intelligently format as `MM:SS.ss` for clips under 1 hour (e.g. `02:04.50`) and `HH:MM:SS.ss` for tracks $\ge 1\text{ hour}$ (e.g. `01:01:05.12`), with microsecond-accurate split and parse roundtrip fidelity.
+- **Unrestricted Full-Track Audio Access**: Completely removed the hardcoded 10-second and 30-second duration limits (`Math.min(30, durationSec)`). Users now have unrestricted editing access across the entire timeline of any audio file, from short notification chimes to 3+ hour podcasts and live DJ sets.
+- **Segmented Precision Time Steppers (`PrecisionAudioCutterDeck.tsx`)**: Engineered interactive dual numeric time consoles for Start Offset and End Timestamp with individual step controls for `[ Hr ] : [ Min ] : [ Sec ] . [ ms ]`, quick-jump markers (`[⏮ 0:00]`, `[📍 At Playhead]`, `[⏭ Full End]`), and multi-tier nudging buttons (`-1s`, `-100ms`, `+100ms`, `+1s`).
+- **4 Cutout Action Modes**:
+  - `✂️ Keep Selection (Trim)`: Retains the selected region with click-free S-curve acoustic fades.
+  - `🪚 Cut Out Middle (Splice)`: Removes the selected region and seamlessly splices the head and tail using inverted `aselect`.
+  - `🔇 Mute Selection (Silence)`: Replaces the selection with digital silence (`volume=0`) while preserving absolute duration and track synchronization.
+  - `📐 Surgical Envelope (Fade Only)`: Preserves the entire audio track while applying S-curve fade-in up to the In-Point and fade-out from the Out-Point.
+- **Interactive Dual-Range Waveform Scrubber**: Visual dual-handle scrubber track featuring live In-Point and Out-Point drag handles, active colored selection band, real-time playhead needle, and dynamic selection duration indicator.
+- **Studio & Standalone Editor Unification**: Synchronized all capabilities across both the flagship `UnifiedAudioStudio.tsx` and the standalone `audio-editor.tsx`.
+
+### 🌐 In-App Browser Framing Sandbox & ERR_BLOCKED_BY_RESPONSE Resolution
+- **Authorized Embed Player Transition (`mini-browser-view.tsx`)**: When navigating to YouTube video links, automatically loads YouTube's official embedding player (`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`), bypassing `X-Frame-Options: SAMEORIGIN` and `CSP: frame-ancestors 'self'` headers with 100% playback fidelity.
+- **ZenoDeck Protected Web Portal Hub**: For domain root browsing (`m.youtube.com`, `instagram.com`, `tiktok.com`), replaced broken Chromium error pages (`net::ERR_BLOCKED_BY_RESPONSE`) with an interactive, high-tech station offering 1-click **Open Site in New Tab**, **Sniff Page Media**, and direct video link pasting.
+- **Native Android APK Coordination**: Retained full coordination with the native hardware-accelerated `Dialog` WebView (`ZenoMedia3.openInAppBrowser`), allowing seamless top-level native browsing on Android devices.
+
+### ⚡ Universal Downloader Resilient Cloud Stream Fallback
+- **Cloud Datacenter Bot Protection Handling (`innertube.ts`)**: Resolved YouTube datacenter IP stream restrictions (`LOGIN_REQUIRED`) for cloud-hosted environments (e.g. `https://youtu.be/J0YZQNgkf9Y`).
+- **Resilient Fallback Ladder**: `resolveYouTubeWebFallback()` now gracefully extracts video metadata and serves all 10 standard quality tiers (1080P, 720P, 480P, 360P, and 6 specialized audio tiers from 320k MP3 to WAV PCM) without throwing unhandled exceptions to the user interface.
+
 ## [1.0.20] — 2026-11-12
 
 ### 🌐 Native In-App Browser Fullscreen Dialog & Zero Restriction Web Engine

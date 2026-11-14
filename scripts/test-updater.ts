@@ -27,7 +27,7 @@ function runTests() {
   console.log("✓ isNewerVersion comparisons passed");
 
   // 3. Test current version
-  assert(APP_VERSION === "1.0.19" || APP_VERSION === "1.0.20", "APP_VERSION must be 1.0.20");
+  assert(APP_VERSION === "1.0.20" || APP_VERSION === "1.0.21", "APP_VERSION must be 1.0.21");
   console.log("✓ APP_VERSION config constant verified: " + APP_VERSION);
 
   // 4. Test dismissUpdateNotification logic & mock storage
