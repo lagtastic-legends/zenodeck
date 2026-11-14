@@ -15,6 +15,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useThemeStore } from "@/lib/theme/theme-store";
 import {
   Scissors,
   Repeat,
@@ -215,6 +216,10 @@ export function PrecisionAudioCutterDeck({
 
   const isLongAudio = effectiveDuration >= 3600;
   const [showHours, setShowHours] = useState(false);
+  const { theme } = useThemeStore();
+  const isPrecision = theme === "precision";
+  const [activeM3Target, setActiveM3Target] = useState<"start" | "end">("start");
+  const [fineTuningOpen, setFineTuningOpen] = useState(false);
 
   // Active dragging handle ("start" | "end" | "playhead" | null)
   const [draggingHandle, setDraggingHandle] = useState<"start" | "end" | "playhead" | null>(null);
@@ -446,6 +451,601 @@ export function PrecisionAudioCutterDeck({
     },
   }[cutMode];
 
+  // =========================================================================
+  // DEDICATED PRECISION M3 MOBILE LAYOUT (APK / theme === "precision")
+  // =========================================================================
+  if (isPrecision) {
+    return (
+      <div className="space-y-4">
+        {/* 1. M3 Segmented Capsule Action Selector */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between px-1">
+            <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 font-bold">
+              <Scissors className="size-3.5 text-primary" />
+              <span>Cutout Mode</span>
+            </span>
+            <span className="font-mono text-[11px] text-muted-foreground truncate max-w-[200px]">
+              {modeDetails.label}
+            </span>
+          </div>
+
+          {/* Segmented Pill Rail */}
+          <div className="p-1 rounded-full bg-secondary/50 border border-border/70 flex items-center justify-between gap-1 shadow-inner">
+            {[
+              { id: "keep", label: "Trim", icon: Scissors },
+              { id: "cut", label: "Cut", icon: Scissors, rotate: true },
+              { id: "silence", label: "Mute", icon: VolumeX },
+              { id: "fade_only", label: "Fade", icon: Sliders },
+            ].map((mode) => {
+              const isSelected = cutMode === mode.id;
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => {
+                    void haptics.light();
+                    updateParam("cutMode", mode.id);
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-full font-mono text-xs transition-all cursor-pointer select-none active:scale-95 ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                  }`}
+                >
+                  <Icon className={`size-3.5 shrink-0 ${mode.rotate ? "rotate-180" : ""}`} />
+                  <span className="font-bold">{mode.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Hero Interactive Touch Scrubber */}
+        <div className="p-4 rounded-3xl border border-border/80 bg-card/80 space-y-3 shadow-xs">
+          {/* Top Header Row with Timecodes */}
+          <div className="flex items-center justify-between gap-2 text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-foreground flex items-center gap-1">
+                <Clock className="size-3.5 text-primary" />
+                <span>Waveform Scrubber</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground text-[11px]">Playhead:</span>
+              <strong className="text-foreground font-black tabular-nums">
+                {formatAdaptiveTimestamp(currentTime, { forceHours: isLongAudio })}
+              </strong>
+            </div>
+          </div>
+
+          {/* Large Touch Waveform Scrubber Track */}
+          <div
+            ref={trackRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className="relative h-16 w-full rounded-2xl bg-background/90 dark:bg-[#090D0C] border border-border/80 overflow-hidden cursor-crosshair select-none touch-none shadow-inner"
+          >
+            {/* Waveform Background Simulation Grid */}
+            <div className="absolute inset-0 flex items-center justify-around opacity-30 dark:opacity-25 pointer-events-none px-2">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-primary/40 dark:bg-[#F7E7CE] rounded-full"
+                  style={{
+                    height: `${20 + Math.sin(i * 0.4) * 45 + ((i % 5) * 6)}%`,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Inactive Pre-Selection Mask */}
+            <div
+              className="absolute top-0 bottom-0 left-0 bg-black/40 dark:bg-black/60 pointer-events-none"
+              style={{ width: `${startPct}%` }}
+            />
+
+            {/* Active Cutout Region Band */}
+            <div
+              className={`absolute top-0 bottom-0 ${modeDetails.bandColor} transition-colors pointer-events-none`}
+              style={{
+                left: `${startPct}%`,
+                width: `${Math.max(0.5, endPct - startPct)}%`,
+              }}
+            >
+              {/* Center Region Label */}
+              <div className="h-full flex items-center justify-center">
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-white/95 bg-black/70 px-2.5 py-0.5 rounded-full backdrop-blur-xs border border-white/20">
+                  {cutMode === "keep" ? "KEEP REGION" : cutMode === "cut" ? "CUT REGION" : cutMode.toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            {/* Inactive Post-Selection Mask */}
+            <div
+              className="absolute top-0 bottom-0 right-0 bg-black/40 dark:bg-black/60 pointer-events-none"
+              style={{ width: `${100 - endPct}%` }}
+            />
+
+            {/* Start Cutpoint Handle (In-Point) — Ergonomic 28px hit target */}
+            <div
+              className="absolute top-0 bottom-0 w-7 -ml-3.5 flex flex-col items-center justify-between cursor-ew-resize z-20 group"
+              style={{ left: `${startPct}%` }}
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-600 dark:bg-emerald-400 border-2 border-background shadow-md flex items-center justify-center -mt-1 group-hover:scale-125 transition-transform">
+                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+              </div>
+              <div className="w-1 h-full bg-emerald-600 dark:bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
+              <div className="w-5 h-5 rounded-full bg-emerald-600 dark:bg-emerald-400 border-2 border-background shadow-md flex items-center justify-center -mb-1 group-hover:scale-125 transition-transform">
+                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+              </div>
+            </div>
+
+            {/* End Cutpoint Handle (Out-Point) — Ergonomic 28px hit target */}
+            <div
+              className="absolute top-0 bottom-0 w-7 -ml-3.5 flex flex-col items-center justify-between cursor-ew-resize z-20 group"
+              style={{ left: `${endPct}%` }}
+            >
+              <div className="w-5 h-5 rounded-full bg-rose-600 dark:bg-rose-400 border-2 border-background shadow-md flex items-center justify-center -mt-1 group-hover:scale-125 transition-transform">
+                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+              </div>
+              <div className="w-1 h-full bg-rose-600 dark:bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.7)]" />
+              <div className="w-5 h-5 rounded-full bg-rose-600 dark:bg-rose-400 border-2 border-background shadow-md flex items-center justify-center -mb-1 group-hover:scale-125 transition-transform">
+                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+              </div>
+            </div>
+
+            {/* Live Playhead Needle */}
+            <div
+              className="absolute top-0 bottom-0 w-1 -ml-0.5 bg-primary z-10 pointer-events-none shadow-[0_0_10px_rgba(0,104,137,0.9)]"
+              style={{ left: `${playheadPct}%` }}
+            >
+              <div className="size-2 rounded-full bg-primary -ml-0.5 -mt-0.5 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Live Horizon Range Badges */}
+          <div className="flex items-center justify-between gap-1 p-2 rounded-2xl bg-secondary/30 border border-border/50 font-mono text-[11px]">
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-[10px]">IN:</span>
+              <strong className="text-emerald-700 dark:text-emerald-300 font-bold tabular-nums">
+                {formatAdaptiveTimestamp(startSec, { forceHours: displayHours })}
+              </strong>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-background/80 px-2 py-0.5 rounded-full border border-border/60">
+              <span className="text-muted-foreground text-[10px]">SPAN:</span>
+              <strong className="text-primary font-bold tabular-nums">{selectionLength.toFixed(2)}s</strong>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground text-[10px]">OUT:</span>
+              <strong className="text-rose-700 dark:text-rose-300 font-bold tabular-nums">
+                {formatAdaptiveTimestamp(endSec, { forceHours: displayHours })}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Unified Boundary Range Controller Card */}
+        <div className="p-4 rounded-3xl border border-border/80 bg-card/80 space-y-4 shadow-xs">
+          {/* Top Dual Wing Readouts */}
+          <div className="grid grid-cols-2 gap-3 pb-3 border-b border-border/50">
+            {/* Left Wing: Start Point */}
+            <div
+              onClick={() => {
+                void haptics.light();
+                setActiveM3Target("start");
+              }}
+              className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                activeM3Target === "start"
+                  ? "border-emerald-500/80 bg-emerald-500/10 ring-2 ring-emerald-500/20 shadow-xs"
+                  : "border-border/60 bg-background/50 hover:bg-background/80"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                  <span>📍 In-Point</span>
+                </span>
+                {activeM3Target === "start" && (
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </div>
+              <div className="font-mono text-lg sm:text-xl font-black text-foreground tabular-nums">
+                {formatAdaptiveTimestamp(startSec, { forceHours: displayHours })}
+              </div>
+              <div className="flex items-center gap-1 mt-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void haptics.light();
+                    updateStartCutpoint(0);
+                  }}
+                  className="flex-1 py-1 rounded-full border border-border/70 bg-background hover:bg-secondary text-[10px] font-mono font-semibold text-foreground transition-all active:scale-95 cursor-pointer"
+                >
+                  0:00
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void haptics.light();
+                    updateStartCutpoint(currentTime);
+                  }}
+                  className="flex-1 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-semibold transition-all active:scale-95 cursor-pointer"
+                >
+                  Playhead
+                </button>
+              </div>
+            </div>
+
+            {/* Right Wing: End Point */}
+            <div
+              onClick={() => {
+                void haptics.light();
+                setActiveM3Target("end");
+              }}
+              className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                activeM3Target === "end"
+                  ? "border-rose-500/80 bg-rose-500/10 ring-2 ring-rose-500/20 shadow-xs"
+                  : "border-border/60 bg-background/50 hover:bg-background/80"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1">
+                  <span>🏁 Out-Point</span>
+                </span>
+                {activeM3Target === "end" && (
+                  <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
+                )}
+              </div>
+              <div className="font-mono text-lg sm:text-xl font-black text-foreground tabular-nums">
+                {formatAdaptiveTimestamp(endSec, { forceHours: displayHours })}
+              </div>
+              <div className="flex items-center gap-1 mt-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void haptics.light();
+                    updateEndCutpoint(currentTime);
+                  }}
+                  className="flex-1 py-1 rounded-full border border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[10px] font-mono font-semibold transition-all active:scale-95 cursor-pointer"
+                >
+                  Playhead
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void haptics.light();
+                    updateEndCutpoint(effectiveDuration);
+                  }}
+                  className="flex-1 py-1 rounded-full border border-border/70 bg-background hover:bg-secondary text-[10px] font-mono font-semibold text-foreground transition-all active:scale-95 cursor-pointer"
+                >
+                  Full End
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Target Stepper & Precision Digit Box */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-bold text-foreground flex items-center gap-1.5">
+                <span>{activeM3Target === "start" ? "📍 In-Point Time Steppers" : "🏁 Out-Point Time Steppers"}</span>
+              </span>
+
+              <div className="flex items-center gap-1">
+                {!displayHours && (
+                  <button
+                    type="button"
+                    onClick={() => setShowHours(true)}
+                    className="px-2 py-0.5 rounded-full border border-border/60 bg-secondary/40 font-mono text-[9px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    +HR
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    void haptics.light();
+                    if (activeM3Target === "start") {
+                      onSeek(startSec);
+                    } else {
+                      onSeek(Math.max(0, endSec - 2.0));
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Play className="size-2.5 fill-current" />
+                  <span>Audition {activeM3Target === "start" ? "Start" : "Tail"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* TimeDigitSegment Component with micro-steppers */}
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-background/90 dark:bg-[#090D0C] border border-border/70 shadow-inner">
+              {displayHours && (
+                <>
+                  <TimeDigitSegment
+                    label="HR"
+                    value={activeM3Target === "start" ? startComponents.hours : endComponents.hours}
+                    min={0}
+                    max={99}
+                    onChange={(v) =>
+                      activeM3Target === "start"
+                        ? handleStartComponentChange("hours", v)
+                        : handleEndComponentChange("hours", v)
+                    }
+                    disabled={busy}
+                    accent={activeM3Target === "start" ? "emerald" : "rose"}
+                  />
+                  <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
+                </>
+              )}
+
+              <TimeDigitSegment
+                label="MIN"
+                value={activeM3Target === "start" ? startComponents.minutes : endComponents.minutes}
+                min={0}
+                max={59}
+                onChange={(v) =>
+                  activeM3Target === "start"
+                    ? handleStartComponentChange("minutes", v)
+                    : handleEndComponentChange("minutes", v)
+                }
+                disabled={busy}
+                accent={activeM3Target === "start" ? "emerald" : "rose"}
+              />
+              <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
+
+              <TimeDigitSegment
+                label="SEC"
+                value={activeM3Target === "start" ? startComponents.seconds : endComponents.seconds}
+                min={0}
+                max={59}
+                onChange={(v) =>
+                  activeM3Target === "start"
+                    ? handleStartComponentChange("seconds", v)
+                    : handleEndComponentChange("seconds", v)
+                }
+                disabled={busy}
+                accent={activeM3Target === "start" ? "emerald" : "rose"}
+              />
+              <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">.</span>
+
+              <TimeDigitSegment
+                label="MS"
+                value={Math.round(
+                  (activeM3Target === "start" ? startComponents.milliseconds : endComponents.milliseconds) / 10
+                )}
+                digits={2}
+                min={0}
+                max={99}
+                step={5}
+                onChange={(v) =>
+                  activeM3Target === "start"
+                    ? handleStartComponentChange("milliseconds", v * 10)
+                    : handleEndComponentChange("milliseconds", v * 10)
+                }
+                disabled={busy}
+                accent={activeM3Target === "start" ? "emerald" : "rose"}
+              />
+            </div>
+
+            {/* Micro-Nudge Jog Strip */}
+            <div className="grid grid-cols-4 gap-1.5 w-full pt-1">
+              <button
+                type="button"
+                onClick={() => (activeM3Target === "start" ? nudgeStart(-1.0) : nudgeEnd(-1.0))}
+                className="h-8 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-xs font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-xs"
+              >
+                -1s
+              </button>
+              <button
+                type="button"
+                onClick={() => (activeM3Target === "start" ? nudgeStart(-0.1) : nudgeEnd(-0.1))}
+                className="h-8 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-xs font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-xs"
+              >
+                -0.1s
+              </button>
+              <button
+                type="button"
+                onClick={() => (activeM3Target === "start" ? nudgeStart(0.1) : nudgeEnd(0.1))}
+                className="h-8 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-xs font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-xs"
+              >
+                +0.1s
+              </button>
+              <button
+                type="button"
+                onClick={() => (activeM3Target === "start" ? nudgeStart(1.0) : nudgeEnd(1.0))}
+                className="h-8 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-xs font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-xs"
+              >
+                +1s
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Collapsible Fine-Tuning & Presets Accordion */}
+        <div className="rounded-3xl border border-border/80 bg-card/60 overflow-hidden shadow-xs">
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              setFineTuningOpen(!fineTuningOpen);
+            }}
+            className="w-full p-3.5 flex items-center justify-between font-mono text-xs font-bold text-foreground bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Sliders className="size-3.5 text-primary" />
+              <span>Fine-Tuning: Fades, Boost & Presets</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
+              <span>{fineTuningOpen ? "Hide" : "Customize"}</span>
+              <ChevronDown className={`size-3.5 transition-transform duration-200 ${fineTuningOpen ? "rotate-180" : ""}`} />
+            </div>
+          </button>
+
+          {fineTuningOpen && (
+            <div className="p-4 space-y-4 border-t border-border/60">
+              {/* Range Presets Pill Strip */}
+              <div>
+                <span className="font-mono text-[10px] uppercase text-muted-foreground block mb-2 font-bold">
+                  Quick Selection Presets
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: "full", label: "Full Track" },
+                    { id: "first30", label: "First 30s" },
+                    { id: "first60", label: "First 60s" },
+                    { id: "last30", label: "Last 30s" },
+                    { id: "center50", label: "Center 50%" },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyPresetRange(p.id as any)}
+                      className="px-3 py-1.5 rounded-full border border-border/70 bg-background/80 hover:bg-secondary text-[11px] font-mono font-medium text-foreground transition-all active:scale-95 cursor-pointer"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleZeroSnap}
+                    className="px-3 py-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 text-[11px] font-mono font-bold flex items-center gap-1 active:scale-95 cursor-pointer"
+                  >
+                    <Magnet className="size-3" />
+                    <span>Zero-Snap</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Acoustic Fades & Volume Boost */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="p-3 rounded-2xl border border-border/60 bg-background/50 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-muted-foreground font-medium">Fade In (S-Curve)</span>
+                    <span className="text-primary font-bold tabular-nums">{fadeInSec.toFixed(2)}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={fadeInSec}
+                    onChange={(e) => updateParam("fadeInSec", parseFloat(e.target.value))}
+                    disabled={busy}
+                    aria-label="Fade In Duration"
+                    className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3 rounded-2xl border border-border/60 bg-background/50 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-muted-foreground font-medium">Fade Out (S-Curve)</span>
+                    <span className="text-primary font-bold tabular-nums">{fadeOutSec.toFixed(2)}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={fadeOutSec}
+                    onChange={(e) => updateParam("fadeOutSec", parseFloat(e.target.value))}
+                    disabled={busy}
+                    aria-label="Fade Out Duration"
+                    className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3 rounded-2xl border border-border/60 bg-background/50 space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-muted-foreground font-medium">Volume Boost</span>
+                    <span className="text-emerald-700 dark:text-emerald-300 font-bold tabular-nums">
+                      {boostDb > 0 ? `+${boostDb}` : boostDb} dB
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={1}
+                    value={boostDb}
+                    onChange={(e) => updateParam("boostDb", parseInt(e.target.value))}
+                    disabled={busy}
+                    aria-label="Volume Boost in Decibels"
+                    className="w-full accent-emerald-500 h-1.5 bg-secondary rounded-lg cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Docked Ergonomic Bottom Thumb Bar */}
+        <div className="p-3 rounded-3xl bg-card/95 border border-border/80 shadow-md flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.medium();
+              setParams((prev) => ({
+                ...prev,
+                startSec: 0,
+                endSec: effectiveDuration,
+              }));
+              onSeek(0);
+            }}
+            className="px-3.5 py-2 rounded-full border border-border/70 bg-secondary/50 hover:bg-secondary font-mono text-xs font-semibold text-foreground flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+            title="Reset to full track length"
+          >
+            <RotateCcw className="size-3.5" />
+            <span>Reset</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              onSeek(startSec);
+            }}
+            className="flex-1 py-2.5 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono text-xs font-black flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all cursor-pointer"
+            title="Audition cut from In-Point"
+          >
+            <Play className="size-3.5 fill-current" />
+            <span>Play Cut ({selectionLength.toFixed(1)}s)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.light();
+              setLoopRegion(!loopRegion);
+            }}
+            className={`px-3.5 py-2 rounded-full border font-mono text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer ${
+              loopRegion
+                ? "border-primary bg-primary/20 text-primary font-black ring-1 ring-primary/40"
+                : "border-border/70 bg-secondary/40 text-muted-foreground hover:text-foreground"
+            }`}
+            title="Toggle region looping"
+          >
+            <Repeat className="size-3.5" />
+            <span>Loop</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // ORIGINAL CYBER WORKSTATION DESKTOP LAYOUT (PRESERVED 100% FOR CYBER MODE)
+  // =========================================================================
   return (
     <div className="space-y-4">
       {/* 1. Cutter Action Mode Deck */}
