@@ -119,9 +119,9 @@ function TimeDigitSegment({
 
   const accentRing =
     accent === "emerald"
-      ? "focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/25 text-emerald-300"
+      ? "focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/25 text-emerald-700 dark:text-emerald-300"
       : accent === "rose"
-      ? "focus-within:border-rose-500/80 focus-within:ring-2 focus-within:ring-rose-500/25 text-rose-300"
+      ? "focus-within:border-rose-500/80 focus-within:ring-2 focus-within:ring-rose-500/25 text-rose-700 dark:text-rose-300"
       : "focus-within:border-primary/80 focus-within:ring-2 focus-within:ring-primary/25 text-primary";
 
   return (
@@ -132,14 +132,14 @@ function TimeDigitSegment({
         onClick={handleIncrement}
         disabled={disabled}
         aria-label={`Increment ${label}`}
-        className="w-11 sm:w-13 h-5 flex items-center justify-center rounded-t-md bg-secondary/40 hover:bg-secondary/80 border border-b-0 border-border/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+        className="no-touch-target w-11 sm:w-13 h-6 flex items-center justify-center rounded-t-lg bg-secondary/50 hover:bg-secondary border border-b-0 border-border/60 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-40 active:scale-95"
       >
         <ChevronUp className="size-3.5" />
       </button>
 
       {/* Digit Display Box */}
       <div
-        className={`w-11 sm:w-13 h-10 flex items-center justify-center bg-[#090D0C] border border-border/70 ${accentRing} transition-all relative`}
+        className={`w-11 sm:w-13 h-10 flex items-center justify-center bg-background/90 dark:bg-[#090D0C] border border-border/70 ${accentRing} transition-all relative shadow-inner`}
       >
         <input
           type="text"
@@ -165,7 +165,7 @@ function TimeDigitSegment({
         onClick={handleDecrement}
         disabled={disabled}
         aria-label={`Decrement ${label}`}
-        className="w-11 sm:w-13 h-5 flex items-center justify-center rounded-b-md bg-secondary/40 hover:bg-secondary/80 border border-t-0 border-border/50 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+        className="no-touch-target w-11 sm:w-13 h-6 flex items-center justify-center rounded-b-lg bg-secondary/50 hover:bg-secondary border border-t-0 border-border/60 text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-40 active:scale-95"
       >
         <ChevronDown className="size-3.5" />
       </button>
@@ -477,10 +477,10 @@ export function PrecisionAudioCutterDeck({
                   void haptics.light();
                   updateParam("cutMode", mode.id);
                 }}
-                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border font-mono text-xs transition-all cursor-pointer text-center ${
+                className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border font-mono text-xs transition-all cursor-pointer text-center ${
                   isSelected
-                    ? "border-primary bg-primary/20 text-primary font-bold shadow-glow ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/50 text-muted-foreground hover:bg-card hover:text-foreground"
+                    ? "border-primary bg-primary/15 text-primary font-bold shadow-sm ring-1 ring-primary/40"
+                    : "border-border/60 bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                 }`}
               >
                 <div className="flex items-center gap-1.5 mb-1">
@@ -497,14 +497,14 @@ export function PrecisionAudioCutterDeck({
       </div>
 
       {/* 2. Visual Dual-Range Scrubber Timeline */}
-      <div className="panel-hud p-4 rounded-xl border border-border/70 bg-card/60 space-y-3">
+      <div className="panel-hud p-4 rounded-2xl border border-border/70 bg-card/60 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1">
               <Clock className="size-3.5 text-primary" />
               <span>Interactive Waveform Scrubber</span>
             </span>
-            <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold border border-primary/40 bg-primary/10 text-primary">
+            <span className="px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold border border-primary/40 bg-primary/10 text-primary">
               Full Track: {formatAdaptiveTimestamp(effectiveDuration, { forceHours: isLongAudio })}
             </span>
           </div>
@@ -524,14 +524,14 @@ export function PrecisionAudioCutterDeck({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          className="relative h-14 w-full rounded-xl bg-[#090D0C] border border-[#A79277]/40 overflow-hidden cursor-crosshair select-none touch-none"
+          className="relative h-14 w-full rounded-2xl bg-card/90 dark:bg-[#090D0C] border border-border/70 overflow-hidden cursor-crosshair select-none touch-none shadow-inner"
         >
           {/* Waveform Background Simulation Grid */}
-          <div className="absolute inset-0 flex items-center justify-around opacity-25 pointer-events-none px-2">
+          <div className="absolute inset-0 flex items-center justify-around opacity-30 dark:opacity-25 pointer-events-none px-2">
             {Array.from({ length: 48 }).map((_, i) => (
               <div
                 key={i}
-                className="w-1 bg-[#F7E7CE] rounded-full"
+                className="w-1 bg-primary/40 dark:bg-[#F7E7CE] rounded-full"
                 style={{
                   height: `${20 + Math.sin(i * 0.4) * 45 + ((i % 5) * 6)}%`,
                 }}
@@ -541,7 +541,7 @@ export function PrecisionAudioCutterDeck({
 
           {/* Inactive Pre-Selection Mask */}
           <div
-            className="absolute top-0 bottom-0 left-0 bg-black/60 pointer-events-none"
+            className="absolute top-0 bottom-0 left-0 bg-black/40 dark:bg-black/60 pointer-events-none"
             style={{ width: `${startPct}%` }}
           />
 
@@ -555,7 +555,7 @@ export function PrecisionAudioCutterDeck({
           >
             {/* Center Region Label */}
             <div className="h-full flex items-center justify-center">
-              <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-white/90 bg-black/70 px-2 py-0.5 rounded-full backdrop-blur-xs border border-white/20">
+              <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-white/95 bg-black/70 px-2.5 py-0.5 rounded-full backdrop-blur-xs border border-white/20">
                 {cutMode === "keep" ? "KEEP REGION" : cutMode === "cut" ? "CUT REGION" : cutMode.toUpperCase()}
               </span>
             </div>
@@ -563,49 +563,49 @@ export function PrecisionAudioCutterDeck({
 
           {/* Inactive Post-Selection Mask */}
           <div
-            className="absolute top-0 bottom-0 right-0 bg-black/60 pointer-events-none"
+            className="absolute top-0 bottom-0 right-0 bg-black/40 dark:bg-black/60 pointer-events-none"
             style={{ width: `${100 - endPct}%` }}
           />
 
-          {/* Start Cutpoint Handle (In-Point) */}
+          {/* Start Cutpoint Handle (In-Point) — Ergonomic 24px wide hit target */}
           <div
-            className="absolute top-0 bottom-0 w-4 -ml-2 flex flex-col items-center justify-between cursor-ew-resize z-20 group"
+            className="absolute top-0 bottom-0 w-6 -ml-3 flex flex-col items-center justify-between cursor-ew-resize z-20 group"
             style={{ left: `${startPct}%` }}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-[#F7E7CE] border-2 border-[#102C26] shadow-md flex items-center justify-center -mt-1 group-hover:scale-125 transition-transform">
-              <div className="w-1 h-1 rounded-full bg-[#102C26]" />
+            <div className="w-4 h-4 rounded-full bg-primary dark:bg-[#F7E7CE] border-2 border-background dark:border-[#102C26] shadow-md flex items-center justify-center -mt-1 group-hover:scale-125 transition-transform">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground dark:bg-[#102C26]" />
             </div>
-            <div className="w-0.5 h-full bg-[#F7E7CE] shadow-[0_0_8px_rgba(247,231,206,0.8)]" />
-            <div className="w-3.5 h-3.5 rounded-full bg-[#F7E7CE] border-2 border-[#102C26] shadow-md flex items-center justify-center -mb-1 group-hover:scale-125 transition-transform">
-              <div className="w-1 h-1 rounded-full bg-[#102C26]" />
+            <div className="w-0.5 h-full bg-primary dark:bg-[#F7E7CE] shadow-[0_0_8px_rgba(0,104,137,0.5)] dark:shadow-[0_0_8px_rgba(247,231,206,0.8)]" />
+            <div className="w-4 h-4 rounded-full bg-primary dark:bg-[#F7E7CE] border-2 border-background dark:border-[#102C26] shadow-md flex items-center justify-center -mb-1 group-hover:scale-125 transition-transform">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground dark:bg-[#102C26]" />
             </div>
           </div>
 
-          {/* End Cutpoint Handle (Out-Point) */}
+          {/* End Cutpoint Handle (Out-Point) — Ergonomic 24px wide hit target */}
           <div
-            className="absolute top-0 bottom-0 w-4 -ml-2 flex flex-col items-center justify-between cursor-ew-resize z-20 group"
+            className="absolute top-0 bottom-0 w-6 -ml-3 flex flex-col items-center justify-between cursor-ew-resize z-20 group"
             style={{ left: `${endPct}%` }}
           >
-            <div className="w-3.5 h-3.5 rounded-full bg-[#F7E7CE] border-2 border-[#102C26] shadow-md flex items-center justify-center -mt-1 group-hover:scale-125 transition-transform">
-              <div className="w-1 h-1 rounded-full bg-[#102C26]" />
+            <div className="w-4 h-4 rounded-full bg-primary dark:bg-[#F7E7CE] border-2 border-background dark:border-[#102C26] shadow-md flex items-center justify-center -mt-1 group-hover:scale-125 transition-transform">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground dark:bg-[#102C26]" />
             </div>
-            <div className="w-0.5 h-full bg-[#F7E7CE] shadow-[0_0_8px_rgba(247,231,206,0.8)]" />
-            <div className="w-3.5 h-3.5 rounded-full bg-[#F7E7CE] border-2 border-[#102C26] shadow-md flex items-center justify-center -mb-1 group-hover:scale-125 transition-transform">
-              <div className="w-1 h-1 rounded-full bg-[#102C26]" />
+            <div className="w-0.5 h-full bg-primary dark:bg-[#F7E7CE] shadow-[0_0_8px_rgba(0,104,137,0.5)] dark:shadow-[0_0_8px_rgba(247,231,206,0.8)]" />
+            <div className="w-4 h-4 rounded-full bg-primary dark:bg-[#F7E7CE] border-2 border-background dark:border-[#102C26] shadow-md flex items-center justify-center -mb-1 group-hover:scale-125 transition-transform">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground dark:bg-[#102C26]" />
             </div>
           </div>
 
           {/* Live Playhead Needle */}
           <div
-            className="absolute top-0 bottom-0 w-1 -ml-0.5 bg-emerald-400 z-10 pointer-events-none shadow-[0_0_10px_rgba(52,211,153,0.9)]"
+            className="absolute top-0 bottom-0 w-1 -ml-0.5 bg-emerald-500 z-10 pointer-events-none shadow-[0_0_10px_rgba(16,185,129,0.9)]"
             style={{ left: `${playheadPct}%` }}
           >
-            <div className="size-2 rounded-full bg-emerald-400 -ml-0.5 -mt-0.5 animate-pulse" />
+            <div className="size-2 rounded-full bg-emerald-500 -ml-0.5 -mt-0.5 animate-pulse" />
           </div>
         </div>
 
         {/* Dynamic Range Readout Pill */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-background/60 border border-border/50 font-mono text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-background/80 dark:bg-background/60 border border-border/50 font-mono text-xs">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Range:</span>
             <span className="text-foreground font-bold">
@@ -620,23 +620,23 @@ export function PrecisionAudioCutterDeck({
             </div>
             <div>
               <span className="text-muted-foreground mr-1">Output Duration:</span>
-              <strong className="text-emerald-400">{formatAdaptiveTimestamp(resultDuration, { forceHours: isLongAudio })}</strong>
+              <strong className="text-emerald-600 dark:text-emerald-400">{formatAdaptiveTimestamp(resultDuration, { forceHours: isLongAudio })}</strong>
             </div>
           </div>
         </div>
       </div>
 
       {/* 3. Selected Cutout Telemetry & Play HUD */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-xl bg-[#090D0C]/90 border border-[#A79277]/30 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-card/90 dark:bg-[#090D0C]/90 border border-border/70 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-[#F7E7CE]">
+          <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-foreground dark:text-[#F7E7CE]">
             <Scissors className="size-3.5 text-primary" />
             <span>Selected Region:</span>
           </span>
-          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-primary/20 text-[#F7E7CE] border border-primary/30">
+          <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/15 text-primary dark:text-[#F7E7CE] border border-primary/30">
             {formatAdaptiveTimestamp(selectionLength, { forceHours: displayHours })} ({selectionLength.toFixed(2)}s)
           </span>
-          <span className="font-mono text-[11px] text-[#A79277] hidden sm:inline">
+          <span className="font-mono text-[11px] text-muted-foreground dark:text-[#A79277] hidden sm:inline">
             ({Math.round((selectionLength / effectiveDuration) * 100)}% of total track)
           </span>
           {selectionLength <= 0.2 && (
@@ -651,7 +651,7 @@ export function PrecisionAudioCutterDeck({
                 }));
                 onSeek(0);
               }}
-              className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-500/50 text-amber-300 font-mono text-xs font-bold animate-pulse cursor-pointer hover:bg-amber-500/30 flex items-center gap-1.5 shadow-sm active:scale-95"
+              className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-600 dark:text-amber-300 font-mono text-xs font-bold animate-pulse cursor-pointer hover:bg-amber-500/30 flex items-center gap-1.5 shadow-sm active:scale-95"
               title="Selection is pinched or collapsed. Tap to reset to full track."
             >
               <RotateCcw className="size-3" />
@@ -672,7 +672,7 @@ export function PrecisionAudioCutterDeck({
               }));
               onSeek(0);
             }}
-            className="px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/30 hover:bg-secondary/70 text-muted-foreground hover:text-foreground flex items-center gap-1.5 font-mono text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+            className="px-3 py-1.5 rounded-full border border-border/60 bg-secondary/50 hover:bg-secondary text-secondary-foreground dark:text-muted-foreground hover:text-foreground flex items-center gap-1.5 font-mono text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             title="Reset selection to cover entire track (0:00 to end)"
           >
             <RotateCcw className="size-3" />
@@ -684,10 +684,10 @@ export function PrecisionAudioCutterDeck({
               void haptics.light();
               onSeek(startSec);
             }}
-            className="px-3 py-1.5 rounded-lg bg-[#102C26] hover:bg-[#102C26]/80 text-[#F7E7CE] border border-[#A79277]/40 flex items-center gap-1.5 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+            className="px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground dark:bg-[#102C26] dark:hover:bg-[#102C26]/80 dark:text-[#F7E7CE] border border-primary/40 dark:border-[#A79277]/40 flex items-center gap-1.5 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             title="Jump to In-Point and audition selected cut"
           >
-            <Play className="size-3 text-[#F7E7CE] fill-current" />
+            <Play className="size-3 text-primary-foreground dark:text-[#F7E7CE] fill-current" />
             <span>Play Cut</span>
           </button>
           <button
@@ -696,9 +696,9 @@ export function PrecisionAudioCutterDeck({
               void haptics.light();
               setLoopRegion(!loopRegion);
             }}
-            className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98] ${
+            className={`px-3 py-1.5 rounded-full border font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98] ${
               loopRegion
-                ? "border-primary bg-primary/20 text-[#F7E7CE] shadow-glow"
+                ? "border-primary bg-primary/20 text-primary dark:text-[#F7E7CE] shadow-glow"
                 : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground"
             }`}
             title="Toggle playback looping within selected region"
@@ -712,9 +712,9 @@ export function PrecisionAudioCutterDeck({
       {/* 4. Dual Precision Time Consoles: Start Offset vs End Timestamp */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Console A: Start Offset (In-Point) */}
-        <div className="p-3.5 rounded-xl border border-emerald-500/30 hover:border-emerald-500/50 bg-card/60 space-y-3.5 shadow-xs transition-all">
+        <div className="p-3.5 rounded-2xl border border-emerald-500/40 hover:border-emerald-500/60 bg-card/70 space-y-3.5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
               <span>📍 Start Offset (In-Point)</span>
             </span>
             <div className="flex items-center gap-1.5">
@@ -722,20 +722,20 @@ export function PrecisionAudioCutterDeck({
                 <button
                   type="button"
                   onClick={() => setShowHours(true)}
-                  className="px-1.5 py-0.5 rounded border border-border/60 bg-secondary/30 hover:bg-secondary font-mono text-[9px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  className="px-2 py-0.5 rounded-full border border-border/60 bg-secondary/40 hover:bg-secondary font-mono text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   title="Expand to show hours"
                 >
                   +HR
                 </button>
               )}
-              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-emerald-500/40 bg-emerald-500/15 text-emerald-300">
+              <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                 {formatAdaptiveTimestamp(startSec, { forceHours: displayHours })}
               </span>
             </div>
           </div>
 
           {/* Segmented Inputs: HH : MM : SEC . MS with Micro-Steppers */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-[#090D0C] border border-border/70 shadow-inner">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-background/90 dark:bg-[#090D0C] border border-border/70 shadow-inner">
             {displayHours && (
               <>
                 <TimeDigitSegment
@@ -794,7 +794,7 @@ export function PrecisionAudioCutterDeck({
                 void haptics.light();
                 updateStartCutpoint(0);
               }}
-              className="h-8 px-2 rounded-lg border border-border/60 bg-secondary/30 hover:bg-secondary/70 font-mono text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              className="h-8 px-2 rounded-full border border-border/60 bg-secondary/40 hover:bg-secondary/80 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Jump to track start (00:00)"
             >
               <RotateCcw className="size-3" />
@@ -807,7 +807,7 @@ export function PrecisionAudioCutterDeck({
                 void haptics.light();
                 updateStartCutpoint(currentTime);
               }}
-              className="h-8 px-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 font-mono text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              className="h-8 px-2 rounded-full border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 font-mono text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Snap In-Point to Current Playhead"
             >
               <Crosshair className="size-3" />
@@ -820,10 +820,10 @@ export function PrecisionAudioCutterDeck({
                 void haptics.light();
                 onSeek(startSec);
               }}
-              className="h-8 px-2 rounded-lg border border-emerald-500/30 bg-secondary/40 hover:bg-secondary/80 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              className="h-8 px-2 rounded-full border border-emerald-500/30 bg-secondary/50 hover:bg-secondary font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Audition audio starting from this In-Point"
             >
-              <Play className="size-3 text-emerald-400 fill-emerald-400" />
+              <Play className="size-3 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400" />
               <span>Audition</span>
             </button>
           </div>
@@ -833,7 +833,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeStart(-1.0)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge In-Point -1.0s"
             >
               -1s
@@ -841,7 +841,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeStart(-0.1)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge In-Point -100ms"
             >
               -0.1s
@@ -849,7 +849,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeStart(0.1)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge In-Point +100ms"
             >
               +0.1s
@@ -857,7 +857,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeStart(1.0)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge In-Point +1.0s"
             >
               +1s
@@ -866,9 +866,9 @@ export function PrecisionAudioCutterDeck({
         </div>
 
         {/* Console B: End Timestamp (Out-Point) */}
-        <div className="p-3.5 rounded-xl border border-rose-500/30 hover:border-rose-500/50 bg-card/60 space-y-3.5 shadow-xs transition-all">
+        <div className="p-3.5 rounded-2xl border border-rose-500/40 hover:border-rose-500/60 bg-card/70 space-y-3.5 shadow-xs transition-all">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
               <span>🏁 End Timestamp (Out-Point)</span>
             </span>
             <div className="flex items-center gap-1.5">
@@ -876,20 +876,20 @@ export function PrecisionAudioCutterDeck({
                 <button
                   type="button"
                   onClick={() => setShowHours(true)}
-                  className="px-1.5 py-0.5 rounded border border-border/60 bg-secondary/30 hover:bg-secondary font-mono text-[9px] text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  className="px-2 py-0.5 rounded-full border border-border/60 bg-secondary/40 hover:bg-secondary font-mono text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   title="Expand to show hours"
                 >
                   +HR
                 </button>
               )}
-              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-rose-500/40 bg-rose-500/15 text-rose-300">
+              <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full border border-rose-500/40 bg-rose-500/15 text-rose-700 dark:text-rose-300">
                 {formatAdaptiveTimestamp(endSec, { forceHours: displayHours })}
               </span>
             </div>
           </div>
 
           {/* Segmented Inputs: HH : MM : SEC . MS with Micro-Steppers */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-[#090D0C] border border-border/70 shadow-inner">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 p-3 rounded-2xl bg-background/90 dark:bg-[#090D0C] border border-border/70 shadow-inner">
             {displayHours && (
               <>
                 <TimeDigitSegment
@@ -948,7 +948,7 @@ export function PrecisionAudioCutterDeck({
                 void haptics.light();
                 updateEndCutpoint(currentTime);
               }}
-              className="h-8 px-2 rounded-lg border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 font-mono text-[11px] font-semibold text-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              className="h-8 px-2 rounded-full border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/25 font-mono text-[11px] font-semibold text-rose-700 dark:text-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Snap Out-Point to Current Playhead"
             >
               <Crosshair className="size-3" />
@@ -961,7 +961,7 @@ export function PrecisionAudioCutterDeck({
                 void haptics.light();
                 updateEndCutpoint(effectiveDuration);
               }}
-              className="h-8 px-2 rounded-lg border border-border/60 bg-secondary/30 hover:bg-secondary/70 font-mono text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              className="h-8 px-2 rounded-full border border-border/60 bg-secondary/40 hover:bg-secondary/80 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Snap Out-Point to Full Track End"
             >
               <ChevronsRight className="size-3" />
@@ -974,10 +974,10 @@ export function PrecisionAudioCutterDeck({
                 void haptics.light();
                 onSeek(Math.max(0, endSec - 2.0));
               }}
-              className="h-8 px-2 rounded-lg border border-rose-500/30 bg-secondary/40 hover:bg-secondary/80 font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
+              className="h-8 px-2 rounded-full border border-rose-500/30 bg-secondary/50 hover:bg-secondary font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Audition tail audio leading up to Out-Point"
             >
-              <Play className="size-3 text-rose-400 fill-rose-400" />
+              <Play className="size-3 text-rose-600 dark:text-rose-400 fill-rose-600 dark:fill-rose-400" />
               <span>Audition</span>
             </button>
           </div>
@@ -987,7 +987,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeEnd(-1.0)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge Out-Point -1.0s"
             >
               -1s
@@ -995,7 +995,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeEnd(-0.1)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge Out-Point -100ms"
             >
               -0.1s
@@ -1003,7 +1003,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeEnd(0.1)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge Out-Point +100ms"
             >
               +0.1s
@@ -1011,7 +1011,7 @@ export function PrecisionAudioCutterDeck({
             <button
               type="button"
               onClick={() => nudgeEnd(1.0)}
-              className="h-7 rounded-md bg-secondary/50 hover:bg-secondary border border-border/50 font-mono text-[10px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              className="h-7.5 rounded-full bg-secondary/50 hover:bg-secondary border border-border/60 font-mono text-[11px] font-bold text-foreground transition-all cursor-pointer active:scale-95 flex items-center justify-center"
               title="Nudge Out-Point +1.0s"
             >
               +1s
@@ -1021,41 +1021,41 @@ export function PrecisionAudioCutterDeck({
       </div>
 
       {/* 4. Quick Selection Presets & Micro-Step Utility Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-background/40 border border-border/50">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-card/60 dark:bg-background/40 border border-border/60">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="font-mono text-[10px] uppercase text-muted-foreground mr-1">Presets:</span>
           <button
             type="button"
             onClick={() => applyPresetRange("full")}
-            className="px-2 py-1 rounded-md border border-border/60 bg-background text-[10px] font-mono text-foreground hover:border-primary/50 transition-all cursor-pointer"
+            className="px-2.5 py-1 rounded-full border border-border/70 bg-background/80 hover:bg-secondary/60 text-[10px] font-mono font-medium text-foreground hover:border-primary/50 transition-all cursor-pointer"
           >
             Full Track
           </button>
           <button
             type="button"
             onClick={() => applyPresetRange("first30")}
-            className="px-2 py-1 rounded-md border border-border/60 bg-background text-[10px] font-mono text-foreground hover:border-primary/50 transition-all cursor-pointer"
+            className="px-2.5 py-1 rounded-full border border-border/70 bg-background/80 hover:bg-secondary/60 text-[10px] font-mono font-medium text-foreground hover:border-primary/50 transition-all cursor-pointer"
           >
             First 30s
           </button>
           <button
             type="button"
             onClick={() => applyPresetRange("first60")}
-            className="px-2 py-1 rounded-md border border-border/60 bg-background text-[10px] font-mono text-foreground hover:border-primary/50 transition-all cursor-pointer"
+            className="px-2.5 py-1 rounded-full border border-border/70 bg-background/80 hover:bg-secondary/60 text-[10px] font-mono font-medium text-foreground hover:border-primary/50 transition-all cursor-pointer"
           >
             First 60s
           </button>
           <button
             type="button"
             onClick={() => applyPresetRange("last30")}
-            className="px-2 py-1 rounded-md border border-border/60 bg-background text-[10px] font-mono text-foreground hover:border-primary/50 transition-all cursor-pointer"
+            className="px-2.5 py-1 rounded-full border border-border/70 bg-background/80 hover:bg-secondary/60 text-[10px] font-mono font-medium text-foreground hover:border-primary/50 transition-all cursor-pointer"
           >
             Last 30s
           </button>
           <button
             type="button"
             onClick={() => applyPresetRange("center50")}
-            className="px-2 py-1 rounded-md border border-border/60 bg-background text-[10px] font-mono text-foreground hover:border-primary/50 transition-all cursor-pointer"
+            className="px-2.5 py-1 rounded-full border border-border/70 bg-background/80 hover:bg-secondary/60 text-[10px] font-mono font-medium text-foreground hover:border-primary/50 transition-all cursor-pointer"
           >
             Center 50%
           </button>
@@ -1068,10 +1068,10 @@ export function PrecisionAudioCutterDeck({
               void haptics.light();
               setLoopRegion(!loopRegion);
             }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md border font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-3 py-1 rounded-full border font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer ${
               loopRegion
                 ? "border-primary bg-primary/20 text-primary"
-                : "border-border/50 bg-background text-muted-foreground"
+                : "border-border/50 bg-background text-muted-foreground hover:text-foreground"
             }`}
           >
             <Repeat className="size-3" />
@@ -1081,10 +1081,10 @@ export function PrecisionAudioCutterDeck({
           <button
             type="button"
             onClick={handleZeroSnap}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/50 bg-background text-muted-foreground hover:text-foreground font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-1 px-3 py-1 rounded-full border border-border/50 bg-background text-muted-foreground hover:text-foreground font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer"
             title="Snap cut boundaries to nearest 100ms grid"
           >
-            <Magnet className="size-3 text-cyan-400" />
+            <Magnet className="size-3 text-cyan-600 dark:text-cyan-400" />
             <span>Zero-Snap</span>
           </button>
         </div>
@@ -1093,7 +1093,7 @@ export function PrecisionAudioCutterDeck({
       {/* 5. Acoustic Transitions (Fades) & Volume Boost */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
         {/* Fade In */}
-        <div className="p-3 rounded-xl border border-border/60 bg-card/40 space-y-1.5">
+        <div className="p-3 rounded-2xl border border-border/60 bg-card/60 space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-muted-foreground">Fade In (S-Curve)</span>
             <span className="text-primary font-bold">{fadeInSec.toFixed(2)}s</span>
@@ -1112,7 +1112,7 @@ export function PrecisionAudioCutterDeck({
         </div>
 
         {/* Fade Out */}
-        <div className="p-3 rounded-xl border border-border/60 bg-card/40 space-y-1.5">
+        <div className="p-3 rounded-2xl border border-border/60 bg-card/60 space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-muted-foreground">Fade Out (S-Curve)</span>
             <span className="text-primary font-bold">{fadeOutSec.toFixed(2)}s</span>
@@ -1131,10 +1131,10 @@ export function PrecisionAudioCutterDeck({
         </div>
 
         {/* Post-Cut Volume Boost */}
-        <div className="p-3 rounded-xl border border-border/60 bg-card/40 space-y-1.5">
+        <div className="p-3 rounded-2xl border border-border/60 bg-card/60 space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-muted-foreground">Volume Boost</span>
-            <span className="text-emerald-400 font-bold">{boostDb > 0 ? `+${boostDb}` : boostDb} dB</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">{boostDb > 0 ? `+${boostDb}` : boostDb} dB</span>
           </div>
           <input
             type="range"
@@ -1145,7 +1145,7 @@ export function PrecisionAudioCutterDeck({
             onChange={(e) => updateParam("boostDb", parseInt(e.target.value))}
             disabled={busy}
             aria-label="Volume Boost in Decibels"
-            className="w-full accent-emerald-400 h-1.5 bg-secondary rounded-lg cursor-pointer"
+            className="w-full accent-emerald-500 h-1.5 bg-secondary rounded-lg cursor-pointer"
           />
         </div>
       </div>

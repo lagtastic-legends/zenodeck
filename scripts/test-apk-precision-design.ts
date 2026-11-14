@@ -65,6 +65,15 @@ assert(stylesXml.includes("android:windowLightStatusBar"), "styles.xml must set 
 assert(stylesXml.includes("android:windowLightNavigationBar"), "styles.xml must set windowLightNavigationBar");
 console.log("✓ PASS: Android native styles.xml & colors.xml match Precision Engineering light system bars");
 
+// 7. Verify PrecisionAudioCutterDeck has semantic theme classes, full-pill geometry, and no raw hardcoded colors
+const cutterTsx = fs.readFileSync(path.join(root, "src", "components", "audio", "PrecisionAudioCutterDeck.tsx"), "utf-8");
+assert(!cutterTsx.match(/(?<!dark:(?:hover:)?)bg-\[#090D0C\]/), "PrecisionAudioCutterDeck must not contain raw bg-[#090D0C]");
+assert(!cutterTsx.match(/(?<!dark:(?:hover:)?)bg-\[#102C26\]/), "PrecisionAudioCutterDeck must not contain raw bg-[#102C26]");
+assert(cutterTsx.includes("rounded-full"), "PrecisionAudioCutterDeck must use rounded-full for M3 pill buttons");
+assert(cutterTsx.includes("bg-background/90"), "PrecisionAudioCutterDeck must use bg-background/90 for digit steppers");
+assert(cutterTsx.includes("no-touch-target"), "Micro-steppers must carry no-touch-target to prevent 44px elongation on APK");
+console.log("✓ PASS: PrecisionAudioCutterDeck adapts seamlessly to Precision M3 design on APK with phone ergonomics");
+
 console.log("\n================================================================================");
-console.log("   ALL APK PRECISION DESIGN & PHONE LAYOUT VERIFICATIONS PASSED (6/6)!          ");
+console.log("   ALL APK PRECISION DESIGN & PHONE LAYOUT VERIFICATIONS PASSED (7/7)!          ");
 console.log("================================================================================\n");
