@@ -20,6 +20,7 @@ import {
   ParamSlider,
 } from "@/components/audio/param-controls";
 import { useMediaJob } from "@/hooks/use-media-job";
+import { formatAdaptiveTimestamp } from "@/lib/audio-dsp";
 import {
   audioOutputArgs,
   editorFilters,
@@ -50,7 +51,7 @@ export function AudioEditor() {
   const handleProbed = (m: VideoMeta) => {
     setDuration(m.durationSec);
     setStart(0);
-    setEnd(Math.min(10, m.durationSec));
+    setEnd(m.durationSec);
   };
 
   const valid =
@@ -126,7 +127,7 @@ export function AudioEditor() {
           <span>
             out length{" "}
             <span className="font-semibold text-foreground">
-              {projection.finalLengthSec.toFixed(1)}s
+              {formatAdaptiveTimestamp(projection.finalLengthSec, { forceHours: projection.finalLengthSec >= 3600 })}
             </span>
           </span>
           <span>
@@ -189,8 +190,10 @@ export function AudioEditor() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] md:text-xs lg:text-[13px]">
-                    <span className="uppercase tracking-[0.14em] text-muted-foreground">start</span>
-                    <span className="font-semibold text-neon">{start.toFixed(1)}s</span>
+                    <span className="uppercase tracking-[0.14em] text-muted-foreground">start offset</span>
+                    <span className="font-semibold text-neon font-mono">
+                      {formatAdaptiveTimestamp(start, { forceHours: duration >= 3600 })}
+                    </span>
                   </div>
                   <Slider
                     value={[start]}
@@ -204,8 +207,10 @@ export function AudioEditor() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] md:text-xs lg:text-[13px]">
-                    <span className="uppercase tracking-[0.14em] text-muted-foreground">end</span>
-                    <span className="font-semibold text-neon">{end.toFixed(1)}s</span>
+                    <span className="uppercase tracking-[0.14em] text-muted-foreground">end timestamp</span>
+                    <span className="font-semibold text-neon font-mono">
+                      {formatAdaptiveTimestamp(end, { forceHours: duration >= 3600 })}
+                    </span>
                   </div>
                   <Slider
                     value={[end]}
@@ -218,8 +223,8 @@ export function AudioEditor() {
                   />
                 </div>
                 <p className="font-mono text-[10px] md:text-xs lg:text-[13px] text-muted-foreground">
-                  selection {(Math.max(end - start, 0)).toFixed(1)}s of{" "}
-                  {duration.toFixed(1)}s
+                  selection {formatAdaptiveTimestamp(Math.max(end - start, 0), { forceHours: duration >= 3600 })} of{" "}
+                  {formatAdaptiveTimestamp(duration, { forceHours: duration >= 3600 })}
                 </p>
               </div>
             )}

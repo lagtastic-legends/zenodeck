@@ -66,7 +66,9 @@ import {
   EQ_PRESET_MAP,
   REVERB_SPACES,
   getDefaultAudioParams,
+  formatAdaptiveTimestamp,
 } from "@/lib/audio-dsp";
+import { PrecisionAudioCutterDeck } from "@/components/audio/PrecisionAudioCutterDeck";
 import { formatBytes } from "@/lib/format";
 import type { VideoMeta } from "@/lib/media/probe";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
@@ -731,19 +733,27 @@ export function UnifiedAudioStudio({
           }
         }
 
-        // Live Audible Fades Automation
+        // Live Audible Fades & Silence Automation
         if (fadeGainRef.current && audioCtxRef.current) {
           let fadeMult = 1.0;
           const fadeIn = params.fadeInSec || 0;
           const fadeOut = params.fadeOutSec || 0;
 
-          if (cutMode === "keep") {
+          if (cutMode === "silence" && cur >= start && cur < end) {
+            fadeMult = 0.0;
+          } else if (cutMode === "keep") {
             const timeSinceStart = cur - start;
             const timeUntilEnd = end - cur;
             if (fadeIn > 0.01 && timeSinceStart < fadeIn) {
               fadeMult = Math.max(0, Math.min(1, timeSinceStart / fadeIn));
             } else if (fadeOut > 0.01 && timeUntilEnd < fadeOut) {
               fadeMult = Math.max(0, Math.min(1, timeUntilEnd / fadeOut));
+            }
+          } else if (cutMode === "fade_only") {
+            if (fadeIn > 0.01 && cur < fadeIn) {
+              fadeMult = Math.max(0, Math.min(1, cur / fadeIn));
+            } else if (fadeOut > 0.01 && (duration - cur) < fadeOut) {
+              fadeMult = Math.max(0, Math.min(1, (duration - cur) / fadeOut));
             }
           }
           fadeGainRef.current.gain.setTargetAtTime(
@@ -876,9 +886,14 @@ export function UnifiedAudioStudio({
     setDuration(meta.durationSec);
     const isTrimmerTool =
       activeEffect === "trimmer" ||
-      activeEffect === "audio-editor" ||
-      activeEffect === "ringtone-maker";
+      activeEffect === "audio-editor";
     if (isTrimmerTool) {
+      setParams((prev) => ({
+        ...prev,
+        startSec: 0,
+        endSec: meta.durationSec,
+      }));
+    } else if (activeEffect === "ringtone-maker") {
       setParams((prev) => ({
         ...prev,
         startSec: 0,
@@ -1245,7 +1260,7 @@ export function UnifiedAudioStudio({
                     {file.name}
                   </p>
                   <p className="font-mono text-[10px] text-muted-foreground">
-                    {currentTime.toFixed(1)}s / {duration > 0 ? `${duration.toFixed(1)}s` : "Audition"} · {formatBytes(file.size)}
+                    {formatAdaptiveTimestamp(currentTime, { forceHours: duration >= 3600 })} / {duration > 0 ? formatAdaptiveTimestamp(duration, { forceHours: duration >= 3600 }) : "Audition"} · {formatBytes(file.size)}
                   </p>
                 </div>
               </div>
@@ -1719,184 +1734,22 @@ export function UnifiedAudioStudio({
 
             {/* Pro Precision Cutter & MP3 Editor */}
             {(activeEffect === "trimmer" || activeEffect === "audio-editor") && (
-              <div className="space-y-4">
-                {/* Cut Mode Toggle */}
-                <div>
-                  <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground block mb-2">
-                    Cutter Action Mode
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        updateParam("cutMode", "keep");
-                      }}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border font-mono text-xs font-semibold transition-all cursor-pointer ${
-                        (params.cutMode || "keep") === "keep"
-                          ? "border-primary bg-primary/20 text-primary shadow-glow"
-                          : "border-border/60 bg-background/50 text-muted-foreground hover:bg-card"
-                      }`}
-                    >
-                      <Scissors className="size-3.5" />
-                      <span>Keep Selection (Trim)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        updateParam("cutMode", "cut");
-                      }}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border font-mono text-xs font-semibold transition-all cursor-pointer ${
-                        params.cutMode === "cut"
-                          ? "border-neon bg-neon/20 text-neon shadow-[0_0_12px_rgba(244,63,94,0.3)]"
-                          : "border-border/60 bg-background/50 text-muted-foreground hover:bg-card"
-                      }`}
-                    >
-                      <Scissors className="size-3.5 rotate-180" />
-                      <span>Cut Out Middle (Splice)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Fine Nudge Controls & Region Helpers */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-background/40 border border-border/50">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        setLoopRegion(!loopRegion);
-                      }}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md border font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer ${
-                        loopRegion
-                          ? "border-primary bg-primary/20 text-primary"
-                          : "border-border/50 bg-background text-muted-foreground"
-                      }`}
-                    >
-                      <Repeat className="size-3" />
-                      <span>Loop {loopRegion ? "ON" : "OFF"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        const s = Math.round((params.startSec || 0) * 10) / 10;
-                        const e = Math.round((params.endSec || duration || 30) * 10) / 10;
-                        setParams((prev) => ({ ...prev, startSec: s, endSec: e }));
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/50 bg-background text-muted-foreground hover:text-foreground font-mono text-[10px] uppercase font-semibold transition-all cursor-pointer"
-                      title="Snap cut boundaries to nearest 100ms zero-crossing"
-                    >
-                      <Magnet className="size-3 text-cyan-400" />
-                      <span>Zero-Snap</span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-muted-foreground">Start Nudge:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        updateParam("startSec", Math.max(0, (params.startSec || 0) - 0.1));
-                      }}
-                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
-                      aria-label="Nudge start -0.1s"
-                    >
-                      <Minus className="size-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        updateParam("startSec", Math.min(params.endSec || duration || 30, (params.startSec || 0) + 0.1));
-                      }}
-                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
-                      aria-label="Nudge start +0.1s"
-                    >
-                      <Plus className="size-3" />
-                    </button>
-
-                    <span className="font-mono text-[10px] text-muted-foreground ml-1">End Nudge:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        updateParam("endSec", Math.max(params.startSec || 0, (params.endSec || duration || 30) - 0.1));
-                      }}
-                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
-                      aria-label="Nudge end -0.1s"
-                    >
-                      <Minus className="size-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void haptics.light();
-                        updateParam("endSec", Math.min(duration || 300, (params.endSec || duration || 30) + 0.1));
-                      }}
-                      className="p-1 rounded bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer"
-                      aria-label="Nudge end +0.1s"
-                    >
-                      <Plus className="size-3" />
-                    </button>
-                  </div>
-                </div>
-
-                <ParamSlider
-                  label="Start Offset"
-                  value={params.startSec || 0}
-                  min={0}
-                  max={Math.max(duration - 1, 10)}
-                  step={0.1}
-                  onChange={(v) => updateParam("startSec", v)}
-                  display={(v) => `${v.toFixed(2)}s`}
-                  disabled={busy}
-                />
-                <ParamSlider
-                  label="End Timestamp"
-                  value={params.endSec || Math.min(30, duration || 30)}
-                  min={1}
-                  max={Math.max(duration, 30)}
-                  step={0.1}
-                  onChange={(v) => updateParam("endSec", v)}
-                  display={(v) => `${v.toFixed(2)}s`}
-                  disabled={busy}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <ParamSlider
-                    label="Fade In (Audible in Preview)"
-                    value={params.fadeInSec || 0}
-                    min={0}
-                    max={5}
-                    step={0.1}
-                    onChange={(v) => updateParam("fadeInSec", v)}
-                    display={(v) => `${v.toFixed(1)}s`}
-                    disabled={busy}
-                  />
-                  <ParamSlider
-                    label="Fade Out (Audible in Preview)"
-                    value={params.fadeOutSec || 0}
-                    min={0}
-                    max={5}
-                    step={0.1}
-                    onChange={(v) => updateParam("fadeOutSec", v)}
-                    display={(v) => `${v.toFixed(1)}s`}
-                    disabled={busy}
-                  />
-                </div>
-                <ParamSlider
-                  label="Post-Cut Volume Boost"
-                  value={params.boostDb || 0}
-                  min={-12}
-                  max={12}
-                  step={1}
-                  onChange={(v) => updateParam("boostDb", v)}
-                  display={(v) => `${v > 0 ? `+${v}` : v} dB`}
-                  disabled={busy}
-                />
-              </div>
+              <PrecisionAudioCutterDeck
+                duration={duration}
+                currentTime={currentTime}
+                params={params}
+                updateParam={updateParam}
+                setParams={setParams}
+                loopRegion={loopRegion}
+                setLoopRegion={setLoopRegion}
+                onSeek={(t) => {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = t;
+                    setCurrentTime(t);
+                  }
+                }}
+                busy={busy}
+              />
             )}
 
             {/* Ringtone Maker Studio */}

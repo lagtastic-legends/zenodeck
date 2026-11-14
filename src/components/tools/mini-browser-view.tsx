@@ -26,6 +26,7 @@ import { useNavStore } from "@/lib/navigation/nav-store";
 import { Capacitor } from "@capacitor/core";
 import { isNativeAndroidPlatform, ZenoMedia3 } from "@/lib/media/native-media-muxer";
 import { detectPlatform, PLATFORM_CONFIGS } from "@/lib/media/detector";
+import { extractYouTubeId } from "@/lib/youtube/innertube";
 
 export interface MiniBrowserViewProps {
   initialUrl?: string;
@@ -559,26 +560,37 @@ export function MiniBrowserView({
               ← Back to Site Portals
             </button>
           </div>
-        ) : (
-          /* State C: Embedded Sandboxed Web Viewport (Desktop / PWA) */
-          <div className="relative w-full h-full flex flex-col">
-            <iframe
-              ref={iframeRef}
-              src={currentUrl}
-              title="Mini Browser Viewport"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-              className="w-full h-full border-none bg-white"
-              onLoad={() => {
-                setIsLoading(false);
-                setLoadingProgress(0);
-              }}
-            />
+        ) : (() => {
+          const detectedYtId = extractYouTubeId(currentUrl);
+          const isFramingRestricted = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitter\.com|x\.com|facebook\.com|reddit\.com/i.test(currentUrl);
+          const effectiveEmbedUrl = detectedYtId
+            ? `https://www.youtube-nocookie.com/embed/${detectedYtId}?autoplay=1&enablejsapi=1`
+            : !isFramingRestricted
+            ? currentUrl
+            : null;
 
-            {/* Desktop Notice Banner */}
-            {!isNativeAndroidPlatform() && (
-              <div className="absolute top-2 left-2 right-2 p-2 rounded-xl border border-[#A79277]/30 bg-[#090D0C]/90 backdrop-blur-md flex items-center justify-between text-[11px] font-mono text-[#A79277] shadow-sm">
+          return effectiveEmbedUrl ? (
+            /* State C1: Embedded Sandboxed Web Viewport */
+            <div className="relative w-full h-full flex flex-col">
+              <iframe
+                ref={iframeRef}
+                src={effectiveEmbedUrl}
+                title="Mini Browser Viewport"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="w-full h-full border-none bg-black"
+                onLoad={() => {
+                  setIsLoading(false);
+                  setLoadingProgress(0);
+                }}
+              />
+
+              {/* Notice Banner */}
+              <div className="absolute top-2 left-2 right-2 p-2 rounded-xl border border-[#A79277]/30 bg-[#090D0C]/90 backdrop-blur-md flex items-center justify-between text-[11px] font-mono text-[#A79277] shadow-sm pointer-events-auto">
                 <span className="truncate">
-                  Browsing: <strong className="text-[#F7E7CE]">{currentUrl}</strong>
+                  {detectedYtId ? "Stream Player: " : "Browsing: "}
+                  <strong className="text-[#F7E7CE]">{currentUrl}</strong>
                 </span>
                 <button
                   type="button"
@@ -589,9 +601,72 @@ export function MiniBrowserView({
                   <span>Open Tab</span>
                 </button>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          ) : (
+            /* State C2: Protected Web Portal & Direct Sniffer Station (Eliminates net::ERR_BLOCKED_BY_RESPONSE) */
+            <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-4 bg-gradient-to-b from-[#102C26]/20 via-[#090D0C] to-[#102C26]/30">
+              <div className="size-16 rounded-2xl bg-[#102C26] border-2 border-[#F7E7CE] flex items-center justify-center text-[#F7E7CE] shadow-xl shadow-emerald-950/40">
+                <Globe className="size-8 animate-pulse text-[#F7E7CE]" />
+              </div>
+
+              <div className="space-y-1.5 max-w-sm">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#F7E7CE]/40 bg-[#102C26]/80 text-[#F7E7CE] font-mono text-[11px] font-bold">
+                  <ShieldCheck className="size-3.5 text-[#F7E7CE]" />
+                  <span>Security Sandbox Protected Portal</span>
+                </div>
+                <h3 className="font-display text-base sm:text-lg font-bold text-[#F7E7CE] truncate">
+                  {pageTitle || currentUrl}
+                </h3>
+                <p className="font-mono text-xs text-[#A79277] leading-relaxed">
+                  This site enforces framing restrictions. Open it in a separate tab or paste any specific video link below to sniff and download.
+                </p>
+              </div>
+
+              {/* Direct video link input */}
+              <div className="w-full max-w-sm flex items-center gap-2 bg-[#090D0C] border border-[#A79277]/40 rounded-xl px-3 py-2 focus-within:border-[#F7E7CE] transition-all">
+                <Search className="size-4 text-[#A79277] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Paste specific video link from this site…"
+                  className="w-full bg-transparent text-xs font-mono text-[#F7E7CE] placeholder:text-[#A79277]/60 focus:outline-hidden"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                      navigateTo((e.target as HTMLInputElement).value.trim());
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => window.open(currentUrl, "_blank")}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#F7E7CE] bg-[#102C26] text-[#F7E7CE] font-mono text-xs font-bold shadow-md hover:bg-[#102C26]/80 active:scale-95 transition-all cursor-pointer"
+                >
+                  <ExternalLink className="size-3.5 text-[#F7E7CE]" />
+                  <span>Open Site in New Tab</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleFloatingActionDownload}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#A79277]/40 bg-[#090D0C] text-[#F7E7CE] font-mono text-xs font-semibold hover:border-[#F7E7CE]/60 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Zap className="size-3.5 text-[#A79277]" />
+                  <span>Sniff Page Media</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoHome}
+                className="text-xs font-mono text-[#A79277] hover:text-[#F7E7CE] transition-colors pt-1 cursor-pointer"
+              >
+                ← Back to Site Portals
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* 3. Floating VidMate-Style Download Action Button (FAB) */}

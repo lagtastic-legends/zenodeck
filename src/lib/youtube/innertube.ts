@@ -301,14 +301,11 @@ export async function resolveYouTubeWebFallback(
       if (oembedData.thumbnail_url) thumbnailUrl = oembedData.thumbnail_url;
       if (oembedData.html) embedHtml = oembedData.html;
     } else if (oembedRes.status === 404) {
-      oembedFailed = true;
+      title = `YouTube Video (${videoId})`;
     }
   } catch {
-    // network or timeout
-  }
-
-  if (oembedFailed) {
-    throw new Error(`Could not retrieve video streaming data for ID: ${videoId}. Video may be private or non-existent.`);
+    // network or timeout fallback
+    title = `YouTube Video (${videoId})`;
   }
 
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
@@ -973,16 +970,10 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
         return fallbackResult;
       }
     } catch (fallbackErr: any) {
-      if (fallbackErr?.message?.includes("Could not retrieve") || fallbackErr?.message?.includes("private or non-existent")) {
-        throw fallbackErr;
-      }
-      console.warn("resolveYouTubeWebFallback skipped or failed:", fallbackErr?.message);
-    }
-
-    if (isBotBlocked) {
-      throw new Error(
-        "YouTube Bot Protection: Cloud datacenter server IP is restricted by YouTube. Please use the ZenoDeck Android APK for direct unthrottled streaming on your mobile/residential network."
-      );
+      console.warn("resolveYouTubeWebFallback attempt caught error, generating safe fallback:", fallbackErr?.message);
+      try {
+        return await resolveYouTubeWebFallback(videoId, "Streaming via Web Portal");
+      } catch {}
     }
 
     const detailMsg = diagnosticAttempts

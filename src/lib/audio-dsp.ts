@@ -119,7 +119,8 @@ export interface TrimmerParams {
   fadeInSec: number;
   fadeOutSec: number;
   boostDb?: number;
-  cutMode?: "keep" | "cut";
+  volumeBoostDb?: number;
+  cutMode?: "keep" | "cut" | "silence" | "fade_only";
 }
 
 export interface VocalRemoverParams {
@@ -493,11 +494,73 @@ export function buildTempoChangerFilter(p: TempoChangerParams): string[] {
 /* 12. Audio Trimmer & Slicer                                                 */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Formats seconds into MM:SS.ss (for < 1 hour) or HH:MM:SS.ss (for >= 1 hour).
+ * Supports optional forced hours display or stripped milliseconds.
+ */
+export function formatAdaptiveTimestamp(
+  seconds: number,
+  options?: { forceHours?: boolean; includeMs?: boolean }
+): string {
+  if (isNaN(seconds) || seconds < 0) seconds = 0;
+  const totalHundredths = Math.round(seconds * 100);
+  const totalSecs = Math.floor(totalHundredths / 100);
+  const hundredths = totalHundredths % 100;
+
+  const hours = Math.floor(totalSecs / 3600);
+  const minutes = Math.floor((totalSecs % 3600) / 60);
+  const remainingSecs = totalSecs % 60;
+
+  const showHours = options?.forceHours || hours > 0;
+  const includeMs = options?.includeMs !== false;
+
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(remainingSecs).padStart(2, "0");
+  const ms = String(hundredths).padStart(2, "0");
+
+  const timeBase = showHours ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`;
+  return includeMs ? `${timeBase}.${ms}` : timeBase;
+}
+
+export interface TimestampComponents {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  milliseconds: number;
+}
+
+export function splitSecondsToComponents(seconds: number): TimestampComponents {
+  if (isNaN(seconds) || seconds < 0) seconds = 0;
+  const totalHundredths = Math.round(seconds * 100);
+  const totalSecs = Math.floor(totalHundredths / 100);
+  const hundredths = totalHundredths % 100;
+
+  const hours = Math.floor(totalSecs / 3600);
+  const minutes = Math.floor((totalSecs % 3600) / 60);
+  const remainingSecs = totalSecs % 60;
+
+  return {
+    hours,
+    minutes,
+    seconds: remainingSecs,
+    milliseconds: hundredths * 10,
+  };
+}
+
+export function parseTimestampToSeconds(c: Partial<TimestampComponents>): number {
+  const h = Number(c.hours || 0);
+  const m = Number(c.minutes || 0);
+  const s = Number(c.seconds || 0);
+  const ms = Number(c.milliseconds || 0);
+  return Math.max(0, h * 3600 + m * 60 + s + ms / 1000);
+}
+
 export function buildTrimmerFilter(p: TrimmerParams): string[] {
-  const isCut = p.cutMode === "cut";
+  const cutMode = p.cutMode || "keep";
   const chain: string[] = [];
 
-  if (isCut) {
+  if (cutMode === "cut") {
     // Cut mode: removes [startSec .. endSec] and splices [0 .. startSec] + [endSec .. duration] together
     chain.push(
       `aselect='not(between(t\\,${p.startSec.toFixed(2)}\\,${p.endSec.toFixed(2)}))'`,
@@ -508,6 +571,26 @@ export function buildTrimmerFilter(p: TrimmerParams): string[] {
     }
     if (p.fadeOutSec > 0.01) {
       chain.push(`afade=t=out:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
+    }
+  } else if (cutMode === "silence") {
+    // Silence mode: mutes [startSec .. endSec] to 0 volume while preserving full track length and timing
+    chain.push(
+      `volume=enable='between(t\\,${p.startSec.toFixed(2)}\\,${p.endSec.toFixed(2)})':volume=0`
+    );
+    if (p.fadeInSec > 0.01) {
+      chain.push(`afade=t=in:st=0:d=${p.fadeInSec.toFixed(2)}:curve=esin`);
+    }
+    if (p.fadeOutSec > 0.01) {
+      chain.push(`afade=t=out:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
+    }
+  } else if (cutMode === "fade_only") {
+    // Envelope mode: keeps full audio, applying S-curve fade-in up to startSec and fade-out from endSec
+    if (p.startSec > 0.01 || p.fadeInSec > 0.01) {
+      const d = Math.max(p.startSec, p.fadeInSec || 0.01);
+      chain.push(`afade=t=in:st=0:d=${d.toFixed(2)}:curve=esin`);
+    }
+    if (p.fadeOutSec > 0.01) {
+      chain.push(`afade=t=out:st=${p.endSec.toFixed(2)}:d=${p.fadeOutSec.toFixed(2)}:curve=esin`);
     }
   } else {
     // Keep mode: retains [startSec .. endSec]
@@ -526,9 +609,10 @@ export function buildTrimmerFilter(p: TrimmerParams): string[] {
     }
   }
 
-  if (p.boostDb && p.boostDb !== 0) {
-    chain.push(`volume=${p.boostDb}dB`);
-    if (p.boostDb > 0) {
+  const boost = typeof p.boostDb === "number" ? p.boostDb : p.volumeBoostDb;
+  if (boost && boost !== 0) {
+    chain.push(`volume=${boost.toFixed(1)}dB`);
+    if (boost > 0) {
       chain.push("alimiter=limit=0.98");
     }
   }
@@ -910,6 +994,7 @@ export const AUDIO_TOOLS_CATALOG: AudioToolMeta[] = [
     presets: [
       { label: "Trim Selection (Keep Mode)", params: { startSec: 0, endSec: 30, cutMode: "keep", fadeInSec: 0.1, fadeOutSec: 0.5 } },
       { label: "Cut Out Middle (Splice Mode)", params: { startSec: 10, endSec: 20, cutMode: "cut", fadeInSec: 0.05, fadeOutSec: 0.05 } },
+      { label: "Mute Region (Silence Mode)", params: { startSec: 15, endSec: 25, cutMode: "silence", fadeInSec: 0.05, fadeOutSec: 0.05 } },
       { label: "Intro Snippet (First 15s)", params: { startSec: 0, endSec: 15, cutMode: "keep", fadeInSec: 0, fadeOutSec: 1.0 } },
       { label: "Outro Fade (Last 20s)", params: { startSec: 40, endSec: 60, cutMode: "keep", fadeInSec: 1.0, fadeOutSec: 2.0 } },
     ],
