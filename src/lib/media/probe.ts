@@ -27,7 +27,7 @@ export function probeVideo(file: File): Promise<VideoMeta> {
       if (!settled) {
         settled = true;
         URL.revokeObjectURL(url);
-        resolve({ durationSec: 30, width: 1280, height: 720, hasAudio: true });
+        resolve({ durationSec: 0, width: 0, height: 0, hasAudio: false });
       }
     }, 5000);
 
@@ -349,6 +349,9 @@ export async function probeHasAudio(file: File): Promise<boolean> {
         if (tailRes.hasMoov) {
           return tailRes.hasAudio;
         }
+      } else {
+        // Small file <= 256KB that lacks a moov box is incomplete or truncated
+        return false;
       }
     } catch {
       // Fall through to video element probe
@@ -367,7 +370,7 @@ export async function probeHasAudio(file: File): Promise<boolean> {
       if (!settled) {
         settled = true;
         URL.revokeObjectURL(url);
-        resolve(true); // default true if undetermined
+        resolve(false); // default false if undetermined
       }
     }, 2500);
 
@@ -416,7 +419,7 @@ export async function probeHasAudio(file: File): Promise<boolean> {
         settled = true;
         clearTimeout(timer);
         URL.revokeObjectURL(url);
-        resolve(true);
+        resolve(false);
       }
     };
 

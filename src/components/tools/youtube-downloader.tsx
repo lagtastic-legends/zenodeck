@@ -847,11 +847,14 @@ export function YouTubeDownloader() {
         `/api/youtube/download?url=${encodeURIComponent(inputUrl.trim() || videoInfo.videoId)}&quality=${encodeURIComponent(qualityParam)}&format=${encodeURIComponent(selectedQuality.container)}`
       );
 
-      // Strict 15-second hard timeout on fallback stream to guarantee UI never freezes indefinitely
+      // Activity-based watchdog: aborts only if stream stalls with 0 bytes transferred for 30 seconds
+      let lastActivityTime = Date.now();
       const fallbackTimeoutController = new AbortController();
-      const fallbackTimeoutTimer = setTimeout(() => {
-        fallbackTimeoutController.abort();
-      }, 15000);
+      const watchdogTimer = setInterval(() => {
+        if (Date.now() - lastActivityTime > 30000) {
+          fallbackTimeoutController.abort();
+        }
+      }, 5000);
 
       const onParentAbort = () => fallbackTimeoutController.abort();
       abortControllerRef.current?.signal.addEventListener("abort", onParentAbort, { once: true });
@@ -861,6 +864,7 @@ export function YouTubeDownloader() {
         streamBytes = await fetchStreamWithProgress(
           fallbackUrl,
           (received, total) => {
+            lastActivityTime = Date.now();
             const tot = total || selectedQuality.approxSizeBytes || 0;
             const pct = tot > 0 ? Math.min(95, Math.max(10, Math.round((received / tot) * 90))) : Math.min(85, Math.round(received / (1024 * 1024)));
             setProgress({
@@ -878,13 +882,13 @@ export function YouTubeDownloader() {
         );
       } catch (streamErr: any) {
         if (fallbackTimeoutController.signal.aborted && !abortControllerRef.current?.signal.aborted) {
-          throw new Error("Stream connection timed out. Please check your network and tap Download to retry.");
+          throw new Error("Stream connection timed out due to inactivity. Please check your network and tap Download to retry.");
         }
         // STRICT RESOLUTION LOCK: Banned silent 360p fallback!
         // Never substitute itag 18 or lower resolutions when user requested 4K/2K/1080p.
         throw streamErr;
       } finally {
-        clearTimeout(fallbackTimeoutTimer);
+        clearInterval(watchdogTimer);
         abortControllerRef.current?.signal.removeEventListener("abort", onParentAbort);
       }
 

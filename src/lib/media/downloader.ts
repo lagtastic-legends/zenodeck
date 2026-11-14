@@ -58,6 +58,25 @@ export async function fetchStreamWithProgress(
         }
       }
 
+      if (total && total > 0 && received < total) {
+        throw new Error(
+          `Incomplete download: received ${Math.round(received / 1024)} KB of ${Math.round(total / 1024)} KB (${Math.round((received / total) * 100)}%). Connection was closed early.`
+        );
+      }
+
+      if (received < 200 * 1024 && chunks.length > 0) {
+        const previewText = new TextDecoder().decode(chunks[0].slice(0, 500));
+        if (
+          previewText.includes("<!DOCTYPE") ||
+          previewText.includes("<html") ||
+          previewText.includes("<body") ||
+          previewText.includes('{"error"') ||
+          previewText.includes('"statusCode":')
+        ) {
+          throw new Error("Stream returned an error or service block page instead of media content.");
+        }
+      }
+
       const result = new Uint8Array(received);
       let offset = 0;
       for (const chunk of chunks) {
@@ -102,6 +121,25 @@ export async function fetchStreamWithProgress(
             chunks.push(value);
             received += value.length;
             if (onProgress) onProgress(received, total);
+          }
+        }
+
+        if (total && total > 0 && received < total) {
+          throw new Error(
+            `Incomplete proxy download: received ${Math.round(received / 1024)} KB of ${Math.round(total / 1024)} KB (${Math.round((received / total) * 100)}%). Stream was interrupted.`
+          );
+        }
+
+        if (received < 200 * 1024 && chunks.length > 0) {
+          const previewText = new TextDecoder().decode(chunks[0].slice(0, 500));
+          if (
+            previewText.includes("<!DOCTYPE") ||
+            previewText.includes("<html") ||
+            previewText.includes("<body") ||
+            previewText.includes('{"error"') ||
+            previewText.includes('"statusCode":')
+          ) {
+            throw new Error("Stream proxy returned an error or service block page instead of media content.");
           }
         }
 

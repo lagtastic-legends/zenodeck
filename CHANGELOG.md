@@ -5,6 +5,24 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.26] — 2026-11-14
+
+### 🛡️ Downloader Incomplete Stream Integrity & Video Converter Audio Extraction Shield
+- **Stream Completeness Enforcement (`src/lib/media/downloader.ts`)**:
+  - Implemented strict byte-level stream verification: if `received < total` when a media stream terminates, the download is marked as interrupted and fails with an explicit error instead of silently saving truncated fragments.
+  - Added early payload inspection rejecting HTML/JSON error or service-block pages so error responses are never packaged into media containers.
+- **Active-Data Stream Watchdog (`src/components/tools/youtube-downloader.tsx`)**:
+  - Replaced the rigid 15-second hard timeout with an activity-based watchdog timer that only interrupts a download if 0 bytes are transferred for 30 consecutive seconds, allowing large multi-gigabyte 1080p and 4K media downloads to finish without premature termination.
+- **Accurate Binary & Video Probing (`src/lib/media/probe.ts`)**:
+  - Small MP4 files ($\le 256\text{ KB}$) lacking a `moov` atom are now recognized as truncated and correctly report `hasAudio: false`.
+  - Fallback HTML5 media element probe now resolves `durationSec: 0` and `hasAudio: false` on error or timeout instead of erroneously defaulting to `true`.
+- **Video Converter Incomplete File Guard (`src/components/tools/media-converter.tsx`)**:
+  - Added detection for incomplete or truncated video files ($<512\text{ KB}$ with 0:00 duration).
+  - Displays a high-contrast warning banner: `⚠️ Incomplete Video File (X KB) · Please re-download the complete video`.
+  - Disables the conversion button with the clear label `INCOMPLETE FILE (RE-DOWNLOAD)`.
+- **Human-Readable FFmpeg Diagnostics (`src/hooks/use-media-job.ts`)**:
+  - Translated low-level FFmpeg exit codes into human-readable error descriptions for incomplete/truncated files and silent/video-only DASH tracks.
+
 ## [1.0.25] — 2026-11-14
 
 ### 🎛️ Precision Audio Cutter M3 Workstation Adaptation (Exclusive to Android APK)

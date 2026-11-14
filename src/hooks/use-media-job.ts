@@ -247,11 +247,19 @@ export function useMediaJob() {
           const ret = await engine.exec(["-y", ...spec.passes[i].exec]);
           if (ret !== 0) {
             const isSilentStream = capturedLogs.some((l) =>
-              /does not contain any stream|Output file #\d+ does not contain any stream/i.test(l),
+              /does not contain any stream|Output file #\d+ does not contain any stream|matches no streams|Cannot find a matching stream|filter.*matching stream was not found|Stream map '0:a'/i.test(l),
             );
             if (isSilentStream) {
               throw new Error(
-                "Source video contains no audio track. Audio extraction cannot produce an audio file from a silent video.",
+                "Source video contains no audio track. Audio extraction cannot produce an audio file from a silent or video-only video.",
+              );
+            }
+            const isCorruptOrTruncated = capturedLogs.some((l) =>
+              /moov atom not found|Invalid data found when processing input|EBML header parsing failed|unexpected end of file|error reading header|End of file/i.test(l),
+            );
+            if (isCorruptOrTruncated) {
+              throw new Error(
+                "The source video file is incomplete or corrupted (e.g. truncated download). Please re-download the complete video before converting.",
               );
             }
             const isOOM = capturedLogs.some((l) =>

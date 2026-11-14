@@ -19,6 +19,7 @@ import { ProcessingStatus } from "@/components/media/processing-status";
 import { useMediaJob } from "@/hooks/use-media-job";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
 import { probeHasAudio, probeAudioCodec } from "@/lib/media/probe";
+import { formatBytes } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -274,6 +275,12 @@ export function MediaConverter() {
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string>("universal-mp4-web");
 
+  const isIncompleteFile = Boolean(
+    file &&
+      ((file.size < 512 * 1024 && videoDuration === 0) ||
+        (file.name.toLowerCase().endsWith(".mp4") && file.size < 262144 && hasAudio === false))
+  );
+
   useEffect(() => {
     const handoff = useWorkstationStore.getState().consumeHandoffFile();
     if (handoff?.file) {
@@ -331,7 +338,7 @@ export function MediaConverter() {
   };
 
   const start = async () => {
-    if (!file) return;
+    if (!file || isIncompleteFile) return;
     if (mode === "audio" && hasAudio === false) return;
     const kbps = Number(audioKbps);
     const srcExt = extOf(effectiveName) || "bin";
@@ -443,6 +450,20 @@ export function MediaConverter() {
           </TabsList>
         </Tabs>
 
+        {file && isIncompleteFile && (
+          <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 text-destructive">
+            <AlertTriangle className="size-4 shrink-0 mt-0.5 text-destructive" />
+            <div className="space-y-1">
+              <p className="font-mono text-[11px] font-bold tracking-wide uppercase">
+                Incomplete Video File ({formatBytes(file.size)})
+              </p>
+              <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+                This video file is only {formatBytes(file.size)} with 0:00 duration (interrupted or truncated download). Conversion cannot run on an incomplete media stream. Please re-download the complete video or choose direct MP3 download in Universal Downloader.
+              </p>
+            </div>
+          </div>
+        )}
+
         {file && mode === "audio" && hasAudio === false && (
           <div className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-amber-600 dark:text-amber-400">
             <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-500" />
@@ -539,15 +560,17 @@ export function MediaConverter() {
         {/* run */}
         <motion.button
           onClick={() => void start()}
-          disabled={!file || busy || (mode === "audio" && hasAudio === false)}
-          whileHover={!file || busy || (mode === "audio" && hasAudio === false) ? undefined : { scale: 1.02 }}
-          whileTap={!file || busy || (mode === "audio" && hasAudio === false) ? undefined : { scale: 0.97 }}
+          disabled={!file || busy || isIncompleteFile || (mode === "audio" && hasAudio === false)}
+          whileHover={!file || busy || isIncompleteFile || (mode === "audio" && hasAudio === false) ? undefined : { scale: 1.02 }}
+          whileTap={!file || busy || isIncompleteFile || (mode === "audio" && hasAudio === false) ? undefined : { scale: 0.97 }}
           className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-primary/50 bg-gradient-to-r from-primary/90 to-plasma/80 font-display text-xs font-bold tracking-[0.2em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 glow-box-violet"
         >
           <Wand2 className="size-4" />
           {busy
             ? "PROCESSING…"
-            : mode === "audio" && hasAudio === false
+            : isIncompleteFile
+              ? "INCOMPLETE FILE (RE-DOWNLOAD)"
+              : mode === "audio" && hasAudio === false
               ? "NO AUDIO TRACK DETECTED"
               : audioFormat === "original"
                 ? `EXTRACT ORIGINAL → ${originalExt.toUpperCase()}`
