@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.26] — 2026-11-14
 
+### 🎨 Dual Cyber & Precision Design Engine & High-Contrast Text Shield (APK & Web)
+- **Decoupled Platform Ergonomics from Theme Palettes (`src/app/globals.css`)**:
+  - Removed `[data-platform="apk"]` from all color palette tokens (`--background`, `--card`, `--foreground`, `.panel-hud`, `.bg-hud-grid`), isolating `data-platform="apk"` strictly to mobile ergonomics (touch target sizing, overscroll prevention, and scrollbar management).
+  - Both the iconic **Cyber Dark Design** (pitch-black obsidian with neon/plasma glows) and the new **Precision Engineering Design** (optical-grade light canvas with oceanic cyan accents) are fully supported and switchable on native Android APKs.
+- **High-Contrast Typography & Accessibility Shield (`src/app/globals.css`)**:
+  - Upgraded `--foreground` to `#10181c` (deep charcoal, 16:1 contrast ratio) and `--muted-foreground` to `#2d383d` (deep slate, 7:1 AAA contrast ratio).
+  - Remapped hardcoded light text classes (`text-white`, `text-slate-300`, `text-zinc-400`, `text-white/80`) to high-contrast dark text inside `[data-theme="precision"]`, completely eliminating invisible/washed-out text on light backgrounds while preserving white text on primary gradient buttons.
+  - Hardened inputs, textareas, and dropdown selects with `#ffffff` backgrounds, `#bfc8ce` borders, and high-contrast `#10181c` text.
+- **Dynamic Theme Persistence & Zero-Flicker Hydration (`src/app/layout.tsx` & `src/lib/theme/theme-store.ts`)**:
+  - Upgraded pre-hydration script in `layout.tsx` to respect user's saved `omni_theme_preference` across native Android APK sessions instead of forcing light mode.
+  - Enabled seamless one-tap switching between Cyber and Precision themes via the TopBar `ThemeToggle`.
+
 ### 🛡️ Downloader Incomplete Stream Integrity & Video Converter Audio Extraction Shield
 - **Stream Completeness Enforcement (`src/lib/media/downloader.ts`)**:
   - Implemented strict byte-level stream verification: if `received < total` when a media stream terminates, the download is marked as interrupted and fails with an explicit error instead of silently saving truncated fragments.

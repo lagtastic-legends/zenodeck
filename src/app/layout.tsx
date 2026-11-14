@@ -143,24 +143,24 @@ export default function RootLayout({
                 );
                 if (isNativePlatform) {
                   document.documentElement.setAttribute('data-platform', 'apk');
-                  document.documentElement.setAttribute('data-theme', 'precision');
+                }
+                var p = localStorage.getItem('omni_theme_preference');
+                var savedTheme = null;
+                try {
+                  savedTheme = p ? JSON.parse(p).state?.theme : null;
+                } catch(e) {}
+                
+                // Allow both Cyber and Precision design in APK & web; respect user choice or default to Cyber
+                var activeTheme = savedTheme || 'cyber';
+                document.documentElement.setAttribute('data-theme', activeTheme);
+                if (activeTheme === 'precision' || activeTheme === 'terracotta') {
                   document.documentElement.classList.remove('dark');
                   document.documentElement.classList.add('light');
                   document.documentElement.style.colorScheme = 'light';
                 } else {
-                  var p = localStorage.getItem('omni_theme_preference');
-                  var t = p ? JSON.parse(p).state?.theme : null;
-                  if (t === 'terracotta') {
-                    document.documentElement.setAttribute('data-theme', 'terracotta');
-                    document.documentElement.classList.remove('dark');
-                    document.documentElement.classList.add('light');
-                    document.documentElement.style.colorScheme = 'light';
-                  } else {
-                    document.documentElement.setAttribute('data-theme', 'cyber');
-                    document.documentElement.classList.add('dark');
-                    document.documentElement.classList.remove('light');
-                    document.documentElement.style.colorScheme = 'dark';
-                  }
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                  document.documentElement.style.colorScheme = 'dark';
                 }
               } catch (e) {}
             `,

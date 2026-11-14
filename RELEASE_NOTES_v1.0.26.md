@@ -17,7 +17,21 @@ This release eliminates silent saving of broken/truncated media streams, replace
 
 ## 🛠️ Highlights & Core Features
 
-### 1. 🛡️ Downloader Incomplete Stream Integrity Shield
+### 1. 🎨 Dual Cyber & Precision Design Engine & High-Contrast Text Shield (APK & Web)
+* **Decoupled Platform Ergonomics from Theme Palettes (`globals.css`)**:
+  * Removed `[data-platform="apk"]` from all color palette tokens (`--background`, `--card`, `--foreground`, `.panel-hud`, `.bg-hud-grid`), isolating `data-platform="apk"` strictly to mobile ergonomics (touch target sizing, overscroll prevention, and scrollbar management).
+  * Both the iconic **Cyber Dark Design** (pitch-black obsidian with neon/plasma glows) and the new **Precision Engineering Design** (optical-grade light canvas with oceanic cyan accents) are fully supported, beautiful, and switchable on native Android APKs.
+* **High-Contrast Typography & Accessibility Shield (`globals.css`)**:
+  * Upgraded `--foreground` to `#10181c` (deep charcoal, 16:1 contrast ratio) and `--muted-foreground` to `#2d383d` (deep slate, 7:1 AAA contrast ratio).
+  * Remapped hardcoded light text classes (`text-white`, `text-slate-300`, `text-zinc-400`, `text-white/80`) to high-contrast dark text inside `[data-theme="precision"]`, completely eliminating invisible/washed-out text on light backgrounds while preserving white text on primary gradient buttons.
+  * Hardened inputs, textareas, and dropdown selects with `#ffffff` backgrounds, `#bfc8ce` borders, and high-contrast `#10181c` text.
+* **Dynamic Theme Persistence & Zero-Flicker Hydration (`layout.tsx` & `theme-store.ts`)**:
+  * Upgraded pre-hydration script in `layout.tsx` to respect user's saved `omni_theme_preference` across native Android APK sessions instead of forcing light mode.
+  * Enabled seamless one-tap switching between Cyber and Precision themes via the TopBar `ThemeToggle`.
+
+---
+
+### 2. 🛡️ Downloader Incomplete Stream Integrity Shield
 * **Stream Completeness Enforcement (`downloader.ts`)**:
   * Implemented byte-level stream verification: if `received < total` when a media stream closes, the download is detected as interrupted and throws an explicit error rather than silently saving a broken fragment.
   * Added early payload inspection rejecting HTML/JSON error or service-block pages so error responses are never packaged into media containers.
@@ -26,7 +40,7 @@ This release eliminates silent saving of broken/truncated media streams, replace
 
 ---
 
-### 2. 🎛️ Video Converter Incomplete File Guard & Probing Hardening
+### 3. 🎛️ Video Converter Incomplete File Guard & Probing Hardening
 * **Incomplete File Shield (`media-converter.tsx`)**:
   * Detects incomplete or truncated video files ($<512\text{ KB}$ with 0:00 duration).
   * Displays a high-contrast warning banner: `⚠️ Incomplete Video File (X KB) · Please re-download the complete video`.

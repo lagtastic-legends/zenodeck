@@ -56,7 +56,7 @@ function applyThemeToDom(theme: OmniTheme) {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: isApkPlatform() ? "precision" : "cyber",
+      theme: "cyber",
       setTheme: (theme) => {
         applyThemeToDom(theme);
         set({ theme });
@@ -77,11 +77,10 @@ export const useThemeStore = create<ThemeState>()(
       name: "omni_theme_preference",
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
-        if (isApkPlatform()) {
-          // Unconditionally ensure Precision Engineering theme and APK platform flag are locked for APK
-          applyThemeToDom(state?.theme ?? "precision");
-        } else if (state?.theme) {
+        if (state?.theme) {
           applyThemeToDom(state.theme);
+        } else {
+          applyThemeToDom("cyber");
         }
       },
     }
