@@ -86,7 +86,8 @@ export function DropZone({
    * never synchronously in the effect body. Audio probing reports duration
    * only (width/height zeroed) for range-slider UIs. */
   useEffect(() => {
-    if (!file || preview === "none") return;
+    if (!file) return;
+    if (preview === "none" && !onProbed) return;
     let cancelled = false;
     const probing: Promise<VideoMeta> =
       preview === "video"
@@ -108,7 +109,7 @@ export function DropZone({
     return () => {
       cancelled = true;
     };
-  }, [file, preview]);
+  }, [file, preview, onProbed]);
 
   /* Only trust probe results that belong to the current file. */
   const meta = probed && probed.file === file ? probed.meta : null;

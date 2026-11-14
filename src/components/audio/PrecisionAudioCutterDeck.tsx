@@ -205,7 +205,7 @@ export function PrecisionAudioCutterDeck({
   const trackRef = useRef<HTMLDivElement>(null);
 
   const startSec = Math.max(0, Number(params.startSec || 0));
-  const effectiveDuration = Math.max(duration || 30, startSec + 0.1);
+  const effectiveDuration = Math.max(duration > 0 ? duration : 300, Math.max(startSec + 1, Number(params.endSec || 30), 30));
   const endSec = Math.min(effectiveDuration, Math.max(startSec + 0.05, Number(params.endSec ?? effectiveDuration)));
   const selectionLength = Math.max(0, endSec - startSec);
   const cutMode = (params.cutMode as "keep" | "cut" | "silence" | "fade_only") || "keep";
@@ -213,7 +213,7 @@ export function PrecisionAudioCutterDeck({
   const fadeOutSec = Number(params.fadeOutSec || 0);
   const boostDb = Number(params.boostDb || 0);
 
-  const isLongAudio = duration >= 3600;
+  const isLongAudio = effectiveDuration >= 3600;
   const [showHours, setShowHours] = useState(false);
 
   // Active dragging handle ("start" | "end" | "playhead" | null)
@@ -230,35 +230,57 @@ export function PrecisionAudioCutterDeck({
   const endComponents = useMemo(() => splitSecondsToComponents(endSec), [endSec]);
   const displayHours = isLongAudio || startComponents.hours > 0 || endComponents.hours > 0 || showHours;
 
-  // Update Start Cutpoint safely with elastic forward push to prevent deadlocks
+  // Update Start Cutpoint safely with atomic two-way sliding & zero deadlock
   const updateStartCutpoint = useCallback(
     (newSec: number) => {
-      const targetStart = Math.max(0, Math.min(effectiveDuration - 0.05, newSec));
-      if (targetStart >= endSec - 0.05) {
-        // Automatically push endSec forward so the handles never deadlock
-        const pushWindow = Math.max(1.0, selectionLength || 5.0);
-        const pushedEnd = Math.min(effectiveDuration, targetStart + pushWindow);
-        updateParam("endSec", Math.round(pushedEnd * 100) / 100);
+      let targetStart = Math.max(0, Math.min(effectiveDuration - 0.1, newSec));
+      let targetEnd = endSec;
+
+      if (targetStart >= targetEnd - 0.1) {
+        // If start pushes against or past end, push end forward
+        if (targetStart + 0.5 <= effectiveDuration) {
+          targetEnd = Math.min(effectiveDuration, targetStart + Math.max(0.5, selectionLength || 1.0));
+        } else {
+          // At the very end of track, keep end at duration and pull start back
+          targetEnd = effectiveDuration;
+          targetStart = Math.max(0, effectiveDuration - Math.max(0.5, selectionLength || 1.0));
+        }
       }
-      updateParam("startSec", Math.round(targetStart * 100) / 100);
+
+      setParams((prev) => ({
+        ...prev,
+        startSec: Math.round(targetStart * 100) / 100,
+        endSec: Math.round(targetEnd * 100) / 100,
+      }));
       onSeek(targetStart);
     },
-    [effectiveDuration, endSec, selectionLength, updateParam, onSeek]
+    [effectiveDuration, endSec, selectionLength, setParams, onSeek]
   );
 
-  // Update End Cutpoint safely with elastic backward push to prevent deadlocks
+  // Update End Cutpoint safely with atomic two-way sliding & zero deadlock
   const updateEndCutpoint = useCallback(
     (newSec: number) => {
-      const targetEnd = Math.min(effectiveDuration, Math.max(0.05, newSec));
-      if (targetEnd <= startSec + 0.05) {
-        // Automatically push startSec backwards so the handles never deadlock
-        const pushWindow = Math.max(1.0, selectionLength || 5.0);
-        const pushedStart = Math.max(0, targetEnd - pushWindow);
-        updateParam("startSec", Math.round(pushedStart * 100) / 100);
+      let targetEnd = Math.min(effectiveDuration, Math.max(0.1, newSec));
+      let targetStart = startSec;
+
+      if (targetEnd <= targetStart + 0.1) {
+        // If end pushes against or behind start, push start backward
+        if (targetEnd - 0.5 >= 0) {
+          targetStart = Math.max(0, targetEnd - Math.max(0.5, selectionLength || 1.0));
+        } else {
+          // At the very start of track, keep start at 0 and push end forward
+          targetStart = 0;
+          targetEnd = Math.min(effectiveDuration, Math.max(0.5, selectionLength || 1.0));
+        }
       }
-      updateParam("endSec", Math.round(targetEnd * 100) / 100);
+
+      setParams((prev) => ({
+        ...prev,
+        startSec: Math.round(targetStart * 100) / 100,
+        endSec: Math.round(targetEnd * 100) / 100,
+      }));
     },
-    [effectiveDuration, startSec, selectionLength, updateParam]
+    [effectiveDuration, startSec, selectionLength, setParams]
   );
 
   // Nudge Helpers
@@ -272,17 +294,29 @@ export function PrecisionAudioCutterDeck({
     updateEndCutpoint(endSec + deltaSec);
   };
 
-  // Direct component update for Start
+  // Direct component update for Start with unit overflow protection
   const handleStartComponentChange = (field: keyof TimestampComponents, val: number) => {
     const next = { ...startComponents, [field]: Math.max(0, val) };
-    const sec = parseTimestampToSeconds(next);
+    let sec = parseTimestampToSeconds(next);
+    if (sec > effectiveDuration) {
+      if (field === "seconds") {
+        next.milliseconds = 0;
+        sec = parseTimestampToSeconds(next);
+      }
+    }
     updateStartCutpoint(sec);
   };
 
-  // Direct component update for End
+  // Direct component update for End with unit overflow protection
   const handleEndComponentChange = (field: keyof TimestampComponents, val: number) => {
     const next = { ...endComponents, [field]: Math.max(0, val) };
-    const sec = parseTimestampToSeconds(next);
+    let sec = parseTimestampToSeconds(next);
+    if (sec > effectiveDuration) {
+      if (field === "seconds") {
+        next.milliseconds = 0;
+        sec = parseTimestampToSeconds(next);
+      }
+    }
     updateEndCutpoint(sec);
   };
 
@@ -605,22 +639,45 @@ export function PrecisionAudioCutterDeck({
           <span className="font-mono text-[11px] text-[#A79277] hidden sm:inline">
             ({Math.round((selectionLength / effectiveDuration) * 100)}% of total track)
           </span>
-          {selectionLength <= 0.1 && (
+          {selectionLength <= 0.2 && (
             <button
               type="button"
               onClick={() => {
                 void haptics.medium();
-                applyPresetRange(effectiveDuration > 30 ? "first30" : "full");
+                setParams((prev) => ({
+                  ...prev,
+                  startSec: 0,
+                  endSec: effectiveDuration,
+                }));
+                onSeek(0);
               }}
-              className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/50 text-amber-300 font-mono text-[10px] font-bold animate-pulse cursor-pointer hover:bg-amber-500/30 flex items-center gap-1"
-              title="Expand collapsed selection"
+              className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-500/50 text-amber-300 font-mono text-xs font-bold animate-pulse cursor-pointer hover:bg-amber-500/30 flex items-center gap-1.5 shadow-sm active:scale-95"
+              title="Selection is pinched or collapsed. Tap to reset to full track."
             >
-              <span>⚠️ Collapsed ({selectionLength.toFixed(2)}s) — Expand</span>
+              <RotateCcw className="size-3" />
+              <span>⚠️ Collapsed ({selectionLength.toFixed(2)}s) — Reset Full</span>
             </button>
           )}
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void haptics.medium();
+              setParams((prev) => ({
+                ...prev,
+                startSec: 0,
+                endSec: effectiveDuration,
+              }));
+              onSeek(0);
+            }}
+            className="px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/30 hover:bg-secondary/70 text-muted-foreground hover:text-foreground flex items-center gap-1.5 font-mono text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+            title="Reset selection to cover entire track (0:00 to end)"
+          >
+            <RotateCcw className="size-3" />
+            <span>Reset Full</span>
+          </button>
           <button
             type="button"
             onClick={() => {

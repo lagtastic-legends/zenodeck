@@ -976,6 +976,16 @@ export function UnifiedAudioStudio({
       {/* Hidden Audio Player for Web Audio API Audition */}
       <audio
         ref={audioRef}
+        onLoadedMetadata={(e) => {
+          const d = (e.currentTarget as HTMLAudioElement).duration;
+          if (Number.isFinite(d) && d > 0) {
+            handleProbed({
+              durationSec: d,
+              width: 0,
+              height: 0,
+            });
+          }
+        }}
         onEnded={() => {
           setIsPlaying(false);
           const isTrimmerTool =
