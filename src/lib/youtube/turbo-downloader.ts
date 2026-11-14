@@ -432,6 +432,9 @@ async function downloadStreamResilient({
           rangeHeader: totalSize ? `bytes=0-${totalSize - 1}` : undefined,
           signal,
         });
+        if (cand.startsWith("http") && label === "video" && data.byteLength < 256 * 1024 && (!totalSize || totalSize > 1024 * 1024)) {
+          throw new Error(`Incomplete video stream received (${Math.round(data.byteLength / 1024)} KB). Retrying alternate node…`);
+        }
         onChunkBytes(data.byteLength);
         return data;
       } catch (err: any) {
@@ -1109,7 +1112,10 @@ export async function downloadYouTubeStream({
   const clipSuffix = isClipActive ? " [Clip]" : "";
 
   // Fast-path: If video format was already pre-muxed (e.g. 720p MP4), save directly without FFmpeg (unless clipped)
-  if (!audioBytes && !isClipActive) {
+  if (!hasSeparateAudio && !audioBytes && !isClipActive) {
+    if (option.videoFormat.url.startsWith("http") && videoBytes.byteLength < 256 * 1024 && (!option.videoFormat.contentLength || option.videoFormat.contentLength > 1024 * 1024)) {
+      throw new Error(`Incomplete video download (${Math.round(videoBytes.byteLength / 1024)} KB received). Stream was interrupted.`);
+    }
     const ext = option.videoFormat.container || "mp4";
     const mime = ext === "webm" ? "video/webm" : "video/mp4";
     const blob = new Blob([videoBytes.buffer as ArrayBuffer], { type: mime });
@@ -1138,6 +1144,18 @@ export async function downloadYouTubeStream({
       is4K,
       is60fps,
     };
+  }
+
+  // Verify dual-stream integrity before initiating WebAssembly muxing
+  if (hasSeparateAudio && (!audioBytes || audioBytes.byteLength === 0)) {
+    throw new Error(
+      "FFmpeg WebAssembly engine is required to multiplex separate video and audio streams. Cannot output silent video.",
+    );
+  }
+  if (option.videoFormat.url.startsWith("http") && videoBytes.byteLength < 256 * 1024 && (!option.videoFormat.contentLength || option.videoFormat.contentLength > 1024 * 1024)) {
+    throw new Error(
+      `Incomplete video download (${Math.round(videoBytes.byteLength / 1024)} KB received). The video stream was interrupted. Please retry.`,
+    );
   }
 
   // -------------------------------------------------------------

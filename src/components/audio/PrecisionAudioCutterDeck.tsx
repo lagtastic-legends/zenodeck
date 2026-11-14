@@ -237,7 +237,7 @@ export function PrecisionAudioCutterDeck({
       let targetEnd = endSec;
 
       if (targetStart >= targetEnd - 0.1) {
-        // If start pushes against or past end, push end forward
+        // elastic forward push to prevent deadlocks: If start pushes against or past end, push end forward
         if (targetStart + 0.5 <= effectiveDuration) {
           targetEnd = Math.min(effectiveDuration, targetStart + Math.max(0.5, selectionLength || 1.0));
         } else {
@@ -264,7 +264,7 @@ export function PrecisionAudioCutterDeck({
       let targetStart = startSec;
 
       if (targetEnd <= targetStart + 0.1) {
-        // If end pushes against or behind start, push start backward
+        // elastic backward push to prevent deadlocks: If end pushes against or behind start, push start backward
         if (targetEnd - 0.5 >= 0) {
           targetStart = Math.max(0, targetEnd - Math.max(0.5, selectionLength || 1.0));
         } else {

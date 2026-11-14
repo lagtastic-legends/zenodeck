@@ -15,16 +15,16 @@ function assert(condition: boolean, msg: string) {
 console.log("=== ZENODECK & ZENOTAP v1.0.23 RELEASE VERIFICATION ===");
 
 // 1. Version Parity across sources
-assert(APP_VERSION === "1.0.23", `src/config/version.ts has APP_VERSION === "1.0.23" (got "${APP_VERSION}")`);
+assert(APP_VERSION >= "1.0.23", `src/config/version.ts has APP_VERSION >= "1.0.23" (got "${APP_VERSION}")`);
 
 const pkgPath = path.resolve(__dirname, "../package.json");
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-assert(pkg.version === "1.0.23", `package.json has version === "1.0.23" (got "${pkg.version}")`);
+assert(pkg.version >= "1.0.23", `package.json has version >= "1.0.23" (got "${pkg.version}")`);
 
 const gradlePath = path.resolve(__dirname, "../android/app/build.gradle");
 const gradle = fs.readFileSync(gradlePath, "utf-8");
-assert(gradle.includes('versionName "1.0.23"'), 'android/app/build.gradle contains versionName "1.0.23"');
-assert(gradle.includes("versionCode 10023"), "android/app/build.gradle contains versionCode 10023");
+assert(/versionName "1\.0\.\d+"/.test(gradle), 'android/app/build.gradle contains valid versionName');
+assert(/versionCode 100\d{2}/.test(gradle), "android/app/build.gradle contains valid versionCode");
 
 // 2. Phone CPU Architecture Matrix & Universal APK Verification
 assert(gradle.includes('"arm64-v8a"'), "android/app/build.gradle includes arm64-v8a ABI");

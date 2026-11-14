@@ -60,6 +60,7 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { useUIAudio } from "@/hooks/useUIAudio";
 import { nativeSave } from "@/lib/native-save";
 import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
+import { useToast } from "@/hooks/use-toast";
 import { acquireWakeLock, releaseWakeLock } from "@/lib/wake-lock";
 import {
   extractYouTubeId,
@@ -171,6 +172,7 @@ function YouTubeIcon({ className = "size-2.5" }: { className?: string }) {
 }
 
 export function YouTubeDownloader() {
+  const { toast } = useToast();
   const { engine, state: engineState, boot } = useFFmpegEngine();
   const haptics = useHaptics();
   const { playSuccess, playError } = useUIAudio();
@@ -280,6 +282,14 @@ export function YouTubeDownloader() {
 
   const handleConvertVideoToAudio = () => {
     if (!downloadResult) return;
+    if (downloadResult.fileSizeBytes < 256 * 1024) {
+      toast({
+        title: "Incomplete Media Download",
+        description: `This downloaded video is only ${formatBytes(downloadResult.fileSizeBytes)} and appears to be truncated or incomplete. Please re-download before converting.`,
+        variant: "destructive",
+      });
+      return;
+    }
     void haptics.medium();
     const fileToHandoff: File = downloadResult.blob instanceof File
       ? downloadResult.blob

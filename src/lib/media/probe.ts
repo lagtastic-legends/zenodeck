@@ -61,9 +61,9 @@ export function probeVideo(file: File): Promise<VideoMeta> {
       }
 
       finish({
-        durationSec: Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 30,
-        width: video.videoWidth || 1280,
-        height: video.videoHeight || 720,
+        durationSec: Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0,
+        width: video.videoWidth || 0,
+        height: video.videoHeight || 0,
         hasAudio,
       });
     };
@@ -91,7 +91,7 @@ export function probeAudioDuration(file: File): Promise<number> {
       if (!settled) {
         settled = true;
         URL.revokeObjectURL(url);
-        resolve(30);
+        resolve(0);
       }
     }, 5000);
 
@@ -99,7 +99,7 @@ export function probeAudioDuration(file: File): Promise<number> {
       if (!settled) {
         settled = true;
         clearTimeout(timer);
-        const d = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 30;
+        const d = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
         URL.revokeObjectURL(url);
         resolve(d);
       }

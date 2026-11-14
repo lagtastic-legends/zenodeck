@@ -191,6 +191,7 @@ export function useMediaJob() {
       const logHandler = ({ message }: { type?: string; message: string }) => {
         if (message) capturedLogs.push(message);
       };
+      engine.on("log", logHandler);
       const mountedDirs: string[] = [];
 
       try {
@@ -268,6 +269,12 @@ export function useMediaJob() {
             if (isOOM) {
               throw new Error(
                 "WebAssembly memory limit reached while encoding output. For massive files (up to 20 GB), extracting audio or using a compact quality preset is recommended.",
+              );
+            }
+            const isAudioPass = (spec.passes[i].label || "").toLowerCase().includes("extracting audio");
+            if (isAudioPass) {
+              throw new Error(
+                "Audio extraction failed: the input file has no audio stream (e.g. video-only DASH stream) or is an incomplete download. Please download complete media or choose direct MP3 in Universal Downloader.",
               );
             }
             throw new Error(

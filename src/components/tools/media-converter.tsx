@@ -18,7 +18,8 @@ import { OutputCard } from "@/components/media/output-card";
 import { ProcessingStatus } from "@/components/media/processing-status";
 import { useMediaJob } from "@/hooks/use-media-job";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
-import { probeHasAudio, probeAudioCodec } from "@/lib/media/probe";
+import { probeHasAudio, probeAudioCodec, probeVideo } from "@/lib/media/probe";
+import { useToast } from "@/hooks/use-toast";
 import { formatBytes } from "@/lib/format";
 import {
   Select,
@@ -257,6 +258,7 @@ function buildAudioArgs(
 }
 
 export function MediaConverter() {
+  const { toast } = useToast();
   const { phase, busy, progress, passIndex, passCount, passLabel, elapsedMs, error, outputs, run, reset } =
     useMediaJob();
 
@@ -277,8 +279,9 @@ export function MediaConverter() {
 
   const isIncompleteFile = Boolean(
     file &&
-      ((file.size < 512 * 1024 && videoDuration === 0) ||
-        (file.name.toLowerCase().endsWith(".mp4") && file.size < 262144 && hasAudio === false))
+      (file.size < 256 * 1024 ||
+        (file.size < 1024 * 1024 && (videoDuration === 0 || !videoDuration)) ||
+        (file.name.toLowerCase().endsWith(".mp4") && file.size < 512 * 1024 && hasAudio === false))
   );
 
   useEffect(() => {
@@ -288,6 +291,23 @@ export function MediaConverter() {
         ? handoff.file
         : new File([handoff.file], handoff.filename, { type: handoff.mimeType || "video/mp4" });
       setFile(f);
+      setCustomName("");
+      setHasAudio(null);
+      probeHasAudio(f)
+        .then((avail) => setHasAudio(avail))
+        .catch(() => setHasAudio(false));
+      probeAudioCodec(f)
+        .then((info) => setOriginalExt(info.ext))
+        .catch(() => {});
+      probeVideo(f)
+        .then((m) => {
+          setVideoDuration(m.durationSec);
+          setTrimRange({ start: 0, end: m.durationSec });
+          if (typeof m.hasAudio === "boolean") {
+            setHasAudio(m.hasAudio);
+          }
+        })
+        .catch(() => {});
       if (handoff.sourceTool === "youtube-downloader" || (handoff.mimeType?.startsWith("video/") && handoff.filename)) {
         setMode("audio");
         setAudioFormat("mp3");
@@ -339,7 +359,27 @@ export function MediaConverter() {
 
   const start = async () => {
     if (!file || isIncompleteFile) return;
-    if (mode === "audio" && hasAudio === false) return;
+    if (file.size < 256 * 1024) {
+      toast({
+        title: "Incomplete Media File",
+        description: `This file is only ${formatBytes(file.size)}. A complete video or audio stream cannot be extracted from a truncated file. Please re-download the complete video or select direct MP3 download in Universal Downloader.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    let audioAvail = hasAudio;
+    if (mode === "audio" && audioAvail === null) {
+      audioAvail = await probeHasAudio(file).catch(() => false);
+      setHasAudio(audioAvail);
+    }
+    if (mode === "audio" && audioAvail === false) {
+      toast({
+        title: "No Audio Stream Available",
+        description: "This video has no audio tracks. Video-only streams (like standalone 1080p DASH) cannot be converted to MP3. Please download complete media or choose direct MP3 in Universal Downloader.",
+        variant: "destructive",
+      });
+      return;
+    }
     const kbps = Number(audioKbps);
     const srcExt = extOf(effectiveName) || "bin";
     const virtualInputPath = `/mnt_0/input.${srcExt}`;

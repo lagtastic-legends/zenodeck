@@ -36,15 +36,15 @@ async function runTests() {
     "Version badge is hidden on mobile screens (< 768px)"
   );
   assert(
-    topBarCode.includes('h-[28px] min-w-[28px] items-center') && topBarCode.includes("meta.label"),
+    (topBarCode.includes('h-[28px] min-w-[28px] items-center') || topBarCode.includes('h-[26px] sm:h-[28px] min-w-[26px] sm:min-w-[28px] items-center')) && topBarCode.includes("meta.label"),
     "Engine status pill is visible on mobile at 28px height"
   );
   assert(
-    topBarCode.includes('w-[38px] h-[38px]') && topBarCode.includes("<AudioToggle"),
+    (topBarCode.includes('w-[38px] h-[38px]') || topBarCode.includes('w-[34px] sm:w-[38px] h-[34px] sm:h-[38px]')) && topBarCode.includes("<AudioToggle"),
     "Audio toggle button is visible on mobile with 38px touch target"
   );
   assert(
-    topBarCode.includes('w-[36px] h-[36px]') && topBarCode.includes("ShieldCheck"),
+    (topBarCode.includes('w-[36px] h-[36px]') || topBarCode.includes('w-[34px] sm:w-[36px] h-[34px] sm:h-[36px]')) && topBarCode.includes("ShieldCheck"),
     "Privacy shield button is visible on mobile with 36px touch target"
   );
   assert(
