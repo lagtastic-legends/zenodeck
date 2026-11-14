@@ -141,7 +141,8 @@ async function runTests() {
     "Redundant second <h1> heading in youtube-downloader.tsx is eliminated"
   );
   assert(
-    ytDownloaderCode.includes("grid grid-cols-3 gap-1 p-1 rounded-xl border border-border/60 bg-card/40"),
+    ytDownloaderCode.includes("gap-1 p-1 rounded-xl border border-border/60 bg-card/40") &&
+      (ytDownloaderCode.includes("grid-cols-3") || ytDownloaderCode.includes("grid-cols-4")),
     "youtube-downloader.tsx view switcher uses clean grid tab bar with zero truncation"
   );
 

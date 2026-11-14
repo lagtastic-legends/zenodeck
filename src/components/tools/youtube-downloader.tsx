@@ -52,6 +52,9 @@ import { usePlayerStore } from "@/lib/youtube/player-store";
 import { YouTubeMiniPlayer } from "./youtube-mini-player";
 import { YouTubeSubtitlesView } from "./youtube-subtitles-view";
 import { YouTubeVaultView } from "./youtube-vault-view";
+import { DownloadManagerView } from "./download-manager-view";
+import { useDownloadQueueStore } from "@/lib/media/download-queue-store";
+import { useDownloadQueueRunner } from "@/lib/media/download-queue-runner";
 import { useFFmpegEngine } from "@/lib/ffmpeg/use-ffmpeg";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useUIAudio } from "@/hooks/useUIAudio";
@@ -306,8 +309,15 @@ export function YouTubeDownloader() {
   const batchControllerRef = useRef<BatchQueueController | null>(null);
 
 
-  // View Navigation: "downloader" | "subtitles" | "vault"
-  const [activeViewTab, setActiveViewTab] = useState<"downloader" | "subtitles" | "vault">("downloader");
+  // Mount background queue runner
+  useDownloadQueueRunner();
+  const queueItems = useDownloadQueueStore((s) => s.items);
+  const activeQueueCount = queueItems.filter(
+    (i) => i.status === "queued" || i.status === "downloading"
+  ).length;
+
+  // View Navigation: "downloader" | "queue" | "subtitles" | "vault"
+  const [activeViewTab, setActiveViewTab] = useState<"downloader" | "queue" | "subtitles" | "vault">("downloader");
 
   // Subtitle Engine State
   const [isDownloadingSubtitle, setIsDownloadingSubtitle] = useState(false);
@@ -1295,6 +1305,35 @@ export function YouTubeDownloader() {
     }
   };
 
+  // Enqueue to Background Download Manager
+  const handleAddToQueue = () => {
+    if (!videoInfo || !selectedQuality) return;
+    void haptics.medium();
+
+    const format = selectedQuality.isAudioOnly
+      ? (selectedQuality.id.includes("m4a") ? "m4a" : "mp3")
+      : (selectedQuality.container || "mp4");
+
+    const targetUrl = inputUrl.trim() || `https://www.youtube.com/watch?v=${videoInfo.videoId}`;
+
+    useDownloadQueueStore.getState().enqueue({
+      url: targetUrl,
+      platform: activePlatform,
+      title: videoInfo.title,
+      author: videoInfo.author,
+      thumbnailUrl: videoInfo.thumbnailUrl,
+      durationFormatted: videoInfo.durationFormatted || formatDuration(videoInfo.durationSeconds || 0),
+      qualityOption: selectedQuality,
+      isAudioOnly: Boolean(selectedQuality.isAudioOnly),
+      format,
+      clipRange: isClipEnabled && (clipStartTime || clipEndTime) ? { startTime: clipStartTime, endTime: clipEndTime } : undefined,
+    });
+
+    void haptics.success();
+    playSuccess();
+    setActiveViewTab("queue");
+  };
+
   // Sample 4K Demo Video
   const handleLoadSample = () => {
     const sample = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
@@ -1347,8 +1386,8 @@ export function YouTubeDownloader() {
         </button>
       </div>
 
-      {/* View Switcher: Downloader | Subtitles | Download Vault */}
-      <div className="grid grid-cols-3 gap-1 p-1 rounded-xl border border-border/60 bg-card/40 w-full sm:w-auto sm:inline-grid">
+      {/* View Switcher: Downloader | Queue | Subtitles | Download Vault */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-xl border border-border/60 bg-card/40 w-full sm:w-auto sm:inline-grid">
         <button
           type="button"
           onClick={() => {
@@ -1363,6 +1402,27 @@ export function YouTubeDownloader() {
         >
           <Film className="hidden xs:inline sm:inline size-3.5 shrink-0" />
           <span className="whitespace-nowrap">Downloader</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveViewTab("queue");
+            void haptics.light();
+          }}
+          className={`flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 rounded-lg font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
+            activeViewTab === "queue"
+              ? "bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40 shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Layers className="hidden xs:inline sm:inline size-3.5 shrink-0 text-[#F7E7CE]" />
+          <span className="whitespace-nowrap">Queue</span>
+          {activeQueueCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-[#A79277]/30 text-[9px] text-[#F7E7CE] font-bold shrink-0 animate-pulse border border-[#A79277]/40">
+              {activeQueueCount}
+            </span>
+          )}
         </button>
 
         <button
@@ -2255,42 +2315,55 @@ export function YouTubeDownloader() {
 
             {/* Download Button or 3-Stage Progress HUD */}
             {!isDownloading ? (
-              <button
-                type="button"
-                onClick={handleStartDownload}
-                disabled={!selectedQuality}
-                className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold text-white transition-all cursor-pointer ${
-                  selectedQuality?.isAudioOnly
-                    ? "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 shadow-lg shadow-violet-500/25 hover:opacity-95"
-                    : "bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 shadow-lg shadow-red-500/20 hover:opacity-95"
-                }`}
-              >
-                {selectedQuality?.isAudioOnly ? (
-                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
-                    <div className="inline-flex items-center gap-1.5">
-                      <Music className="size-4 shrink-0" />
-                      <span>{isClipEnabled ? "EXTRACT AUDIO CLIP" : "EXTRACT AUDIO"}</span>
+              <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleStartDownload}
+                  disabled={!selectedQuality}
+                  className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold text-white transition-all cursor-pointer ${
+                    selectedQuality?.isAudioOnly
+                      ? "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 shadow-lg shadow-violet-500/25 hover:opacity-95"
+                      : "bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 shadow-lg shadow-red-500/20 hover:opacity-95"
+                  }`}
+                >
+                  {selectedQuality?.isAudioOnly ? (
+                    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <Music className="size-4 shrink-0" />
+                        <span>{isClipEnabled ? "EXTRACT AUDIO CLIP" : "EXTRACT AUDIO"}</span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
+                        <span>{selectedQuality?.badge}</span>
+                        <span>•</span>
+                        <span>{formatBytes(selectedQuality?.approxSizeBytes || 0)}</span>
+                      </span>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
-                      <span>{selectedQuality?.badge}</span>
-                      <span>•</span>
-                      <span>{formatBytes(selectedQuality?.approxSizeBytes || 0)}</span>
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
-                    <div className="inline-flex items-center gap-1.5">
-                      <Download className="size-4 shrink-0" />
-                      <span>{isClipEnabled ? "START TURBO CLIP DOWNLOAD" : "START TURBO DOWNLOAD"}</span>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <Download className="size-4 shrink-0" />
+                        <span>{isClipEnabled ? "START TURBO CLIP DOWNLOAD" : "START TURBO DOWNLOAD"}</span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
+                        <span>{selectedQuality?.badge || "4K"}</span>
+                        <span>•</span>
+                        <span>{formatBytes(selectedQuality?.approxSizeBytes || 0)}</span>
+                      </span>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono font-medium opacity-90 px-2 py-0.5 rounded-md bg-black/25">
-                      <span>{selectedQuality?.badge || "4K"}</span>
-                      <span>•</span>
-                      <span>{formatBytes(selectedQuality?.approxSizeBytes || 0)}</span>
-                    </span>
-                  </div>
-                )}
-              </button>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddToQueue}
+                  disabled={!selectedQuality}
+                  className="sm:w-auto min-h-[48px] px-5 py-3 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-mono text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                  title="Add to background download queue"
+                >
+                  <ListPlus className="size-4" />
+                  <span>Add to Queue</span>
+                </button>
+              </div>
             ) : (
               /* 3-Stage Split Telemetry HUD */
               <div
@@ -2701,7 +2774,12 @@ export function YouTubeDownloader() {
         </div>
       )}
 
-      {/* 2. Subtitles View */}
+      {/* 2. Background Download Queue View */}
+      {activeViewTab === "queue" && (
+        <DownloadManagerView onNavigateToDownloader={() => setActiveViewTab("downloader")} />
+      )}
+
+      {/* 3. Subtitles View */}
       {activeViewTab === "subtitles" && (
         <YouTubeSubtitlesView
           videoInfo={videoInfo}
@@ -2712,7 +2790,7 @@ export function YouTubeDownloader() {
         />
       )}
 
-      {/* 3. Download History Vault View */}
+      {/* 4. Download History Vault View */}
       {activeViewTab === "vault" && <YouTubeVaultView />}
 
       {/* Subtitle Transcript Preview Modal */}
@@ -2829,6 +2907,14 @@ export function YouTubeDownloader() {
           setTimeout(() => {
             handleStartDownload();
           }, 150);
+        }}
+        onAddToQueue={(opt) => {
+          setSelectedQuality(opt);
+          if (opt.isAudioOnly) setMediaTypeTab("audio");
+          else setMediaTypeTab("video");
+          setTimeout(() => {
+            handleAddToQueue();
+          }, 100);
         }}
       />
 

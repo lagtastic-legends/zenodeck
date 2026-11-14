@@ -24,6 +24,7 @@ export interface VidmateQualitySheetProps {
   selectedQualityId: string;
   onSelectQuality: (qualityId: string) => void;
   onDownload: (qualityOption: YouTubeQualityOption) => void;
+  onAddToQueue?: (qualityOption: YouTubeQualityOption) => void;
 }
 
 export function VidmateQualitySheet({
@@ -33,6 +34,7 @@ export function VidmateQualitySheet({
   selectedQualityId,
   onSelectQuality,
   onDownload,
+  onAddToQueue,
 }: VidmateQualitySheetProps) {
   const haptics = useHaptics();
 
@@ -61,6 +63,14 @@ export function VidmateQualitySheet({
     }
   };
 
+  const handleQueue = () => {
+    if (currentOption && onAddToQueue) {
+      void haptics.medium();
+      onClose();
+      onAddToQueue(currentOption);
+    }
+  };
+
   return (
     <ZenoModal
       isOpen={isOpen}
@@ -78,17 +88,28 @@ export function VidmateQualitySheet({
       maxWidthClassName="sm:max-w-xl"
       overlayId="vidmate-quality-sheet"
       footer={
-        <div className="w-full pt-1 pb-1">
+        <div className="w-full pt-1 pb-1 flex flex-col sm:flex-row items-stretch gap-2">
           <button
             onClick={handleDownload}
             disabled={!currentOption}
-            className="w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide bg-gradient-to-r from-primary via-emerald-500 to-primary bg-[length:200%_auto] hover:bg-[position:right_center] transition-all duration-300 text-primary-foreground shadow-lg shadow-primary/25 active:scale-[0.98] flex items-center justify-center gap-2.5 border border-primary/30"
+            className="flex-1 py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide bg-gradient-to-r from-primary via-emerald-500 to-primary bg-[length:200%_auto] hover:bg-[position:right_center] transition-all duration-300 text-primary-foreground shadow-lg shadow-primary/25 active:scale-[0.98] flex items-center justify-center gap-2.5 border border-primary/30 cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>
               DOWNLOAD NOW {currentOption?.approxSizeBytes ? `(${formatBytes(currentOption.approxSizeBytes)})` : ""}
             </span>
           </button>
+          {onAddToQueue && (
+            <button
+              onClick={handleQueue}
+              disabled={!currentOption}
+              className="sm:w-auto py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide bg-secondary/80 hover:bg-secondary border border-border/80 text-foreground transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              title="Add this format to the background download queue"
+            >
+              <Layers className="w-4 h-4 text-primary" />
+              <span>Queue</span>
+            </button>
+          )}
         </div>
       }
     >
