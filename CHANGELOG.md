@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.26] — 2026-11-14
 
+### 📐 Precision M3 Mobile Layout Transformation & Cyber Workstation Preservation
+- **M3 Segmented Capsule Action Selector (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Replaced bulky 4-card mode grid with a compact, one-line horizontal segmented capsule (`Trim` / `Cut` / `Mute` / `Fade`) with active sliding highlight and haptic feedback.
+- **Hero Waveform Scrubber & Live Horizon (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - 64px tactile waveform touch canvas with 28px hit-target thumb pills (`In-Point` in emerald, `Out-Point` in rose, `Playhead` in oceanic cyan) and high-contrast live horizon badges (`IN` ── `SPAN` ── `OUT`).
+- **Unified Single-Card Boundary Range Controller (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Merged two separate 300px boxes into a single horizontal card:
+    - **Left Wing:** `📍 In-Point` large digital counter, `[0:00]` and `[Playhead]` quick-snaps.
+    - **Right Wing:** `🏁 Out-Point` large digital counter, `[Playhead]` and `[Full End]` quick-snaps.
+    - **Center Micro-Steppers & Jog Nudge:** Tab-selectable steppers for digit-by-digit time adjustments (`HR : MIN : SEC . MS`), plus a unified micro-nudge bar (`-1s`, `-0.1s`, `+0.1s`, `+1s`).
+- **Collapsible Fine-Tuning & Presets Drawer (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Smooth expandable drawer hiding secondary parameters (S-curve Fade In/Out sliders, Volume Boost dB, Zero-Snap, and Range Presets) to eliminate vertical scrolling clutter on mobile.
+- **Docked Ergonomic Bottom Thumb Bar (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Sticky/docked action bar featuring `Reset Full`, `Loop`, and large `Play Cut` audition CTA directly at one-handed thumb reach.
+- **100% Unchanged Cyber Workstation Mode (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Retains 100% of the original workstation layout under `theme === 'cyber'`: dual side-by-side In-Point & Out-Point consoles, raw timeline scrubber, floating stats telemetry, and dark obsidian aesthetic.
+
+### 🌐 Web App TopBar Audio Feedback Button & Web Design Switching Fixes
+- **TopBar Audio Button Text Overflow Resolution (`src/components/shell/top-bar.tsx` & `src/components/shell/audio-toggle.tsx`)**:
+  - Eliminated the rigid desktop width constraint (`w-[34px] sm:w-[38px] p-0`) on the audio toggle button that caused the text `"AUDIO"` to clip and overflow the circular border on desktop web browsers.
+  - Sized responsively as a 34px icon circle on mobile (`w-[34px] h-[34px]`) and a full pill on desktop (`sm:w-auto sm:h-8 sm:px-2.5`), matching `ThemeToggle` with zero text clipping.
+  - Added `whitespace-nowrap shrink-0` to the audio toggle label text span.
+- **Precision Design Switching in Web App (`src/lib/theme/theme-store.ts`)**:
+  - Enabled switching between Cyber Design and Precision Design directly in the web app via `ThemeToggle`, allowing users to test both designs in desktop and mobile web browsers.
+
 ### 🎨 Dual Cyber & Precision Design Engine & High-Contrast Text Shield (APK & Web)
 - **Decoupled Platform Ergonomics from Theme Palettes (`src/app/globals.css`)**:
   - Removed `[data-platform="apk"]` from all color palette tokens (`--background`, `--card`, `--foreground`, `.panel-hud`, `.bg-hud-grid`), isolating `data-platform="apk"` strictly to mobile ergonomics (touch target sizing, overscroll prevention, and scrollbar management).

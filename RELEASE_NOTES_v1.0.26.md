@@ -17,7 +17,26 @@ This release eliminates silent saving of broken/truncated media streams, replace
 
 ## 🛠️ Highlights & Core Features
 
-### 1. 🎨 Dual Cyber & Precision Design Engine & High-Contrast Text Shield (APK & Web)
+### 1. 📐 Dedicated Precision M3 Mobile Layout for Audio Cutter
+* **M3 Segmented Capsule Action Selector**: Replaced bulky 4-card mode grid with a compact, one-line horizontal segmented capsule (`Trim` / `Cut` / `Mute` / `Fade`) with active sliding highlight and haptic feedback.
+* **Hero Waveform Scrubber & Live Horizon**: 64px tactile waveform touch canvas with 28px hit-target thumb pills (`In-Point` in emerald, `Out-Point` in rose, `Playhead` in oceanic cyan) and high-contrast live horizon badges (`IN` ── `SPAN` ── `OUT`).
+* **Unified Single-Card Boundary Range Controller**: Merged two separate 300px boxes into a single horizontal card:
+  * **Left Wing:** `📍 In-Point` large digital counter, `[0:00]` and `[Playhead]` quick-snaps.
+  * **Right Wing:** `🏁 Out-Point` large digital counter, `[Playhead]` and `[Full End]` quick-snaps.
+  * **Center Micro-Steppers & Jog Nudge:** Tab-selectable steppers for digit-by-digit time adjustments (`HR : MIN : SEC . MS`), plus a unified micro-nudge bar (`-1s`, `-0.1s`, `+0.1s`, `+1s`).
+* **Collapsible Fine-Tuning & Presets Drawer**: Smooth expandable drawer hiding secondary parameters (S-curve Fade In/Out sliders, Volume Boost dB, Zero-Snap, and Range Presets) to eliminate vertical scrolling clutter on mobile.
+* **Docked Ergonomic Bottom Thumb Bar**: Sticky/docked action bar featuring `Reset Full`, `Loop`, and large `Play Cut` audition CTA directly at one-handed thumb reach.
+* **100% Cyber Workstation Preservation**: When `theme === 'cyber'`, the exact original pro-audio workstation layout is preserved pixel-for-pixel with side-by-side consoles and obsidian neon styling.
+
+### 2. 🌐 Web App TopBar Audio Feedback Button & Web Design Switching Fixes
+* **TopBar Audio Button Text Overflow Resolution (`top-bar.tsx` & `audio-toggle.tsx`)**:
+  * Eliminated the rigid desktop width constraint (`w-[34px] sm:w-[38px] p-0`) on the audio toggle button that caused the text `"AUDIO"` to clip and overflow the circular border on desktop web browsers.
+  * Sized responsively as a 34px icon circle on mobile (`w-[34px] h-[34px]`) and a full pill on desktop (`sm:w-auto sm:h-8 sm:px-2.5`), matching `ThemeToggle` with zero text clipping.
+  * Added `whitespace-nowrap shrink-0` to the audio toggle label text span.
+* **Precision Design Switching in Web App (`theme-store.ts`)**:
+  * Enabled switching between Cyber Design and Precision Design directly in the web app via `ThemeToggle`, allowing users to test both designs in desktop and mobile web browsers.
+
+### 3. 🎨 Dual Cyber & Precision Design Engine & High-Contrast Text Shield (APK & Web)
 * **Decoupled Platform Ergonomics from Theme Palettes (`globals.css`)**:
   * Removed `[data-platform="apk"]` from all color palette tokens (`--background`, `--card`, `--foreground`, `.panel-hud`, `.bg-hud-grid`), isolating `data-platform="apk"` strictly to mobile ergonomics (touch target sizing, overscroll prevention, and scrollbar management).
   * Both the iconic **Cyber Dark Design** (pitch-black obsidian with neon/plasma glows) and the new **Precision Engineering Design** (optical-grade light canvas with oceanic cyan accents) are fully supported, beautiful, and switchable on native Android APKs.
