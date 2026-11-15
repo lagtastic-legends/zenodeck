@@ -5,6 +5,24 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.28] — 2026-11-15
+
+### 🎧 Audio Editor & Cutter In-Point / Out-Point Value Reset-to-Zero Resolution
+- **Continuous Global Timestamp Steppers with Automatic Unit Rollover (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Replaced isolated modulo-stepper logic (`value + step > max ? min : ...`) with global continuous timestamp stepping (`onStep: (dir) => stepTarget(target, dir * deltaSec)`).
+  - Stepping `SEC` across `59s` automatically rolls over into `01:00.00` (minutes) and `HR` without resetting to `00:00.00`.
+  - Stepping `MIN` across `59m` automatically rolls over into `01:00:00.00` (hours).
+  - Stepping downward decrements seamlessly from `01:00.00` to `00:59.00` without wrapping or zero resets.
+- **Track Boundary Elastic Guard & Deadlock Prevention (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Eliminated the `selectionLength` subtraction flaw where pushing In-Point or Out-Point against track boundaries subtracted the entire track length (e.g. 180s - 180s = 0), resetting values to zero.
+  - Replaced with a safe constant 0.5s minimal gap guard (`Math.max(0, effectiveDuration - 0.5)` and `Math.min(effectiveDuration, 0.5)`).
+- **Direct Digit Typing Slicing Fix (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Replaced `e.target.value.slice(0, digits)` with `.slice(-digits)` in `<input onChange>` to ensure typing into `"00"` appends newly typed digits (e.g., typing `"5"` yields `"05"`, typing `"2"` yields `"52"`) instead of slicing away the user's keystrokes.
+- **Instance Reuse Key Scoping (`src/components/audio/PrecisionAudioCutterDeck.tsx`)**:
+  - Bound explicit target-scoped `key` attributes (`${activeM3Target}-${label}`, `cyber-start-${label}`, `cyber-end-${label}`) to force clean React state re-initialization when switching between In-Point and Out-Point.
+- **Probed Metadata Overwrite Protection (`src/components/audio/UnifiedAudioStudio.tsx`)**:
+  - Guarded `handleProbed` against overwriting user-configured `startSec` and `endSec` when delayed `<audio onLoadedMetadata>` events fire after user adjustments.
+
 ## [1.0.27] — 2026-11-14
 
 ### 📐 Precision M3 Mobile Layout Transformation & Cyber Workstation Preservation

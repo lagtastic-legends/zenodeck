@@ -925,8 +925,11 @@ export function UnifiedAudioStudio({
     if (isTrimmerTool) {
       setParams((prev) => ({
         ...prev,
-        startSec: 0,
-        endSec: meta.durationSec,
+        startSec: prev.startSec && prev.startSec < meta.durationSec ? prev.startSec : 0,
+        endSec:
+          prev.endSec && prev.endSec <= meta.durationSec && prev.endSec > (prev.startSec || 0)
+            ? prev.endSec
+            : meta.durationSec,
       }));
     } else if (activeEffect === "ringtone-maker") {
       setParams((prev) => ({
@@ -1789,7 +1792,9 @@ export function UnifiedAudioStudio({
                 setLoopRegion={setLoopRegion}
                 onSeek={(t) => {
                   if (audioRef.current) {
-                    audioRef.current.currentTime = t;
+                    try {
+                      audioRef.current.currentTime = t;
+                    } catch {}
                     setCurrentTime(t);
                   }
                 }}

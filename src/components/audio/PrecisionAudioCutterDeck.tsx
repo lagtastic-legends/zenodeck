@@ -58,6 +58,7 @@ interface TimeDigitSegmentProps {
   max: number;
   step?: number;
   onChange: (val: number) => void;
+  onStep?: (direction: 1 | -1) => void;
   disabled?: boolean;
   accent?: "emerald" | "rose" | "primary";
 }
@@ -70,6 +71,7 @@ function TimeDigitSegment({
   max,
   step = 1,
   onChange,
+  onStep,
   disabled = false,
   accent = "primary",
 }: TimeDigitSegmentProps) {
@@ -84,12 +86,20 @@ function TimeDigitSegment({
 
   const handleIncrement = () => {
     if (disabled) return;
+    if (onStep) {
+      onStep(1);
+      return;
+    }
     const next = value + step > max ? min : value + step;
     onChange(next);
   };
 
   const handleDecrement = () => {
     if (disabled) return;
+    if (onStep) {
+      onStep(-1);
+      return;
+    }
     const next = value - step < min ? max : value - step;
     onChange(next);
   };
@@ -151,7 +161,7 @@ function TimeDigitSegment({
             setIsEditing(true);
             e.target.select();
           }}
-          onChange={(e) => setLocalText(e.target.value.replace(/\D/g, "").slice(0, digits))}
+          onChange={(e) => setLocalText(e.target.value.replace(/\D/g, "").slice(-digits))}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           disabled={disabled}
@@ -244,11 +254,11 @@ export function PrecisionAudioCutterDeck({
       if (targetStart >= targetEnd - 0.1) {
         // elastic forward push to prevent deadlocks: If start pushes against or past end, push end forward
         if (targetStart + 0.5 <= effectiveDuration) {
-          targetEnd = Math.min(effectiveDuration, targetStart + Math.max(0.5, selectionLength || 1.0));
+          targetEnd = Math.min(effectiveDuration, targetStart + 0.5);
         } else {
           // At the very end of track, keep end at duration and pull start back
           targetEnd = effectiveDuration;
-          targetStart = Math.max(0, effectiveDuration - Math.max(0.5, selectionLength || 1.0));
+          targetStart = Math.max(0, effectiveDuration - 0.5);
         }
       }
 
@@ -259,7 +269,7 @@ export function PrecisionAudioCutterDeck({
       }));
       onSeek(targetStart);
     },
-    [effectiveDuration, endSec, selectionLength, setParams, onSeek]
+    [effectiveDuration, endSec, setParams, onSeek]
   );
 
   // Update End Cutpoint safely with atomic two-way sliding & zero deadlock
@@ -271,11 +281,11 @@ export function PrecisionAudioCutterDeck({
       if (targetEnd <= targetStart + 0.1) {
         // elastic backward push to prevent deadlocks: If end pushes against or behind start, push start backward
         if (targetEnd - 0.5 >= 0) {
-          targetStart = Math.max(0, targetEnd - Math.max(0.5, selectionLength || 1.0));
+          targetStart = Math.max(0, targetEnd - 0.5);
         } else {
           // At the very start of track, keep start at 0 and push end forward
           targetStart = 0;
-          targetEnd = Math.min(effectiveDuration, Math.max(0.5, selectionLength || 1.0));
+          targetEnd = Math.min(effectiveDuration, 0.5);
         }
       }
 
@@ -285,7 +295,20 @@ export function PrecisionAudioCutterDeck({
         endSec: Math.round(targetEnd * 100) / 100,
       }));
     },
-    [effectiveDuration, startSec, selectionLength, setParams]
+    [effectiveDuration, startSec, setParams]
+  );
+
+  // Discrete stepper helper with automatic roll-over across boundaries
+  const stepTarget = useCallback(
+    (target: "start" | "end", deltaSec: number) => {
+      void haptics.light();
+      if (target === "start") {
+        updateStartCutpoint(startSec + deltaSec);
+      } else {
+        updateEndCutpoint(endSec + deltaSec);
+      }
+    },
+    [startSec, endSec, updateStartCutpoint, updateEndCutpoint, haptics]
   );
 
   // Nudge Helpers
@@ -773,10 +796,12 @@ export function PrecisionAudioCutterDeck({
               {displayHours && (
                 <>
                   <TimeDigitSegment
+                    key={`${activeM3Target}-hr`}
                     label="HR"
                     value={activeM3Target === "start" ? startComponents.hours : endComponents.hours}
                     min={0}
                     max={99}
+                    onStep={(dir) => stepTarget(activeM3Target, dir * 3600)}
                     onChange={(v) =>
                       activeM3Target === "start"
                         ? handleStartComponentChange("hours", v)
@@ -790,10 +815,12 @@ export function PrecisionAudioCutterDeck({
               )}
 
               <TimeDigitSegment
+                key={`${activeM3Target}-min`}
                 label="MIN"
                 value={activeM3Target === "start" ? startComponents.minutes : endComponents.minutes}
                 min={0}
                 max={59}
+                onStep={(dir) => stepTarget(activeM3Target, dir * 60)}
                 onChange={(v) =>
                   activeM3Target === "start"
                     ? handleStartComponentChange("minutes", v)
@@ -805,10 +832,12 @@ export function PrecisionAudioCutterDeck({
               <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
 
               <TimeDigitSegment
+                key={`${activeM3Target}-sec`}
                 label="SEC"
                 value={activeM3Target === "start" ? startComponents.seconds : endComponents.seconds}
                 min={0}
                 max={59}
+                onStep={(dir) => stepTarget(activeM3Target, dir * 1)}
                 onChange={(v) =>
                   activeM3Target === "start"
                     ? handleStartComponentChange("seconds", v)
@@ -820,6 +849,7 @@ export function PrecisionAudioCutterDeck({
               <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">.</span>
 
               <TimeDigitSegment
+                key={`${activeM3Target}-ms`}
                 label="MS"
                 value={Math.round(
                   (activeM3Target === "start" ? startComponents.milliseconds : endComponents.milliseconds) / 10
@@ -828,6 +858,7 @@ export function PrecisionAudioCutterDeck({
                 min={0}
                 max={99}
                 step={5}
+                onStep={(dir) => stepTarget(activeM3Target, dir * 0.05)}
                 onChange={(v) =>
                   activeM3Target === "start"
                     ? handleStartComponentChange("milliseconds", v * 10)
@@ -1339,10 +1370,12 @@ export function PrecisionAudioCutterDeck({
             {displayHours && (
               <>
                 <TimeDigitSegment
+                  key="cyber-start-hr"
                   label="HR"
                   value={startComponents.hours}
                   min={0}
                   max={99}
+                  onStep={(dir) => stepTarget("start", dir * 3600)}
                   onChange={(v) => handleStartComponentChange("hours", v)}
                   disabled={busy}
                   accent="emerald"
@@ -1352,10 +1385,12 @@ export function PrecisionAudioCutterDeck({
             )}
 
             <TimeDigitSegment
+              key="cyber-start-min"
               label="MIN"
               value={startComponents.minutes}
               min={0}
               max={59}
+              onStep={(dir) => stepTarget("start", dir * 60)}
               onChange={(v) => handleStartComponentChange("minutes", v)}
               disabled={busy}
               accent="emerald"
@@ -1363,10 +1398,12 @@ export function PrecisionAudioCutterDeck({
             <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
 
             <TimeDigitSegment
+              key="cyber-start-sec"
               label="SEC"
               value={startComponents.seconds}
               min={0}
               max={59}
+              onStep={(dir) => stepTarget("start", dir * 1)}
               onChange={(v) => handleStartComponentChange("seconds", v)}
               disabled={busy}
               accent="emerald"
@@ -1374,12 +1411,14 @@ export function PrecisionAudioCutterDeck({
             <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">.</span>
 
             <TimeDigitSegment
+              key="cyber-start-ms"
               label="MS"
               value={Math.round(startComponents.milliseconds / 10)}
               digits={2}
               min={0}
               max={99}
               step={5}
+              onStep={(dir) => stepTarget("start", dir * 0.05)}
               onChange={(v) => handleStartComponentChange("milliseconds", v * 10)}
               disabled={busy}
               accent="emerald"
@@ -1493,10 +1532,12 @@ export function PrecisionAudioCutterDeck({
             {displayHours && (
               <>
                 <TimeDigitSegment
+                  key="cyber-end-hr"
                   label="HR"
                   value={endComponents.hours}
                   min={0}
                   max={99}
+                  onStep={(dir) => stepTarget("end", dir * 3600)}
                   onChange={(v) => handleEndComponentChange("hours", v)}
                   disabled={busy}
                   accent="rose"
@@ -1506,10 +1547,12 @@ export function PrecisionAudioCutterDeck({
             )}
 
             <TimeDigitSegment
+              key="cyber-end-min"
               label="MIN"
               value={endComponents.minutes}
               min={0}
               max={59}
+              onStep={(dir) => stepTarget("end", dir * 60)}
               onChange={(v) => handleEndComponentChange("minutes", v)}
               disabled={busy}
               accent="rose"
@@ -1517,10 +1560,12 @@ export function PrecisionAudioCutterDeck({
             <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">:</span>
 
             <TimeDigitSegment
+              key="cyber-end-sec"
               label="SEC"
               value={endComponents.seconds}
               min={0}
               max={59}
+              onStep={(dir) => stepTarget("end", dir * 1)}
               onChange={(v) => handleEndComponentChange("seconds", v)}
               disabled={busy}
               accent="rose"
@@ -1528,12 +1573,14 @@ export function PrecisionAudioCutterDeck({
             <span className="font-mono font-black text-muted-foreground text-base sm:text-lg pb-5 select-none">.</span>
 
             <TimeDigitSegment
+              key="cyber-end-ms"
               label="MS"
               value={Math.round(endComponents.milliseconds / 10)}
               digits={2}
               min={0}
               max={99}
               step={5}
+              onStep={(dir) => stepTarget("end", dir * 0.05)}
               onChange={(v) => handleEndComponentChange("milliseconds", v * 10)}
               disabled={busy}
               accent="rose"
