@@ -17,15 +17,22 @@ export type AudioFormat = "mp3" | "wav" | "flac" | "ogg" | "m4a";
 export function audioOutputArgs(format: AudioFormat, kbps: number): string[] {
   switch (format) {
     case "mp3":
-      return ["-c:a", "libmp3lame", "-b:a", `${kbps}k`, "-ar", "44100"];
+      return [
+        "-c:a", "libmp3lame",
+        "-b:a", `${kbps}k`,
+        "-q:a", "0",
+        "-compression_level", "0",
+        "-reservoir", "1",
+        "-ac", "2",
+      ];
     case "wav":
-      return ["-c:a", "pcm_s16le", "-ar", "44100"];
+      return ["-c:a", "pcm_s16le", "-ac", "2"];
     case "flac":
-      return ["-c:a", "flac", "-compression_level", "5", "-ar", "44100"];
+      return ["-c:a", "flac", "-compression_level", "8", "-ac", "2"];
     case "ogg":
-      return ["-c:a", "libvorbis", "-q:a", "6", "-ar", "44100"];
+      return ["-c:a", "libvorbis", "-q:a", "7", "-ac", "2"];
     case "m4a":
-      return ["-c:a", "aac", "-b:a", `${Math.min(kbps, 320)}k`, "-ar", "44100"];
+      return ["-c:a", "aac", "-b:a", `${Math.min(kbps, 320)}k`, "-ac", "2"];
   }
 }
 

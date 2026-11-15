@@ -5,6 +5,23 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] — 2026-11-15
+
+### 🎵 Play Cut Audition Engine & Real-Time Waveform Transport
+- **Functional Audition & Playback Transport (`src/components/audio/PrecisionAudioCutterDeck.tsx` & `src/components/audio/UnifiedAudioStudio.tsx`)**:
+  - Resolved issue where clicking `Play Cut` or `Audition (2s)` only moved the playhead needle with `onSeek` without actually triggering audio playback.
+  - Implemented `handlePlayCut(startAt)` controller in `UnifiedAudioStudio.tsx` hooked into the Web Audio API graph and `<audio>` element with playhead synchronization and automatic region bounds enforcement.
+  - Connected `onPlayCut` to the docked mobile thumb bar, Cyber transport console, and precision In/Out-point audition buttons.
+  - Added dynamic state toggle (`Play Cut` ➔ `Pause Cut`) with reactive `<Pause>` and `<Play>` icons.
+
+### 💎 Audiophile Sound Quality & Export Encoding Pipeline Optimization
+- **Highest-Fidelity LAME Psychoacoustic Algorithm (`src/lib/audio-dsp.ts` & `src/lib/audio/filters.ts`)**:
+  - Added `-q:a 0` and `-compression_level 0` to `libmp3lame` output encoding args. By default, FFmpeg's `libmp3lame` defaulted to quality 4, which applied an aggressive 16 kHz low-pass filter that cut off all cymbal shimmer, vocal air, and high-frequency harmonics. `-q:a 0` unlocks the complete 20Hz – 22.05kHz audible spectrum.
+  - Enabled bit reservoir (`-reservoir 1`) to preserve transient peaks and prevent dynamic compression on loud musical sections.
+  - Guaranteed 2-channel stereo width (`-ac 2`) to eliminate unintended mono downmixing or surround phase cancellation.
+- **Native Sample Rate Preservation & Resampling Elimination (`src/components/audio/UnifiedAudioStudio.tsx`, `src/components/audio/FXRackStudio.tsx`, `src/components/audio/StemMixerConsole.tsx`)**:
+  - Removed hardcoded `sampleRate: 44100` from `handleRunProcessing` and `audioOutputArgs`, allowing modern 48kHz audio streams (standard across YouTube, phone media, and digital cameras) to retain their native 48kHz sampling rate without lossy non-integer downsampling.
+
 ## [1.0.28] — 2026-11-15
 
 ### 🎧 Audio Editor & Cutter In-Point / Out-Point Value Reset-to-Zero Resolution

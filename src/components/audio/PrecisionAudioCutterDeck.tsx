@@ -198,6 +198,8 @@ export interface PrecisionAudioCutterDeckProps {
   loopRegion: boolean;
   setLoopRegion: (loop: boolean) => void;
   onSeek: (time: number) => void;
+  isPlaying?: boolean;
+  onPlayCut?: (startAt?: number) => void;
   busy?: boolean;
 }
 
@@ -210,6 +212,8 @@ export function PrecisionAudioCutterDeck({
   loopRegion,
   setLoopRegion,
   onSeek,
+  isPlaying = false,
+  onPlayCut,
   busy = false,
 }: PrecisionAudioCutterDeckProps) {
   const haptics = useHaptics();
@@ -777,10 +781,11 @@ export function PrecisionAudioCutterDeck({
                   type="button"
                   onClick={() => {
                     void haptics.light();
-                    if (activeM3Target === "start") {
-                      onSeek(startSec);
+                    const targetTime = activeM3Target === "start" ? startSec : Math.max(startSec, endSec - 2.0);
+                    if (onPlayCut) {
+                      onPlayCut(targetTime);
                     } else {
-                      onSeek(Math.max(0, endSec - 2.0));
+                      onSeek(targetTime);
                     }
                   }}
                   className="px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer"
@@ -1044,13 +1049,26 @@ export function PrecisionAudioCutterDeck({
             type="button"
             onClick={() => {
               void haptics.light();
-              onSeek(startSec);
+              if (onPlayCut) {
+                onPlayCut(isPlaying ? undefined : startSec);
+              } else {
+                onSeek(startSec);
+              }
             }}
             className="flex-1 py-2.5 px-4 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono text-xs font-black flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all cursor-pointer"
-            title="Audition cut from In-Point"
+            title={isPlaying ? "Pause playback" : "Audition cut from In-Point"}
           >
-            <Play className="size-3.5 fill-current" />
-            <span>Play Cut ({selectionLength.toFixed(1)}s)</span>
+            {isPlaying ? (
+              <>
+                <Pause className="size-3.5 fill-current" />
+                <span>Pause Cut</span>
+              </>
+            ) : (
+              <>
+                <Play className="size-3.5 fill-current" />
+                <span>Play Cut ({selectionLength.toFixed(1)}s)</span>
+              </>
+            )}
           </button>
 
           <button
@@ -1313,13 +1331,26 @@ export function PrecisionAudioCutterDeck({
             type="button"
             onClick={() => {
               void haptics.light();
-              onSeek(startSec);
+              if (onPlayCut) {
+                onPlayCut(isPlaying ? undefined : startSec);
+              } else {
+                onSeek(startSec);
+              }
             }}
             className="px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground dark:bg-[#102C26] dark:hover:bg-[#102C26]/80 dark:text-[#F7E7CE] border border-primary/40 dark:border-[#A79277]/40 flex items-center gap-1.5 font-mono text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-            title="Jump to In-Point and audition selected cut"
+            title={isPlaying ? "Pause playback" : "Jump to In-Point and audition selected cut"}
           >
-            <Play className="size-3 text-primary-foreground dark:text-[#F7E7CE] fill-current" />
-            <span>Play Cut</span>
+            {isPlaying ? (
+              <>
+                <Pause className="size-3 text-primary-foreground dark:text-[#F7E7CE] fill-current" />
+                <span>Pause Cut</span>
+              </>
+            ) : (
+              <>
+                <Play className="size-3 text-primary-foreground dark:text-[#F7E7CE] fill-current" />
+                <span>Play Cut</span>
+              </>
+            )}
           </button>
           <button
             type="button"
@@ -1457,7 +1488,11 @@ export function PrecisionAudioCutterDeck({
               type="button"
               onClick={() => {
                 void haptics.light();
-                onSeek(startSec);
+                if (onPlayCut) {
+                  onPlayCut(startSec);
+                } else {
+                  onSeek(startSec);
+                }
               }}
               className="h-8 px-2 rounded-full border border-emerald-500/30 bg-secondary/50 hover:bg-secondary font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Audition audio starting from this In-Point"
@@ -1619,7 +1654,12 @@ export function PrecisionAudioCutterDeck({
               type="button"
               onClick={() => {
                 void haptics.light();
-                onSeek(Math.max(0, endSec - 2.0));
+                const tailTime = Math.max(startSec, endSec - 2.0);
+                if (onPlayCut) {
+                  onPlayCut(tailTime);
+                } else {
+                  onSeek(tailTime);
+                }
               }}
               className="h-8 px-2 rounded-full border border-rose-500/30 bg-secondary/50 hover:bg-secondary font-mono text-[11px] font-semibold text-foreground transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs active:scale-[0.98]"
               title="Audition tail audio leading up to Out-Point"

@@ -873,6 +873,29 @@ export function UnifiedAudioStudio({
     }
   };
 
+  /* Audition / Play Cut Controller */
+  const handlePlayCut = (startAt?: number) => {
+    if (!audioRef.current) return;
+    void haptics.light();
+    const start = typeof startAt === "number" ? startAt : (params.startSec || 0);
+
+    // If already playing and user clicks "Play Cut" (without specifying a new start offset), toggle pause
+    if (isPlaying && typeof startAt !== "number") {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      audioRef.current.currentTime = start;
+    } catch {}
+    setCurrentTime(start);
+    audioRef.current.playbackRate = 1.0;
+    setupDspGraph();
+    audioRef.current.play().catch(() => {});
+    setIsPlaying(true);
+  };
+
   /* Automatically surface SaveResultModal on successful export */
   useEffect(() => {
     if (result && result.blob) {
@@ -912,7 +935,6 @@ export function UnifiedAudioStudio({
       params,
       outputFormat: format,
       kbps: Number(kbps),
-      sampleRate: 44100,
     });
   };
 
@@ -1798,6 +1820,8 @@ export function UnifiedAudioStudio({
                     setCurrentTime(t);
                   }
                 }}
+                isPlaying={isPlaying}
+                onPlayCut={handlePlayCut}
                 busy={busy}
               />
             )}

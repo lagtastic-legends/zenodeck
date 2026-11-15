@@ -293,7 +293,6 @@ export function StemMixerConsole({
       params: {},
       outputFormat: format,
       kbps: Number(kbps),
-      sampleRate: 44100,
       customFilterArgs: filters,
     });
   };
