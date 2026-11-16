@@ -48,6 +48,8 @@ export default function Error({
           <button
             type="button"
             onClick={() => {
+              // Hard reset to matrix hub on critical error
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.href = "/";
             }}
             className="flex items-center gap-2 rounded-xl border border-border/80 bg-background/90 px-5 py-3 font-mono text-xs text-foreground hover:border-primary/50 active:scale-95 transition-all cursor-pointer"

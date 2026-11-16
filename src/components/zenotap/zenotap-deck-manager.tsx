@@ -503,7 +503,6 @@ export function ZenoTapDeckManager({ open, onOpenChange }: ZenoTapDeckManagerPro
                 >
                   {/* Thumbnail */}
                   <div className="aspect-square bg-neutral-950 flex items-center justify-center overflow-hidden relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.url}
                       alt={item.originalName}

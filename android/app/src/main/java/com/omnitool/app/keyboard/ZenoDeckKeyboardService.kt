@@ -241,6 +241,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private val clipboardVaultItems = mutableListOf<ClipboardVaultItem>()
     private var tvClipboardEmpty: TextView? = null
     private var btnClipSniffZenodeck: Button? = null
+    private var layoutClipboardPill: View? = null
 
     // State Variables
     private var currentTheme: String = ZenoDeckKeyboardBridgePlugin.THEME_GLACIER
@@ -470,7 +471,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
             startActivity(intent)
         }
 
-        btnSpacebar?.let { setupSpacebarGesture(it) }
+        btnSpacebar?.let { setupSpacebarTrackpadGesture(it) }
         btnBackspace?.let { setupBackspaceGesture(it) }
 
         // Vault Media Deck Binding
@@ -480,11 +481,22 @@ class ZenoDeckKeyboardService : InputMethodService() {
             onItemClick = { file -> commitGif(file, description = file.nameWithoutExtension) },
             onItemLongClick = { file -> showVaultCardOptionsDialog(file) }
         )
+        val spanCount = resources.getInteger(R.integer.keyboard_grid_span_count)
         rvGifDeck?.apply {
-            layoutManager = GridLayoutManager(this@ZenoDeckKeyboardService, 3)
+            layoutManager = GridLayoutManager(this@ZenoDeckKeyboardService, spanCount)
             adapter = gifAdapter
             setHasFixedSize(true)
         }
+
+        // Setup Clipboard Listener Pill Actions (Direct Headless Native Processing)
+        layoutClipboardPill = root.findViewById(R.id.layout_clipboard_pill)
+        val btnClipCompress = root.findViewById<Button>(R.id.btn_clip_compress)
+        val btnClipToGif = root.findViewById<Button>(R.id.btn_clip_to_gif)
+        val btnClipToSticker = root.findViewById<Button>(R.id.btn_clip_to_sticker)
+
+        btnClipCompress?.setOnClickListener { processClipboardMedia("compress") }
+        btnClipToGif?.setOnClickListener { processClipboardMedia("to_gif") }
+        btnClipToSticker?.setOnClickListener { processClipboardMedia("to_sticker") }
 
         // Category Filter Strip
         btnCatAll = root.findViewById(R.id.btn_cat_all)
@@ -845,6 +857,10 @@ class ZenoDeckKeyboardService : InputMethodService() {
     /**
      * 50% Hardware Spacebar with Horizontal Cursor Scrubbing & 350ms Double-Space Period
      */
+    private fun setupSpacebarTrackpadGesture(spacebar: Button) {
+        setupSpacebarGesture(spacebar)
+    }
+
     private fun setupSpacebarGesture(spacebar: Button) {
         var downX = 0f
         var lastScrubX = 0f
@@ -1670,6 +1686,47 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 null -> 0xFF94A3B8.toInt()
             }
             setTextColor(color)
+        }
+    }
+
+    private fun processClipboardMedia(action: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clipData = clipboard?.primaryClip
+
+        var clipUri: Uri? = null
+        var clipText: String? = null
+
+        if (clipData != null && clipData.itemCount > 0) {
+            val item = clipData.getItemAt(0)
+            clipUri = item.uri
+            clipText = item.text?.toString()
+        }
+
+        updateCommitResultDisplay("⚡ Processing $action headlessly…", isSuccess = null)
+
+        ZenoHeadlessMediaEngine.getInstance(applicationContext).processClipboardActionAsync(
+            action = action,
+            clipUri = clipUri,
+            clipText = clipText
+        ) { result ->
+            if (result.isSuccess) {
+                val outputFile = result.getOrNull()
+                if (outputFile != null && outputFile.exists()) {
+                    refreshDeckFiles()
+                    vibrateTactileClick()
+                    // Finish composing text before committing rich media content
+                    currentInputConnection?.finishComposingText()
+                    commitGif(outputFile, description = "ZenoTap $action")
+                    updateCommitResultDisplay("✓ Injected $action into active chat", isSuccess = true)
+                    layoutClipboardPill?.visibility = View.GONE
+                } else {
+                    updateCommitResultDisplay("✗ Failed: output file not found", isSuccess = false)
+                }
+            } else {
+                val err = result.exceptionOrNull()?.message ?: "Processing failed"
+                Log.e(TAG, "Headless media processing failed: $err")
+                updateCommitResultDisplay("✗ $err", isSuccess = false)
+            }
         }
     }
 

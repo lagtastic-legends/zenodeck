@@ -241,7 +241,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             // Case A: AVC/H.264 + AAC -> MPEG_4
             // Case B: VP9/AV01 + Opus/Vorbis -> WEBM
             // Case C: Mixed Container (e.g. AVC + Opus): On API >= 29, MPEG_4 natively accepts Opus.
-            val isWebmTarget = (isVideoWebm && isAudioWebm) || (outputFile.name.endsWith(".webm", ignoreCase = true) && !isVideoAvc)
+            val isWebmTarget = (outputFile.name.endsWith(".webm", ignoreCase = true) || isVideoWebm) && isAudioWebm
             val targetOutputFile = if (isWebmTarget && outputFile.name.endsWith(".mp4", ignoreCase = true)) {
                 File(outputFile.parentFile, outputFile.nameWithoutExtension + ".webm")
             } else if (!isWebmTarget && outputFile.name.endsWith(".webm", ignoreCase = true)) {

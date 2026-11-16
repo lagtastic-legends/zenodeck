@@ -79,11 +79,6 @@ export function AiMessageBubble({
   isStreaming,
   onRegenerate,
 }: AiMessageBubbleProps) {
-  // Never render a blank message bubble unless it is actively streaming tokens
-  if (!message.content?.trim() && !isStreaming) {
-    return null;
-  }
-
   const [copied, setCopied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const haptics = useHaptics();
@@ -97,6 +92,11 @@ export function AiMessageBubble({
       }
     };
   }, []);
+
+  // Never render a blank message bubble unless it is actively streaming tokens
+  if (!message.content?.trim() && !isStreaming) {
+    return null;
+  }
 
   const handleCopyMessage = () => {
     navigator.clipboard.writeText(message.content);

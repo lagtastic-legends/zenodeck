@@ -12,6 +12,7 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.omnitool.app.media.ZenoHeadlessMediaEngine
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -103,6 +104,20 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
                     }
                     val thumbBytes = Base64.decode(cleanThumb, Base64.DEFAULT)
                     FileOutputStream(thumbFile).use { it.write(thumbBytes) }
+                } else {
+                    try {
+                        val options = android.graphics.BitmapFactory.Options().apply {
+                            inSampleSize = 2
+                        }
+                        val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+                        if (bitmap != null) {
+                            ZenoHeadlessMediaEngine.getInstance(context)
+                                .generateCompanionThumbnail(bitmap, thumbFile)
+                            bitmap.recycle()
+                        }
+                    } catch (thumbErr: Exception) {
+                        Log.w(TAG, "Automatic thumbnail extraction failed: ${thumbErr.message}")
+                    }
                 }
 
                 val intent = Intent(ACTION_DECK_UPDATED).apply {

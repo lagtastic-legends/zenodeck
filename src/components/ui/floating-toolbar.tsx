@@ -179,21 +179,9 @@ export function FloatingToolbar({
   const lastScrollY = useRef(0);
   const { playHover, playClick } = useUIAudio();
 
-  if (view !== "dashboard") {
-    return null;
-  }
-
-  const handleToggle = () => {
-    playClick();
-    const nextState = !isOpen;
-    // Trigger Light haptic impact on open/close
-    void triggerHaptic(ImpactStyle.Light);
-    setIsOpen(nextState);
-    onToggle?.(nextState);
-  };
-
   /* Auto-hide FAB when scrolling down on mobile, restore when scrolling up or at top */
   useEffect(() => {
+    if (view !== "dashboard") return;
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
@@ -213,17 +201,31 @@ export function FloatingToolbar({
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isOpen]);
+  }, [isOpen, view]);
 
   /* Register as active overlay so back key/gesture collapses the toolbar first */
   useEffect(() => {
+    if (view !== "dashboard") return;
     if (isOpen) {
       return useNavStore.getState().registerOverlay("floating-toolbar", () => {
         setIsOpen(false);
         return true;
       });
     }
-  }, [isOpen]);
+  }, [isOpen, view]);
+
+  if (view !== "dashboard") {
+    return null;
+  }
+
+  const handleToggle = () => {
+    playClick();
+    const nextState = !isOpen;
+    // Trigger Light haptic impact on open/close
+    void triggerHaptic(ImpactStyle.Light);
+    setIsOpen(nextState);
+    onToggle?.(nextState);
+  };
 
   return (
     <motion.div

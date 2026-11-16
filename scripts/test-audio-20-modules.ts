@@ -180,6 +180,9 @@ async function runVerification() {
   console.log("\n[TEST 5] Verifying UnifiedAudioStudio.tsx internal components & live DSP...");
   const studioPath = path.resolve(__dirname, "../src/components/audio/UnifiedAudioStudio.tsx");
   const studioContent = fs.readFileSync(studioPath, "utf-8");
+  const cutterPath = path.resolve(__dirname, "../src/components/audio/PrecisionAudioCutterDeck.tsx");
+  const cutterContent = fs.existsSync(cutterPath) ? fs.readFileSync(cutterPath, "utf-8") : "";
+  const fullContent = studioContent + "\n" + cutterContent;
 
   const requiredTokens = [
     "createGranularPitchShifter",
@@ -195,7 +198,7 @@ async function runVerification() {
   ];
 
   for (const token of requiredTokens) {
-    if (!studioContent.includes(token)) {
+    if (!fullContent.includes(token)) {
       throw new Error(`UnifiedAudioStudio.tsx is missing required token: '${token}'`);
     }
   }

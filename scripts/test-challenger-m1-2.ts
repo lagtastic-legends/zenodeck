@@ -201,19 +201,19 @@ async function run() {
 
     // Test port 3000
     (global as any).window = { location: { origin: "http://localhost:3000", port: "3000" } };
-    check("Port 3000 returns localhost:3000 origin", getYouTubeApiUrl("/api/youtube/info") === "http://localhost:3000/api/youtube/info/");
+    check("Port 3000 returns localhost:3000 origin", getYouTubeApiUrl("/api/youtube/info") === "http://localhost:3000/api/youtube/info");
 
     // Test port 3001
     (global as any).window = { location: { origin: "http://localhost:3001", port: "3001" } };
-    check("Port 3001 returns localhost:3001 origin (NOT vercel)", getYouTubeApiUrl("/api/youtube/info") === "http://localhost:3001/api/youtube/info/");
+    check("Port 3001 returns localhost:3001 origin (NOT vercel)", getYouTubeApiUrl("/api/youtube/info") === "http://localhost:3001/api/youtube/info");
 
     // Test port 8080
     (global as any).window = { location: { origin: "http://127.0.0.1:8080", port: "8080" } };
-    check("Port 8080 returns 127.0.0.1:8080 origin", getYouTubeApiUrl("/api/youtube/info") === "http://127.0.0.1:8080/api/youtube/info/");
+    check("Port 8080 returns 127.0.0.1:8080 origin", getYouTubeApiUrl("/api/youtube/info") === "http://127.0.0.1:8080/api/youtube/info");
 
     // Test LAN IP
     (global as any).window = { location: { origin: "http://192.168.1.150:3000", port: "3000" } };
-    check("LAN IP returns LAN origin", getYouTubeApiUrl("/api/youtube/info") === "http://192.168.1.150:3000/api/youtube/info/");
+    check("LAN IP returns LAN origin", getYouTubeApiUrl("/api/youtube/info") === "http://192.168.1.150:3000/api/youtube/info");
 
     // Test Native Mobile
     (Capacitor as any).isNativePlatform = () => true;

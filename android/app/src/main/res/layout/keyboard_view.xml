@@ -869,7 +869,7 @@
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/keyboard_key_height"
-                android:layout_weight="0.46"
+                android:layout_weight="0.5"
                 android:layout_marginHorizontal="2dp"
                 android:background="@drawable/bg_spacebar_50"
                 android:text="Space"

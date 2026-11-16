@@ -339,7 +339,7 @@ async function runChallengerTests() {
     };
     let url = getYouTubeApiUrl("/api/youtube/info?v=xT1gYZGDx4I");
     assert(
-      url === "http://localhost:3000/api/youtube/info/?v=xT1gYZGDx4I",
+      url === "http://localhost:3000/api/youtube/info?v=xT1gYZGDx4I",
       "2.1: Browser on port 3000 targets localhost:3000 with normalized path",
       `Got: ${url}`
     );
@@ -349,7 +349,7 @@ async function runChallengerTests() {
     (global as any).window.location.port = "3001";
     url = getYouTubeApiUrl("/api/youtube/info?v=xT1gYZGDx4I");
     assert(
-      url === "http://localhost:3001/api/youtube/info/?v=xT1gYZGDx4I",
+      url === "http://localhost:3001/api/youtube/info?v=xT1gYZGDx4I",
       "2.2: Browser on port 3001 targets localhost:3001 (NOT falling back to cloud Vercel)",
       `Got: ${url}`
     );
@@ -359,7 +359,7 @@ async function runChallengerTests() {
     (global as any).window.location.port = "3002";
     url = getYouTubeApiUrl("/api/youtube/stream");
     assert(
-      url === "http://localhost:3002/api/youtube/stream/",
+      url === "http://localhost:3002/api/youtube/stream",
       "2.3: Browser on port 3002 targets localhost:3002",
       `Got: ${url}`
     );
@@ -369,7 +369,7 @@ async function runChallengerTests() {
     (global as any).window.location.port = "8080";
     url = getYouTubeApiUrl("/api/youtube/playlist?list=PL123");
     assert(
-      url === "http://127.0.0.1:8080/api/youtube/playlist/?list=PL123",
+      url === "http://127.0.0.1:8080/api/youtube/playlist?list=PL123",
       "2.4: Browser on 127.0.0.1:8080 targets 127.0.0.1:8080",
       `Got: ${url}`
     );
@@ -379,7 +379,7 @@ async function runChallengerTests() {
     (global as any).window.location.port = "3000";
     url = getYouTubeApiUrl("/api/youtube/info");
     assert(
-      url === "http://192.168.1.105:3000/api/youtube/info/",
+      url === "http://192.168.1.105:3000/api/youtube/info",
       "2.5: Browser on LAN IP 192.168.1.105:3000 targets LAN IP",
       `Got: ${url}`
     );
@@ -389,7 +389,7 @@ async function runChallengerTests() {
     (global as any).window.location.port = "";
     url = getYouTubeApiUrl("/api/youtube/info");
     assert(
-      url === "https://app.zenodeck.io/api/youtube/info/",
+      url === "https://app.zenodeck.io/api/youtube/info",
       "2.6: Browser on custom domain targets custom domain",
       `Got: ${url}`
     );
@@ -404,7 +404,7 @@ async function runChallengerTests() {
       (global as any).window.location.origin = "http://localhost:3001";
       url = getYouTubeApiUrl("/api/youtube/info?v=xT1gYZGDx4I");
       assert(
-        url === "https://omni-tool-two.vercel.app/api/youtube/info/?v=xT1gYZGDx4I",
+        url === "https://omni-tool-two.vercel.app/api/youtube/info?v=xT1gYZGDx4I",
         "2.7.1: Native mobile returns remote Vercel endpoint even when origin is localhost:3001",
         `Got: ${url}`
       );
@@ -412,7 +412,7 @@ async function runChallengerTests() {
       (global as any).window.location.origin = "capacitor://localhost";
       url = getYouTubeApiUrl("/api/youtube/stream");
       assert(
-        url === "https://omni-tool-two.vercel.app/api/youtube/stream/",
+        url === "https://omni-tool-two.vercel.app/api/youtube/stream",
         "2.7.2: Native mobile with capacitor://localhost returns remote endpoint",
         `Got: ${url}`
       );
@@ -421,7 +421,7 @@ async function runChallengerTests() {
       process.env.NEXT_PUBLIC_APP_URL = "https://api.custom-server.com";
       url = getYouTubeApiUrl("/api/youtube/info");
       assert(
-        url === "https://api.custom-server.com/api/youtube/info/",
+        url === "https://api.custom-server.com/api/youtube/info",
         "2.7.3: Native mobile honors custom NEXT_PUBLIC_APP_URL",
         `Got: ${url}`
       );
@@ -434,7 +434,7 @@ async function runChallengerTests() {
     delete (global as any).window;
     url = getYouTubeApiUrl("/api/youtube/info?v=xT1gYZGDx4I");
     assert(
-      url === "https://omni-tool-two.vercel.app/api/youtube/info/?v=xT1gYZGDx4I",
+      url === "https://omni-tool-two.vercel.app/api/youtube/info?v=xT1gYZGDx4I",
       "2.8: SSR / Node runtime falls back to remote API origin",
       `Got: ${url}`
     );
@@ -449,7 +449,7 @@ async function runChallengerTests() {
     // Missing leading slash
     url = getYouTubeApiUrl("api/youtube/info");
     assert(
-      url === "http://localhost:3000/api/youtube/info/",
+      url === "http://localhost:3000/api/youtube/info",
       "2.9.1: Path without leading slash is normalized with leading slash",
       `Got: ${url}`
     );
@@ -466,7 +466,7 @@ async function runChallengerTests() {
     (global as any).window.location.origin = "file://";
     url = getYouTubeApiUrl("/api/youtube/info");
     assert(
-      url === "https://omni-tool-two.vercel.app/api/youtube/info/",
+      url === "https://omni-tool-two.vercel.app/api/youtube/info",
       "2.9.3: file:// origin falls back to remote endpoint",
       `Got: ${url}`
     );

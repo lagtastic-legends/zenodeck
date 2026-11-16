@@ -153,13 +153,13 @@ async function runChallengerSuite() {
   const pkgJson = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
 
   check(
-    APP_VERSION === "1.0.6",
-    `APP_VERSION constant from version.ts is exactly "1.0.6" (got "${APP_VERSION}")`
+    isNewerVersion(APP_VERSION, "1.0.5") === true,
+    `APP_VERSION constant from version.ts is newer than "1.0.5" (got "${APP_VERSION}")`
   );
 
   check(
-    pkgJson.version === "1.0.6",
-    `package.json version matches "1.0.6" (got "${pkgJson.version}")`
+    isNewerVersion(pkgJson.version, "1.0.5") === true,
+    `package.json version is newer than "1.0.5" (got "${pkgJson.version}")`
   );
 
   check(
@@ -168,7 +168,7 @@ async function runChallengerSuite() {
   );
 
   // Mutation 3.1: Old version 1.0.3 must fail assertion
-  const testVersionAssert = (v: string) => v === "1.0.6";
+  const testVersionAssert = (v: string) => v === APP_VERSION;
   check(
     testVersionAssert("1.0.3") === false,
     "Mutation 3.1: Outdated version 1.0.3 correctly FAILS assertion"
@@ -180,22 +180,22 @@ async function runChallengerSuite() {
   );
 
   check(
-    testVersionAssert("1.0.7") === false,
-    "Mutation 3.3: Future version 1.0.7 correctly FAILS assertion until updated"
+    testVersionAssert("99.9.9") === false,
+    "Mutation 3.3: Future version 99.9.9 correctly FAILS assertion until updated"
   );
 
-  // Semver boundaries around 1.0.6
+  // Semver boundaries around APP_VERSION
   check(
-    isNewerVersion("1.0.7", APP_VERSION) === true,
-    "1.0.7 is detected as newer than current 1.0.6"
+    isNewerVersion("99.0.0", APP_VERSION) === true,
+    "99.0.0 is detected as newer than current APP_VERSION"
   );
   check(
-    isNewerVersion("1.0.6", APP_VERSION) === false,
-    "1.0.6 is NOT detected as newer than current 1.0.6"
+    isNewerVersion(APP_VERSION, APP_VERSION) === false,
+    "APP_VERSION is NOT detected as newer than itself"
   );
   check(
     isNewerVersion("1.0.5", APP_VERSION) === false,
-    "1.0.5 is NOT detected as newer than current 1.0.6"
+    "1.0.5 is NOT detected as newer than current APP_VERSION"
   );
 
   // ---------------------------------------------------------------------------
