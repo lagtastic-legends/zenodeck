@@ -227,7 +227,7 @@ export function DropZone({
                 {label}
               </p>
               <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                {hint ?? "click to browse — or drag & drop"}
+                {hint ?? "Tap to select files or drag & drop"}
               </p>
             </div>
             <span className="rounded-full border border-border/60 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">

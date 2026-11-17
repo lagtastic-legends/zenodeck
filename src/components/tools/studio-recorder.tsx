@@ -709,7 +709,7 @@ export function StudioRecorder() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="max-w-60 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                    <p className="max-w-60 font-mono text-[10px] leading-relaxed text-[#F7E7CE]/85 font-medium">
                       {mode === "mic" ? "audio-only capture — arm the mic to see levels" : `${meta.hint} · arm to preview`}
                     </p>
                     {mode === "screen" && (

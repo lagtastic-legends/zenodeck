@@ -291,8 +291,8 @@ async function runMasterAudit() {
   }
 
   // 4.3 Pulsing floating download FAB triggering quality sheet
-  assert(browserContent.includes("bottom-5 right-5 z-30"),
-    "Pillar 4.3: Pulsing floating download FAB positioned at bottom-5 right-5 z-30");
+  assert(browserContent.includes("bottom-4 right-4 z-30") || browserContent.includes("bottom-5 right-5 z-30"),
+    "Pillar 4.3: Pulsing floating download FAB positioned at bottom-4/5 right-4/5 z-30");
   assert(ytdlContent.includes("onTriggerVidMateSheet") && ytdlContent.includes("setIsQualitySheetOpen(true)"),
     "Pillar 4.3: youtube-downloader.tsx connects onTriggerVidMateSheet to open VidmateQualitySheet");
 

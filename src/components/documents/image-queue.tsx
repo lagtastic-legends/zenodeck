@@ -110,7 +110,7 @@ export function ImageQueue({
         <p className="font-mono text-[10px] text-muted-foreground">
           {images.length > 0
             ? `${images.length} page${images.length === 1 ? "" : "s"} · ${formatBytes(totalBytes)}`
-            : "JPG / PNG — click to browse or drag & drop"}
+            : "JPG / PNG — Tap to select files or drag & drop"}
         </p>
       </div>
 

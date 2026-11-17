@@ -85,7 +85,7 @@ export function ToolShell({ toolId, children, hideHeader = false }: ToolShellPro
               >
                 {tool.name}
               </motion.h1>
-              <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm line-clamp-2 sm:line-clamp-none">
+              <p className="mt-0.5 line-clamp-2 leading-snug text-xs text-muted-foreground font-mono">
                 {tool.description}
               </p>
             </div>

@@ -1359,7 +1359,7 @@ export function YouTubeDownloader() {
     <div className="mx-auto w-full max-w-4xl space-y-5 px-3 sm:px-6 py-4">
       {/* Platform Strip & 4K Sample Trigger */}
       <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 scroll-smooth flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pr-4 max-w-full pb-1 scroll-smooth flex-1 min-w-0">
           <span className="flex shrink-0 items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-400">
             <YouTubeIcon className="size-2.5" />
             <span>YouTube 4K</span>
@@ -1410,11 +1410,11 @@ export function YouTubeDownloader() {
           }}
           className={`flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 rounded-lg font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "downloader"
-              ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
+              ? "bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Film className="hidden xs:inline sm:inline size-3.5 shrink-0" />
+          <Film className="hidden xs:inline sm:inline size-3.5 shrink-0 text-[#F7E7CE]" />
           <span className="whitespace-nowrap">Downloader</span>
         </button>
 
@@ -1447,14 +1447,14 @@ export function YouTubeDownloader() {
           }}
           className={`flex items-center justify-center gap-1 px-1.5 sm:px-3 py-1.5 rounded-lg font-mono text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
             activeViewTab === "subtitles"
-              ? "bg-red-500/20 text-red-400 border border-red-500/30 shadow-xs"
+              ? "bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40 shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Subtitles className="hidden xs:inline sm:inline size-3.5 shrink-0" />
+          <Subtitles className="hidden xs:inline sm:inline size-3.5 shrink-0 text-[#F7E7CE]" />
           <span className="whitespace-nowrap">Subtitles</span>
           {videoInfo?.subtitles && videoInfo.subtitles.length > 0 && (
-            <span className="px-1 py-0.2 rounded-full bg-red-500/30 text-[9px] text-red-300 font-bold shrink-0">
+            <span className="px-1 py-0.2 rounded-full bg-[#A79277]/30 text-[9px] text-[#F7E7CE] font-bold shrink-0">
               {videoInfo.subtitles.length}
             </span>
           )}
@@ -1499,7 +1499,6 @@ export function YouTubeDownloader() {
                   : "text-[#A79277] hover:text-[#F7E7CE]"
               }`}
             >
-              <Zap className="size-3.5 text-[#F7E7CE]" />
               <span>🔗 Paste Link</span>
             </button>
 
@@ -1515,7 +1514,6 @@ export function YouTubeDownloader() {
                   : "text-[#A79277] hover:text-[#F7E7CE]"
               }`}
             >
-              <Globe className="size-3.5 text-[#F7E7CE]" />
               <span>🌐 In-App Browser</span>
               <span className="px-1.5 py-0.2 rounded-full bg-[#102C26] text-[9px] font-bold text-[#F7E7CE] border border-[#F7E7CE]/30">
                 FAB Sniffer
@@ -1613,16 +1611,16 @@ export function YouTubeDownloader() {
             type="button"
             onClick={() => void handleResolve()}
             disabled={isResolving || isDownloading || !inputUrl.trim()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 font-display text-xs font-bold text-white shadow-xs hover:bg-red-500 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-[#102C26] hover:bg-[#102C26]/90 text-[#F7E7CE] border border-[#A79277]/40 px-5 py-2.5 font-display text-xs font-bold shadow-xs disabled:opacity-50 transition-all cursor-pointer shrink-0"
           >
             {isResolving ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin text-[#F7E7CE]" />
                 <span>RESOLVING 4K STREAMS…</span>
               </>
             ) : (
               <>
-                <Sparkles className="size-4" />
+                <Sparkles className="size-4 text-[#F7E7CE]" />
                 <span>FETCH VIDEO</span>
               </>
             )}

@@ -140,7 +140,7 @@ export function DownloadManagerView({ onNavigateToDownloader }: DownloadManagerV
                 </span>
                 <span className="font-display text-sm font-bold text-[#F7E7CE]">
                   {activeTask ? "Downloading" : queuedTasks.length > 0 ? "Queued" : "Idle"} ·{" "}
-                  <strong className="text-white">{queuedTasks.length + (activeTask ? 1 : 0)} Active</strong>
+                  <strong className="text-[#F7E7CE] font-semibold">{queuedTasks.length + (activeTask ? 1 : 0)} Active</strong>
                 </span>
               </div>
             </div>

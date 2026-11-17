@@ -116,14 +116,29 @@ interface ParamToggleProps {
 
 export function ParamToggle({ label, checked, onChange, disabled, hint }: ParamToggleProps) {
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
-      <div>
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
+      <div className="min-w-0 flex-1">
         <p className="font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </p>
         {hint && <p className="mt-1 font-mono text-[9px] md:text-[10px] text-muted-foreground/70">{hint}</p>}
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} aria-label={label} />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ${
+          checked ? "bg-primary" : "bg-muted-foreground/30 dark:bg-input"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 shrink-0 transform rounded-full bg-white shadow transition-transform duration-200 ${
+            checked ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
     </div>
   );
 }

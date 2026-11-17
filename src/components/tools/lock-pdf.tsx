@@ -178,7 +178,7 @@ export function LockPdf() {
             setOutput(null);
           }}
           preview="none"
-          label="Drop a PDF to protect"
+          label="Tap to select PDF document to encrypt"
           hint="stays on device · encrypted locally"
           disabled={busy}
         />
@@ -259,9 +259,9 @@ export function LockPdf() {
           disabled={!file || !strong || busy}
           whileHover={!file || !strong || busy ? undefined : { scale: 1.02 }}
           whileTap={!file || !strong || busy ? undefined : { scale: 0.97 }}
-          className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-primary/50 bg-gradient-to-r from-primary/90 to-plasma/80 font-display text-xs font-bold tracking-[0.2em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 glow-box-violet"
+          className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-[#A79277]/40 bg-[#102C26] hover:bg-[#102C26]/90 font-display text-xs font-bold tracking-[0.2em] text-[#F7E7CE] transition-all disabled:cursor-not-allowed disabled:opacity-40 shadow-md cursor-pointer active:scale-98"
         >
-          <LockKeyhole className="size-4" />
+          <LockKeyhole className="size-4 text-[#F7E7CE]" />
           {busy ? "ENCRYPTING…" : "LOCK PDF"}
         </motion.button>
       </div>

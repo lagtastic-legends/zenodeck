@@ -1371,7 +1371,7 @@ export function UnifiedAudioStudio({
                   void haptics.light();
                   setIsPresetModalOpen(true);
                 }}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition-all shadow-xs cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 font-mono text-xs transition-all shadow-xs cursor-pointer shrink-0 whitespace-nowrap ${
                   currentPresetMatch
                     ? "border-primary/50 bg-primary/15 text-primary font-semibold hover:border-primary hover:bg-primary/20"
                     : "border-border/70 bg-background/80 text-foreground hover:border-primary/40 hover:bg-card"
@@ -1388,7 +1388,7 @@ export function UnifiedAudioStudio({
 
             {/* Quick Presets Horizontal Chip Rail */}
             {activeToolMeta.presets.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scroll-hud">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 pr-3 scroll-smooth">
                 <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground shrink-0 pr-1 flex items-center gap-1">
                   <Sparkles className="size-2.5 text-primary" />
                   Presets:
@@ -1658,8 +1658,14 @@ export function UnifiedAudioStudio({
                         <span className="font-mono text-[9px] text-muted-foreground whitespace-nowrap">
                           {freq >= 1000 ? `${freq / 1000}k` : `${freq}`}Hz
                         </span>
-                        <span className={`font-mono text-[11px] font-semibold my-1 ${gainVal > 0 ? "text-emerald-400" : gainVal < 0 ? "text-amber-400" : "text-muted-foreground"}`}>
-                          {gainVal > 0 ? `+${gainVal}` : gainVal}
+                        <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded my-1.5 ${
+                          gainVal > 0 
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
+                            : gainVal < 0 
+                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" 
+                            : "bg-muted/30 text-muted-foreground"
+                        }`}>
+                          {gainVal > 0 ? `+${gainVal}dB` : `${gainVal}dB`}
                         </span>
                         <input
                           type="range"
@@ -1672,7 +1678,7 @@ export function UnifiedAudioStudio({
                             newGains[i] = Number(e.target.value);
                             updateParam("gains", newGains);
                           }}
-                          className="w-full accent-emerald-500 h-1.5"
+                          className="w-full accent-primary h-2 cursor-pointer"
                           disabled={busy}
                         />
                       </div>

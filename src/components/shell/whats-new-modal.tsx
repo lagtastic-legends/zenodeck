@@ -160,9 +160,9 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
-          title="360° System Engine & FLIP"
-          badge="340/340 PASS 🛡️"
-          description="Master verified 8-pillar foundation spanning 20 DSP audio modules, 120fps FLIP compositor, and native Android services."
+          title="UI Contrast & Global Shield"
+          badge="Zero Override 🎨"
+          description="Surgically shielded CSS preventing white input boxes, high-contrast champagne portal cards, and clean 2-line header subtitles."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
@@ -171,25 +171,25 @@ export function WhatsNewModal() {
           icon={<Globe className="size-4.5 text-[#F7E7CE]" />}
           title="In-App Browser & VidMate FAB"
           badge="Zero Block 🌐"
-          description="Ultra-low latency 8-portal web hub with stream detection and floating VidMate FAB for instant media capture."
+          description="Ultra-low latency web hub, streamlined single-icon mode switcher, and always-visible floating download FAB."
           accentClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
           badgeClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
         />
 
         <FeatureCard
-          icon={<Headphones className="size-4.5 text-cyan-400" />}
-          title="20 Unified Audio Modules"
-          badge="Audiophile 🎧"
-          description="Precision cutter, 4-stem Mid/Side separation, Hann-window pitch shifting, and lossless LAME -q:a 0 export."
+          icon={<Sliders className="size-4.5 text-cyan-400" />}
+          title="Ergonomic Toggle Switches"
+          badge="44×24 Pill 🔘"
+          description="Standardized horizontal pill toggles with smooth spring translation across audio DSP, PDF lock, and system preferences."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />
 
         <FeatureCard
           icon={<Keyboard className="size-4.5 text-fuchsia-400" />}
-          title="ZenoTap Keyboard Deck Sync"
-          badge="Instant Deck ⌨️"
-          description="1-tap sticker & GIF creation auto-synced directly to your native Android keyboard deck with 60fps animated previews."
+          title="360° System Engine & FLIP"
+          badge="340/340 PASS 🛡️"
+          description="Master verified 8-pillar foundation spanning 20 DSP audio modules, 120fps FLIP compositor, and native Android services."
           accentClass="bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30"
           badgeClass="bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
         />

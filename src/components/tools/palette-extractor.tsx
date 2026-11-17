@@ -293,6 +293,11 @@ export function PaletteExtractor() {
     [swatches],
   );
 
+  const totalProportion = useMemo(
+    () => sortedSwatches.reduce((sum, s) => sum + (s.proportion || 0), 0) || 1,
+    [sortedSwatches],
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
       {/* ------------------------------------------------------- input column */}
@@ -432,12 +437,15 @@ export function PaletteExtractor() {
               role="img"
               aria-label="Color proportion bar"
             >
-              {sortedSwatches.map((s) => (
-                <span
-                  key={s.hex}
-                  style={{ width: `${s.proportion * 100}%`, background: s.hex }}
-                />
-              ))}
+              {sortedSwatches.map((s) => {
+                const pct = Math.max(0, ((s.proportion || 0) / totalProportion) * 100);
+                return (
+                  <span
+                    key={s.hex}
+                    style={{ width: `${pct}%`, background: s.hex }}
+                  />
+                );
+              })}
             </div>
 
             <div className="flex items-center justify-between pt-1">

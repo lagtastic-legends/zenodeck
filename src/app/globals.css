@@ -824,59 +824,68 @@ body {
   color: #10181c;
 }
 
-[data-theme="precision"] h1,
-[data-theme="precision"] h2,
-[data-theme="precision"] h3,
-[data-theme="precision"] h4,
-[data-theme="precision"] h5,
-[data-theme="precision"] h6 {
-  color: #10181c !important;
-}
-
-[data-theme="precision"] p:not([class*="text-primary"]):not([class*="text-destructive"]):not([class*="text-emerald"]):not([class*="text-amber"]) {
+[data-theme="precision"] h1:not([class*="text-"]):not([class*="!text-"]),
+[data-theme="precision"] h2:not([class*="text-"]):not([class*="!text-"]),
+[data-theme="precision"] h3:not([class*="text-"]):not([class*="!text-"]),
+[data-theme="precision"] h4:not([class*="text-"]):not([class*="!text-"]),
+[data-theme="precision"] h5:not([class*="text-"]):not([class*="!text-"]),
+[data-theme="precision"] h6:not([class*="text-"]):not([class*="!text-"]) {
   color: #10181c;
 }
 
-/* Ensure hardcoded light/white text classes become dark charcoal in Precision light mode */
-[data-theme="precision"] .text-white:not([class*="bg-primary"]):not([class*="bg-gradient"]):not(button:not([class*="bg-card"])):not([class*="bg-destructive"]):not([class*="bg-neon"]),
-[data-theme="precision"] .text-slate-100,
-[data-theme="precision"] .text-slate-200,
-[data-theme="precision"] .text-slate-300,
-[data-theme="precision"] .text-zinc-100,
-[data-theme="precision"] .text-zinc-200,
-[data-theme="precision"] .text-zinc-300,
-[data-theme="precision"] .text-gray-100,
-[data-theme="precision"] .text-gray-200,
-[data-theme="precision"] .text-gray-300 {
-  color: #10181c !important;
+[data-theme="precision"] p:not([class*="text-"]):not([class*="!text-"]) {
+  color: #10181c;
 }
 
-/* High-contrast secondary/muted text (contrast ratio >= 7:1) */
-[data-theme="precision"] .text-white\/90,
-[data-theme="precision"] .text-white\/80,
-[data-theme="precision"] .text-white\/70,
-[data-theme="precision"] .text-white\/60,
-[data-theme="precision"] .text-slate-400,
-[data-theme="precision"] .text-slate-500,
-[data-theme="precision"] .text-zinc-400,
-[data-theme="precision"] .text-zinc-500,
-[data-theme="precision"] .text-gray-400,
-[data-theme="precision"] .text-gray-500,
-[data-theme="precision"] .text-muted-foreground {
-  color: #2d383d !important;
+/* Ensure hardcoded light/white text classes become dark charcoal ONLY on light surfaces in Precision light mode */
+[data-theme="precision"] .text-white:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]):not(button:not([class*="bg-card"])),
+[data-theme="precision"] .text-slate-100:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-slate-200:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-slate-300:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-zinc-100:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-zinc-200:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-zinc-300:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-gray-100:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-gray-200:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-gray-300:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]) {
+  color: #10181c;
 }
 
-/* High contrast inputs and text fields in Precision theme */
-[data-theme="precision"] input:not([type="checkbox"]):not([type="radio"]),
-[data-theme="precision"] textarea {
-  color: #10181c !important;
+/* High-contrast secondary/muted text on light surfaces only */
+[data-theme="precision"] .text-white\/90:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-white\/80:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-white\/70:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-white\/60:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-slate-400:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-slate-500:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-zinc-400:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-zinc-500:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-gray-400:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-gray-500:not([class*="bg-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] .text-muted-foreground:not([class*="!text-"]):not([class*="text-[#"]) {
+  color: #2d383d;
+}
+
+/* High contrast inputs and text fields in Precision theme — NEVER override explicit bg/text utilities or dark surfaces */
+[data-theme="precision"] input:not([type="checkbox"]):not([type="radio"]):not([class*="bg-"]):not([class*="text-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] textarea:not([class*="bg-"]):not([class*="text-"]):not([class*="!bg-"]):not([class*="!text-"]),
+[data-theme="precision"] select:not([class*="bg-"]):not([class*="text-"]):not([class*="!bg-"]):not([class*="!text-"]) {
+  color: #10181c;
   background-color: #ffffff;
   border-color: #bfc8ce;
 }
 
-[data-theme="precision"] input::placeholder,
-[data-theme="precision"] textarea::placeholder {
-  color: #636f75 !important;
+[data-theme="precision"] input:not([class*="placeholder:"]):not([class*="!placeholder:"])::placeholder,
+[data-theme="precision"] textarea:not([class*="placeholder:"]):not([class*="!placeholder:"])::placeholder {
+  color: #636f75;
+}
+
+/* Explicit guard: Ensure dark backgrounds always preserve their contrast */
+[data-theme="precision"] [class*="bg-[#090D0C]"],
+[data-theme="precision"] [class*="bg-[#102C26]"],
+[data-theme="precision"] [class*="bg-black"],
+[data-theme="precision"] [class*="bg-card"] {
+  color-scheme: dark;
 }
 
 /* High contrast cards & structural borders */

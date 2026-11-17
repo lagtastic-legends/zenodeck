@@ -335,7 +335,7 @@ export function ScanToPdf() {
             {camera !== "live" && (
               <div className="grid aspect-video w-full place-items-center p-4">
                 <div className="flex flex-col items-center gap-2 max-w-64 text-center">
-                  <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+                  <p className="font-mono text-[10px] leading-relaxed text-[#F7E7CE]/85 font-medium">
                     {camera === "denied"
                       ? "Camera blocked. Grant permission to capture documents with your camera."
                       : camera === "starting"

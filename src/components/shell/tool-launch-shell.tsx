@@ -205,7 +205,7 @@ export function ToolLaunchShell({
                     {title}
                   </h2>
                   {subtitle && (
-                    <p className="truncate text-xs text-muted-foreground font-mono">{subtitle}</p>
+                    <p className="line-clamp-2 leading-snug text-xs text-muted-foreground font-mono">{subtitle}</p>
                   )}
                 </div>
               </div>

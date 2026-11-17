@@ -895,7 +895,7 @@ export function KeyboardDeckManager() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search cyber reactions, memes, vault clips..."
-            className="bg-transparent flex-1 text-sm font-medium text-[#e0e8f0] focus:outline-none placeholder:text-[#a0b4c4]/50"
+            className="!bg-[#090D0C]/90 !text-[#F7E7CE] placeholder:!text-[#A79277]/70 border border-[#A79277]/30 rounded-xl px-3 flex-1 text-sm font-medium focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -942,7 +942,7 @@ export function KeyboardDeckManager() {
       </div>
 
       {/* 4. Filter Pills (Stitch Lines 50-72) */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 -mx-3 px-3 sm:-mx-6 sm:px-6">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 pb-1 -mx-3 px-3 sm:-mx-6 sm:px-6">
         {FILTER_PILLS.map((pill) => {
           const isActive = selectedFilterPill === pill.id;
           return (
@@ -1089,7 +1089,7 @@ export function KeyboardDeckManager() {
                   value={activeInspectCaption}
                   onChange={(e) => setActiveInspectCaption(e.target.value)}
                   placeholder="Caption this reaction..."
-                  className="bg-transparent flex-1 text-xs text-[#e0e8f0] focus:outline-none placeholder:text-[#a0b4c4]/40"
+                  className="!bg-[#090D0C]/90 !text-[#F7E7CE] placeholder:!text-[#A79277]/70 border border-[#A79277]/30 rounded-xl px-3 flex-1 text-xs focus:outline-none"
                 />
                 <button
                   type="button"

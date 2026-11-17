@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.18">
-    <img src="https://img.shields.io/badge/Release-v1.0.18-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.18" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.31">
+    <img src="https://img.shields.io/badge/Release-v1.0.31-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.31" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.18/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.31/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,29 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.31 (Full UI Contrast, Global CSS Override, Toggle Switch & Mobile Layout Overhaul)
+
+- **Eliminated Global White `<input>` & Black Text Overrides (`globals.css`):** Re-architected `[data-theme="precision"]` typography and input shield rules with `:not([class*="bg-"]):not([class*="!bg-"])` and `:not([class*="text-"]):not([class*="!text-"])` guards, ensuring explicit dark container classes (`bg-[#090D0C]`, `bg-[#102C26]`, `bg-card`) never suffer from white backgrounds or illegible dark text.
+- **Header Subtitle 2-Line Wrapping (`tool-launch-shell.tsx` & `tool-shell.tsx`):** Upgraded tool subtitles from single-line clipping `truncate` to `line-clamp-2 leading-snug text-xs`, allowing complete tool descriptions to wrap gracefully on mobile viewports.
+- **In-App Browser & 8-Site Portal Card Contrast (`mini-browser-view.tsx`):**
+  - Omnibox input enforced to deep obsidian `!bg-[#090D0C] !text-[#F7E7CE] placeholder:!text-[#A79277]/75 border border-[#A79277]/40`.
+  - 8 quick portal cards (YouTube, TikTok, Instagram, Facebook, X, Reddit, Vimeo, SoundCloud) restyled with high-contrast `!text-[#F7E7CE] font-bold` titles and `!text-[#A79277] font-medium` subtitles on `#102C26` surfaces.
+  - Floating VidMate FAB fixed at `bottom-4 right-4 z-30` and rendered unconditionally for 100% discoverability.
+- **Universal Media Downloader Polish (`youtube-downloader.tsx`):**
+  - Removed duplicate switcher icons: single `🔗 Paste Link` and `🌐 In-App Browser` buttons.
+  - Fixed Queue tab badge and `0 Active` queue card contrast with high-contrast Champagne text (`#F7E7CE`).
+  - Added smooth horizontal scrolling with `overflow-x-auto no-scrollbar pr-4` on platform chips.
+- **Standardized Ergonomic Toggle Switches (`param-controls.tsx` & `switch.tsx`):**
+  - Fixed vertically squished switch pills into standard `h-6 w-11 shrink-0` horizontal pills with a smooth `h-5 w-5` white thumb.
+  - Enhanced `Lock PDF` with clear dropzone copy (`Tap to select PDF document to encrypt`) and high-contrast `#102C26` button.
+  - Restyled camera/recorder viewports (`scan-to-pdf.tsx`, `studio-recorder.tsx`) with legible `text-[#F7E7CE]/85 font-medium` guidance.
+- **Audio Studio Equalizer & Swatch Distribution (`UnifiedAudioStudio.tsx`, `palette-extractor.tsx`):**
+  - Added clear `+XdB / -XdB` badges and smooth touch sliders to the 10-band EQ.
+  - Normalized swatch proportions in Palette Extractor to guarantee the color distribution bar fills 100% width.
+  - Increased ASCII Art Gallery card contrast to crisp `text-[#102C26] dark:text-[#F7E7CE]`.
 
 ---
 
