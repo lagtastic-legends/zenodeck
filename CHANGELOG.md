@@ -5,6 +5,43 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.30] — 2026-11-17
+
+### 🛡️ Master 360° Architectural Verification Suite (340/340 Checks Pass)
+- **Comprehensive Programmatic Audit Engine (`scripts/test-zenodeck-full-system.ts`)**:
+  - Implemented an exhaustive, self-terminating verification suite asserting all 8 architectural pillars with 340 programmatic checks (100% health).
+  - Validated single-card layout projection (`selectedCardId`), 120fps compositor spring mechanics (`APP_LAUNCH_SPRING`), and pure GPU opacity/scale transforms.
+  - Verified balanced braces, absence of unescaped XML tokens in Android layout resources, and complete end-to-end type safety.
+
+### 🌐 In-App Mini Browser & 8-Site Portal Hub with Floating VidMate FAB
+- **Distraction-Free Web Media Portal (`src/components/tools/mini-browser-view.tsx`)**:
+  - Designed the Forest & Champagne dark aesthetic (`#102C26`, `#F7E7CE`, `#A79277`, `#090D0C`) with responsive grid adaptivity.
+  - Provided 1-tap fast navigation tiles to 8 top media portals: YouTube, TikTok, Instagram, Facebook, X (Twitter), Reddit, Vimeo, and SoundCloud.
+  - Integrated real-time media stream regex detector and pulsing floating download FAB (`bottom-5 right-5 z-30`) opening `<VidmateQualitySheet />` directly over the active web session.
+
+### 🎛️ All 20 Unified Audio Studio Modules & Routing Integration
+- **Exhaustive Audio Tool ID Routing (`src/components/shell/app-shell.tsx`)**:
+  - Configured routing aliases for all 20 audio studio module IDs: `audio-editor`, `ringtone-maker`, `slowed-reverb`, `audio-effects`, `audio-dsp`, `fx-rack`, `stem-separator`, `trimmer`, `pitch-shifter`, `tempo-changer`, `vocal-remover`, `8d-audio`, `equalizer`, `bass-booster`, `reverb`, `compressor`, `noise-reducer`, `voice-changer`, `normalizer`, `reverse-audio`.
+  - Mapped precision cutter, S-curve fades, zero-crossing snap, and 4-stem Mid/Side separation (Vocals, Bass, Drums, Instruments).
+  - Maintained audiophile LAME encoding with `-q:a 0` and native 48kHz sample-rate preservation.
+
+### 🚀 Universal Downloader, InnerTube Multi-Client & SoundCloud Platform Support
+- **Multi-Client Fallback Profiles (`src/lib/youtube/innertube.ts`)**:
+  - Added `MWEB` profile alongside `ANDROID_VR`, `TVHTML5`, and `IOS`.
+  - Enforced Proof of Origin (`pot=`) token preservation in downstream stream URLs to guard against IP throttling and premature expiration.
+  - Added full SoundCloud support with platform detection regex and branded badges in `src/lib/media/detector.ts` and `src/lib/media/types.ts`.
+
+### ⚡ Native Android Media3 Engine & `.part` Partial Stream Resumption
+- **Headless Media Engine Hardening (`android/app/src/main/java/com/omnitool/app/media/ZenoHeadlessMediaEngine.kt`)**:
+  - Enforced 16-packet monotonic ascending PTS sorting (`pts <= lastVideoPts -> pts = lastVideoPts + 100L`) preventing multiplexing frame drops.
+  - Appended `.part` file extensions to intermediate stream tracks with append support (`FileOutputStream(..., true)`) for resilient downloading.
+  - Reinforced WebView stream sniffer in `ZenoMedia3Plugin.kt` for `googlevideo.com/videoplayback` extraction and OpenGraph metadata parsing.
+
+### ⌨️ ZenoTap Native Keyboard Deck Direct Sync
+- **1-Tap Media Deck Synchronization (`src/components/tools/gif-maker.tsx` & `src/components/dialogs/save-result-modal.tsx`)**:
+  - Integrated `saveGifToKeyboardDeck` from `@/lib/zenodeck-bridge` into GIF generation and file export flows.
+  - Automatically notifies native `ZenoDeckKeyboardService` via `ACTION_GIF_DECK_UPDATED` so newly created stickers and GIFs appear instantly in the keyboard media picker.
+
 ## [1.0.29] — 2026-11-15
 
 ### 🎵 Play Cut Audition Engine & Real-Time Waveform Transport

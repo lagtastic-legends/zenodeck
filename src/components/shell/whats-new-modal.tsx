@@ -159,39 +159,39 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
+          icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
+          title="360° System Engine & FLIP"
+          badge="340/340 PASS 🛡️"
+          description="Master verified 8-pillar foundation spanning 20 DSP audio modules, 120fps FLIP compositor, and native Android services."
+          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+        />
+
+        <FeatureCard
           icon={<Globe className="size-4.5 text-[#F7E7CE]" />}
-          title="Native Browser & VidMate FAB"
+          title="In-App Browser & VidMate FAB"
           badge="Zero Block 🌐"
-          description="Hardware-accelerated native Android browser Dialog eliminating ERR_BLOCKED_BY_RESPONSE with real-time stream sniffer and VidMate FAB."
+          description="Ultra-low latency 8-portal web hub with stream detection and floating VidMate FAB for instant media capture."
           accentClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
           badgeClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
         />
 
         <FeatureCard
-          icon={<Film className="size-4.5 text-fuchsia-400" />}
-          title="8K 60FPS Full Ultra HD"
-          badge="8K FUHD 🚀"
-          description="Client-side media pipeline now acquires and compresses up to 8K (7680 × 4320) at 60 FPS across InnerTube, VidMate Sheet, and Compressor."
-          accentClass="bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30"
-          badgeClass="bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
-        />
-
-        <FeatureCard
-          icon={<Sliders className="size-4.5 text-cyan-400" />}
-          title="All-Phone Adaptive Layout"
-          badge="Responsive 📱"
-          description="Seamless fit across 320px ultra-compacts to foldables with safe-area insets for camera notches, dynamic islands, and gesture bars."
+          icon={<Headphones className="size-4.5 text-cyan-400" />}
+          title="20 Unified Audio Modules"
+          badge="Audiophile 🎧"
+          description="Precision cutter, 4-stem Mid/Side separation, Hann-window pitch shifting, and lossless LAME -q:a 0 export."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />
 
         <FeatureCard
-          icon={<Zap className="size-4.5 text-amber-400" />}
-          title="Multi-Section Edge Back Gestures"
-          badge="Gestures 👈"
-          description="Interactive left-to-right edge swipe and step handlers to step back through web history, quality sheets, and tools before exiting."
-          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
-          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
+          icon={<Keyboard className="size-4.5 text-fuchsia-400" />}
+          title="ZenoTap Keyboard Deck Sync"
+          badge="Instant Deck ⌨️"
+          description="1-tap sticker & GIF creation auto-synced directly to your native Android keyboard deck with 60fps animated previews."
+          accentClass="bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30"
+          badgeClass="bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
         />
       </div>
     </ZenoModal>

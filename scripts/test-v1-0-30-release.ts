@@ -1,0 +1,47 @@
+setTimeout(() => { console.error("TIMEOUT"); process.exit(1); }, 25000).unref();
+
+import assert from "assert";
+import fs from "fs";
+import path from "path";
+
+console.log("=== ZENODECK & ZENOTAP v1.0.30 RELEASE VERIFICATION ===");
+
+const root = path.resolve(__dirname, "..");
+
+// 1. Version Sync
+const versionTs = fs.readFileSync(path.join(root, "src", "config", "version.ts"), "utf-8");
+assert(/APP_VERSION = "1\.0\.30"/.test(versionTs), 'src/config/version.ts has APP_VERSION = "1.0.30"');
+console.log("✅ src/config/version.ts has APP_VERSION = 1.0.30");
+
+const pkgJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
+assert(pkgJson.version === "1.0.30", 'package.json has version === "1.0.30"');
+console.log("✅ package.json has version === 1.0.30");
+
+const buildGradle = fs.readFileSync(path.join(root, "android", "app", "build.gradle"), "utf-8");
+assert(buildGradle.includes('versionName "1.0.30"'), 'android/app/build.gradle contains versionName "1.0.30"');
+assert(buildGradle.includes("versionCode 10030"), "android/app/build.gradle contains versionCode 10030");
+console.log("✅ android/app/build.gradle contains valid versionName and versionCode (10030)");
+
+// 2. Changelog & Release Notes
+const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf-8");
+assert(changelog.includes("## [1.0.30]"), "CHANGELOG.md contains [1.0.30]");
+assert(changelog.includes("Master 360° Architectural Verification"), "CHANGELOG.md documents Master 360° Audit");
+assert(changelog.includes("In-App Mini Browser & 8-Site Portal Hub"), "CHANGELOG.md documents Mini Browser Hub");
+assert(changelog.includes("All 20 Unified Audio Studio Modules"), "CHANGELOG.md documents 20 Audio Modules");
+console.log("✅ CHANGELOG.md documents v1.0.30 releases and highlights");
+
+const releaseNotes = fs.readFileSync(path.join(root, "RELEASE_NOTES_v1.0.30.md"), "utf-8");
+assert(releaseNotes.includes("v1.0.30"), "Release notes document v1.0.30");
+assert(releaseNotes.includes("Master 360° Architectural Verification Suite (340/340 Checks Pass)"), "Release notes detail 340 checks");
+console.log("✅ RELEASE_NOTES_v1.0.30.md exists and is valid");
+
+// 3. What's New Modal
+const whatsNewModal = fs.readFileSync(path.join(root, "src", "components", "shell", "whats-new-modal.tsx"), "utf-8");
+assert(whatsNewModal.includes("360° System Engine"), "whats-new-modal.tsx highlights 360° System Engine");
+assert(whatsNewModal.includes("In-App Browser & VidMate FAB"), "whats-new-modal.tsx highlights In-App Browser & VidMate FAB");
+assert(whatsNewModal.includes("20 Unified Audio Modules"), "whats-new-modal.tsx highlights 20 Audio Modules");
+assert(whatsNewModal.includes("ZenoTap Keyboard Deck Sync"), "whats-new-modal.tsx highlights ZenoTap Keyboard Deck Sync");
+console.log("✅ whats-new-modal.tsx contains v1.0.30 feature cards");
+
+console.log("🎉 ALL v1.0.30 RELEASE VERIFICATION CHECKS PASSED!");
+process.exit(0);
