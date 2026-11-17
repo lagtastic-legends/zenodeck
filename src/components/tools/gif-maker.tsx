@@ -26,6 +26,7 @@ import { useMediaJob } from "@/hooks/use-media-job";
 import { useWorkstationStore } from "@/hooks/useWorkstationStore";
 import { useSaveDialogStore } from "@/hooks/useSaveDialogStore";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
+import { saveGifToKeyboardDeck } from "@/lib/zenodeck-bridge";
 import { baseName, extOf, mimeFor } from "@/lib/media/ffmpeg-jobs";
 import type { VideoMeta } from "@/lib/media/probe";
 
@@ -114,6 +115,10 @@ export function GifMaker() {
   useEffect(() => {
     if (output && phase === "done" && notifiedOutputRef.current !== output.name) {
       notifiedOutputRef.current = output.name;
+      // Auto-sync created GIF to native ZenoTap Keyboard deck (ACTION_GIF_DECK_UPDATED)
+      if (output.blob) {
+        void saveGifToKeyboardDeck(output.blob, output.name).catch(() => {});
+      }
       useSaveDialogStore.getState().showSuccess({
         filename: output.name,
         directory: "Download",

@@ -156,6 +156,10 @@ const TOOL_COMPONENTS: Record<string, React.ComponentType> = {
   "audio-effects": AudioEffectsStudioTool,
   "fx-rack": FXRackStudioTool,
   "stem-separator": StemSeparatorStudioTool,
+  "8d-audio": Spatial8DStudioTool,
+  "compressor": AudioEffectsStudioTool,
+  "voice-changer": PitchShifterTool,
+  "normalizer": VolumeChangerStudioTool,
   "macro-studio": MacroStudioView,
 };
 

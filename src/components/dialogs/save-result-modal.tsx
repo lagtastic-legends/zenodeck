@@ -32,6 +32,7 @@ import { formatBytes } from "@/lib/format";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
 import { openAppSettings } from "@/lib/permissions";
+import { saveGifToKeyboardDeck } from "@/lib/zenodeck-bridge";
 
 function getFileCategory(filename: string): "audio" | "video" | "image" | "pdf" | "file" {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
@@ -98,6 +99,7 @@ export function SaveResultModal() {
   const [shareSuccess, setShareSuccess] = useState(false);
   const [pathCopied, setPathCopied] = useState(false);
   const [vaultAdded, setVaultAdded] = useState(false);
+  const [deckAdded, setDeckAdded] = useState(false);
   const haptics = useHaptics();
 
   useEffect(() => {
@@ -216,6 +218,17 @@ export function SaveResultModal() {
       }
     } catch (e) {
       console.warn("Could not save to ZenoTap Vault history:", e);
+    }
+  };
+
+  const handleSaveToKeyboardDeck = async () => {
+    if (!blob) return;
+    void haptics.medium();
+    try {
+      await saveGifToKeyboardDeck(blob, filename);
+      setDeckAdded(true);
+    } catch (e) {
+      console.warn("Could not save to ZenoTap Keyboard deck:", e);
     }
   };
 
@@ -531,6 +544,28 @@ export function SaveResultModal() {
                 </>
               ) : category === "image" ? (
                 <>
+                  {filename.toLowerCase().endsWith(".gif") && (
+                    <button
+                      type="button"
+                      onClick={handleSaveToKeyboardDeck}
+                      className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all cursor-pointer ${
+                        deckAdded
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                          : "border-border/60 bg-card/60 hover:border-primary/40 hover:bg-secondary/40 text-foreground"
+                      }`}
+                    >
+                      <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                        {deckAdded ? <Check className="size-4 text-emerald-400" /> : <Film className="size-4" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-mono text-[11px] font-bold truncate">
+                          {deckAdded ? "Synced to ZenoTap" : "ZenoTap GIF Deck"}
+                        </p>
+                        <p className="font-mono text-[9px] text-muted-foreground truncate">Sync to native keyboard</p>
+                      </div>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={handleSendToVault}

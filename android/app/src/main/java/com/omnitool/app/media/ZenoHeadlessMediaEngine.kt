@@ -1334,9 +1334,9 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         val vExt = if (isWebmTarget) "webm" else if (isAudioOnlyTarget) (if (outputFileName.endsWith(".m4a", ignoreCase = true)) "m4a" else "mp3") else "mp4"
         val aExt = if (isWebmTarget) "webm" else "m4a"
 
-        val vTempFile = File(tempDir, "v_${tempId}.$vExt")
-        val aTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "a_${tempId}.$aExt") else null
-        val muxTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "mux_${tempId}.${if (isWebmTarget) "webm" else "mp4"}") else null
+        val vTempFile = File(tempDir, "v_${tempId}.$vExt.part")
+        val aTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "a_${tempId}.$aExt.part") else null
+        val muxTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "mux_${tempId}.${if (isWebmTarget) "webm" else "mp4"}.part") else null
 
         // Determine destination directory: Music/ZenoDeck for audio, Movies/ZenoDeck for video
         val targetDir = if (isAudioOnlyTarget) {

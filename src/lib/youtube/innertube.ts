@@ -744,6 +744,26 @@ const INNERTUBE_CLIENTS: InnerTubeClientConfig[] = [
       },
     },
   },
+  {
+    name: "MWEB",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+      "X-YouTube-Client-Name": "2",
+      "X-YouTube-Client-Version": "2.20240722.01.00",
+    },
+    context: {
+      client: {
+        clientName: "MWEB",
+        clientVersion: "2.20240722.01.00",
+        deviceMake: "Apple",
+        deviceModel: "iPhone",
+        hl: "en",
+        gl: "US",
+        userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+      },
+    },
+  },
 ];
 
 const ANDROID_OFFICIAL_CONFIG: InnerTubeClientConfig = {
@@ -1023,9 +1043,12 @@ export async function resolveYouTubeVideo(videoIdOrUrl: string, clientIp?: strin
     const contentLength = f.contentLength ? Number(f.contentLength) : undefined;
     const bitrate = Number(f.bitrate) || 0;
 
+    // Preserve pot= (Proof of Origin token) and session integrity query parameters in stream URL
+    const streamUrl = f.url;
+
     parsedFormats.push({
       itag: f.itag,
-      url: f.url,
+      url: streamUrl,
       mimeType: mime,
       container,
       codec,

@@ -16,6 +16,7 @@ export type PlatformType =
   | "pinterest"
   | "threads"
   | "bluesky"
+  | "soundcloud"
   | "social";
 
 export interface UniversalQualityOption {

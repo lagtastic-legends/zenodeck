@@ -160,6 +160,15 @@ export function detectPlatform(inputUrl: string): DetectedPlatformResult | null 
     };
   }
 
+  // 11. SoundCloud
+  // Matches: soundcloud.com/...
+  if (/(?:soundcloud\.com)/i.test(url)) {
+    return {
+      platform: "soundcloud",
+      cleanUrl: url,
+    };
+  }
+
   // 11. Bluesky
   // Matches: bsky.app/profile/.../post/...
   if (/(?:bsky\.app)/i.test(url)) {
@@ -256,6 +265,12 @@ export const PLATFORM_CONFIGS: Record<PlatformType, PlatformBadgeConfig> = {
     badgeClass: "border-sky-400/30 bg-sky-400/10 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)]",
     iconColor: "text-sky-300",
     glowColor: "rgba(56, 189, 248, 0.25)",
+  },
+  soundcloud: {
+    name: "SoundCloud",
+    badgeClass: "border-orange-500/30 bg-orange-500/10 text-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.2)]",
+    iconColor: "text-orange-400",
+    glowColor: "rgba(249, 115, 22, 0.25)",
   },
   social: {
     name: "Media (yt-dlp)",
