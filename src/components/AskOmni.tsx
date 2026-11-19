@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
+  Zap,
   X,
   Send,
   Trash2,
@@ -42,6 +43,8 @@ export default function AskOmni({ showTrigger = false }: AskOmniProps) {
     isStreaming,
     setStreaming,
     clearChat,
+    modelMode,
+    setModelMode,
   } = useAiStore();
 
   const [input, setInput] = useState('');
@@ -302,8 +305,44 @@ export default function AskOmni({ showTrigger = false }: AskOmniProps) {
                 </div>
               </div>
 
-              {/* Header Action Buttons */}
-              <div className="flex items-center gap-1">
+              {/* Header Action Buttons & Model Switcher */}
+              <div className="flex items-center gap-1.5">
+                {/* Fast Model Switcher Pill */}
+                <div className="flex items-center gap-0.5 rounded-lg border border-border/70 bg-secondary/40 p-0.5 font-mono text-[9px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptics.light();
+                      setModelMode('flash-lite');
+                    }}
+                    className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-all cursor-pointer ${
+                      modelMode === 'flash-lite'
+                        ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    title="Gemini 3.5 Flash-Lite (Fastest sub-second latency)"
+                  >
+                    <Zap className="size-2.5 text-amber-400" />
+                    <span>Lite</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptics.light();
+                      setModelMode('flash');
+                    }}
+                    className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-all cursor-pointer ${
+                      modelMode === 'flash'
+                        ? 'bg-primary/25 text-primary border border-primary/40 shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    title="Gemini 3.8 Flash (Flagship speed & multimodal reasoning)"
+                  >
+                    <Sparkles className="size-2.5 text-primary" />
+                    <span>3.8</span>
+                  </button>
+                </div>
+
                 <button
                   onClick={() => {
                     haptics.light();
@@ -432,8 +471,17 @@ export default function AskOmni({ showTrigger = false }: AskOmniProps) {
               {/* Bottom Micro Hint */}
               <div className="flex items-center justify-between mt-1.5 px-1 font-mono text-[9px] text-muted-foreground select-none">
                 <span className="flex items-center gap-1">
-                  <Sparkles className="size-2.5 text-primary" />
-                  <span>Gemini 3.8 Flash Neural Engine</span>
+                  {modelMode === 'flash-lite' ? (
+                    <>
+                      <Zap className="size-2.5 text-amber-400" />
+                      <span className="text-amber-300/90 font-medium">Gemini 3.5 Flash-Lite (Ultra-Fast)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-2.5 text-primary" />
+                      <span className="text-primary/90 font-medium">Gemini 3.8 Flash Neural Engine</span>
+                    </>
+                  )}
                 </span>
                 <span>Enter ↵ to send · Esc to close</span>
               </div>

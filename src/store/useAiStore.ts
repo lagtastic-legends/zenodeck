@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ChatMessage } from '../lib/gemini';
+import { ChatMessage, AiModelMode } from '../lib/gemini';
 
 interface AiState {
   isOpen: boolean;
@@ -8,6 +8,8 @@ interface AiState {
   isStreaming: boolean;
   messages: ChatMessage[];
   isLoading: boolean;
+  modelMode: AiModelMode;
+  setModelMode: (modelMode: AiModelMode) => void;
   setIsOpen: (isOpen: boolean) => void;
   toggleOpen: () => void;
   setIsExpanded: (isExpanded: boolean) => void;
@@ -27,6 +29,8 @@ export const useAiStore = create<AiState>()(
       isOpen: false,
       isExpanded: false,
       isStreaming: false,
+      modelMode: 'flash-lite',
+      setModelMode: (modelMode) => set({ modelMode }),
       messages: [
         {
           id: 'welcome-msg',
@@ -111,7 +115,8 @@ export const useAiStore = create<AiState>()(
           let streamFailed = false;
 
           try {
-            const stream = streamAiResponse(currentMessages, signal);
+            const currentMode = useAiStore.getState().modelMode || 'flash-lite';
+            const stream = streamAiResponse(currentMessages, signal, currentMode);
             for await (const chunk of stream) {
               if (signal?.aborted) break;
               if (chunk.includes('[Connection failed:')) {
@@ -154,7 +159,8 @@ export const useAiStore = create<AiState>()(
 
           if ((isFirstChunk || streamFailed) && !signal?.aborted) {
             set({ isLoading: true, isStreaming: false });
-            const fallbackText = await generateAiResponse(currentMessages);
+            const currentMode = useAiStore.getState().modelMode || 'flash-lite';
+            const fallbackText = await generateAiResponse(currentMessages, currentMode);
             set({ isLoading: false, isStreaming: false });
             if (isFirstChunk) {
               set((state) => ({

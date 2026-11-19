@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { zenoApiFetch, resolveApiUrl } from "@/lib/api-gateway";
 
 export type MessageRole = "user" | "model";
+export type AiModelMode = "flash" | "flash-lite";
 
 export interface ChatMessage {
   id?: string;
@@ -15,14 +16,14 @@ const getAiEndpoint = (params = ""): string => {
   return resolveApiUrl(`/api/ai${query}`);
 };
 
-export const generateAiResponse = async (messages: ChatMessage[]) => {
+export const generateAiResponse = async (messages: ChatMessage[], modelMode: AiModelMode = "flash-lite") => {
   try {
     const contents = messages.map(msg => ({
       role: msg.role,
       parts: [{ text: msg.content }]
     }));
 
-    const response = await zenoApiFetch(getAiEndpoint(), {
+    const response = await zenoApiFetch(getAiEndpoint(`?model=${modelMode}`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -49,14 +50,18 @@ export const generateAiResponse = async (messages: ChatMessage[]) => {
   }
 };
 
-export const streamAiResponse = async function* (messages: ChatMessage[], signal?: AbortSignal) {
+export const streamAiResponse = async function* (
+  messages: ChatMessage[],
+  signal?: AbortSignal,
+  modelMode: AiModelMode = "flash-lite"
+) {
   try {
     const contents = messages.map(msg => ({
       role: msg.role,
       parts: [{ text: msg.content }]
     }));
 
-    const response = await zenoApiFetch(getAiEndpoint("?stream=true"), {
+    const response = await zenoApiFetch(getAiEndpoint(`?stream=true&model=${modelMode}`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

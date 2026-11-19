@@ -27,13 +27,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { searchParams } = new URL(req.url);
     const isStream = searchParams.get("stream") === "true";
+    const requestedModel = searchParams.get("model");
 
     const endpointPath = isStream 
       ? `streamGenerateContent?alt=sse&key=${apiKey}` 
       : `generateContent?key=${apiKey}`;
 
-    // Fast, resilient model hierarchy: try 3.8 first; if 503/busy, seamlessly failover to 3.6, 3.5-flash-lite, and flash-latest
-    const candidateModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"];
+    // Fast, resilient model hierarchy: prioritize 3.5-flash-lite for ultra-fast latency, or 3.8-flash for flagship intelligence
+    const candidateModels = requestedModel === "flash-lite"
+      ? ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-flash-latest"]
+      : ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-flash-latest"];
     let response: Response | null = null;
     let lastErrorData = "";
 
