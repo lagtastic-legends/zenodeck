@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.31">
-    <img src="https://img.shields.io/badge/Release-v1.0.31-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.31" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.32">
+    <img src="https://img.shields.io/badge/Release-v1.0.32-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.32" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.31/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.32/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,18 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.32 (Dual Gemini 3.8 & 3.5 Flash-Lite Neural Engine, Speed Switcher & Zero-Downtime Cascade)
+
+- **Interactive Speed Switcher in Ask Zeno (`AskOmni.tsx`):**
+  - Added an ergonomic speed selector pill in the co-pilot header: `[ ⚡ Lite | 🧠 3.8 ]`.
+  - Enables instant toggling between ultra-fast **Gemini 3.5 Flash-Lite** (~100–200ms response latency) and flagship **Gemini 3.8 Flash** (deep multimodal reasoning).
+  - Dynamic neural status wave and bottom hint adapt in real-time to the active model tier.
+- **Smart Zero-Downtime Model Hierarchy (`/api/ai/route.ts`):**
+  - Integrated `gemini-3.5-flash-lite` and `gemini-3.8-flash` into a resilient auto-failover pipeline.
+  - Automatically recovers from transient 503 (high demand) or 429 (rate limiting) spikes on Google's API by seamlessly routing to the next optimal candidate model with zero chat interruptions.
 
 ---
 

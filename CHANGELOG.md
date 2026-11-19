@@ -5,6 +5,40 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.32] — 2026-11-19
+
+### ⚡ Dual Gemini 3.8 & 3.5 Flash-Lite Neural Engine with Speed Switcher
+- **Interactive Model Speed Switcher (`src/components/AskOmni.tsx`)**:
+  - Added a responsive model toggle pill in the *Ask Zeno* co-pilot header: `[ ⚡ Lite | 🧠 3.8 ]`.
+  - Gives users instant control between ultra-low-latency **Gemini 3.5 Flash-Lite** (sub-second ~100–200ms latency) and flagship **Gemini 3.8 Flash** (deep multimodal reasoning).
+  - Dynamic status bar and bottom hint dynamically reflect the active model tier.
+- **Smart Model Failover Cascade (`src/app/api/ai/route.ts`)**:
+  - Integrated `gemini-3.5-flash-lite` and `gemini-3.8-flash` into the model hierarchy.
+  - Automatically fails over if Google's API returns temporary 503 high-demand or 429 rate-limiting responses, ensuring zero dropped prompts or disconnected chat sessions.
+
+### 🎨 Full UI Contrast, Global CSS Shield & Mobile Layout Overhaul
+- **Global CSS Input & Text Overrides Eliminated (`src/app/globals.css`)**:
+  - Re-architected `[data-theme="precision"]` typography and input shields with `:not([class*="bg-"]):not([class*="!bg-"])` and `:not([class*="text-"]):not([class*="!text-"])` guards.
+  - Dark surfaces (`bg-[#090D0C]`, `bg-[#102C26]`, `bg-card`) are now guaranteed never to be injected with white `<input>` backgrounds or illegible black text.
+- **Header Subtitle 2-Line Wrapping (`tool-launch-shell.tsx` & `tool-shell.tsx`)**:
+  - Upgraded tool subtitles from single-line `truncate` to `line-clamp-2 leading-snug text-xs`, allowing complete tool descriptions to wrap gracefully on mobile screens without clipping mid-word.
+- **In-App Mini Browser & 8-Site Portal Card Contrast (`src/components/tools/mini-browser-view.tsx`)**:
+  - Omnibox input enforced to deep obsidian `!bg-[#090D0C] !text-[#F7E7CE] placeholder:!text-[#A79277]/75 border border-[#A79277]/40`.
+  - All 8 quick portal cards (YouTube, TikTok, Instagram, Facebook, X, Reddit, Vimeo, SoundCloud) restyled with high-contrast `!text-[#F7E7CE] font-bold` titles and `!text-[#A79277] font-medium` subtitles on `#102C26` surfaces.
+  - Floating VidMate FAB fixed permanently at `bottom-4 right-4 z-30` and rendered unconditionally for 100% discoverability.
+- **Universal Media Downloader Polish (`src/components/tools/youtube-downloader.tsx`)**:
+  - Removed duplicate switcher icons: consolidated into clean `<span>🔗 Paste Link</span>` and `<span>🌐 In-App Browser</span>`.
+  - Fixed Queue tab badge and `0 Active` queue card contrast with high-contrast Champagne text (`#F7E7CE`).
+  - Added smooth horizontal scrolling with `overflow-x-auto no-scrollbar pr-4` on platform chips.
+- **Standardized Ergonomic Toggle Switches (`param-controls.tsx` & `switch.tsx`)**:
+  - Standardized toggle pills into ergonomic $44 \times 24\text{ px}$ horizontal tracks (`h-6 w-11 shrink-0`) with smooth circular white thumbs (`h-5 w-5`).
+  - Enhanced `Lock PDF` with clear dropzone copy (`Tap to select PDF document to encrypt`) and high-contrast `#102C26` action button.
+  - Restyled camera/recorder viewports (`scan-to-pdf.tsx`, `studio-recorder.tsx`) with legible `text-[#F7E7CE]/85 font-medium` guidance.
+- **Audio Studio Equalizer & Swatch Distribution (`UnifiedAudioStudio.tsx`, `palette-extractor.tsx`)**:
+  - Added clear `+XdB / -XdB` badges and smooth touch sliders to the 10-band ISO graphic EQ.
+  - Normalized swatch proportions in Palette Extractor to guarantee the color distribution bar fills 100% width.
+  - Increased ASCII Art Gallery card contrast to crisp `text-[#102C26] dark:text-[#F7E7CE]`.
+
 ## [1.0.30] — 2026-11-17
 
 ### 🛡️ Master 360° Architectural Verification Suite (340/340 Checks Pass)

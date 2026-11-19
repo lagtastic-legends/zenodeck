@@ -159,6 +159,15 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
+          icon={<Zap className="size-4.5 text-amber-400" />}
+          title="Dual Gemini 3.8 & Flash-Lite"
+          badge="Sub-Second ⚡"
+          description="Interactive speed toggle in Ask Zeno: switch between sub-second Gemini 3.5 Flash-Lite and flagship 3.8 Flash with smart zero-downtime failover."
+          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
+        />
+
+        <FeatureCard
           icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
           title="UI Contrast & Global Shield"
           badge="Zero Override 🎨"
@@ -183,15 +192,6 @@ export function WhatsNewModal() {
           description="Standardized horizontal pill toggles with smooth spring translation across audio DSP, PDF lock, and system preferences."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
-        />
-
-        <FeatureCard
-          icon={<Keyboard className="size-4.5 text-fuchsia-400" />}
-          title="360° System Engine & FLIP"
-          badge="340/340 PASS 🛡️"
-          description="Master verified 8-pillar foundation spanning 20 DSP audio modules, 120fps FLIP compositor, and native Android services."
-          accentClass="bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30"
-          badgeClass="bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
         />
       </div>
     </ZenoModal>
