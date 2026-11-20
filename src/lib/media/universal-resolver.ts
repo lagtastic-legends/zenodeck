@@ -226,6 +226,79 @@ export async function resolveMediaUrl(url: string): Promise<{
       return { platformResult: detected, mediaInfo: ensureFullQualityLadder(mediaInfo) };
     }
 
+    case "social":
+    case "threads":
+    case "bluesky":
+    case "twitch":
+    case "soundcloud": {
+      // 1. Direct media file link support (.mp4, .mp3, .m4a, etc.)
+      const isDirectMedia = /\.(mp4|m4v|webm|mov|mkv|mp3|m4a|wav|aac|ogg)(\?|$)/i.test(detected.cleanUrl);
+      const isAudio = /\.(mp3|m4a|wav|aac|ogg)(\?|$)/i.test(detected.cleanUrl) || detected.platform === "soundcloud";
+      const ext =
+        (detected.cleanUrl.match(/\.(mp4|m4v|webm|mov|mkv|mp3|m4a|wav|aac|ogg)/i)?.[1]?.toLowerCase() as any) ||
+        (isAudio ? "mp3" : "mp4");
+
+      if (isDirectMedia) {
+        const directInfo: UniversalMediaInfo = {
+          id: `media_${Date.now()}`,
+          platform: detected.platform,
+          url: detected.cleanUrl,
+          title: `${detected.platform.toUpperCase()} Direct Media Stream`,
+          author: `${detected.platform} Source`,
+          thumbnailUrl: "",
+          qualities: [
+            {
+              label: isAudio ? "Direct Audio Stream" : "Direct Video Stream",
+              resolution: isAudio ? "AUDIO" : "HD",
+              ext,
+              isAudioOnly: isAudio,
+              downloadUrl: detected.cleanUrl,
+              badge: isAudio ? "AUDIO" : "DIRECT",
+            },
+          ],
+        };
+        return { platformResult: detected, mediaInfo: ensureFullQualityLadder(directInfo) };
+      }
+
+      // 2. Native Android WebView sniffer fallback
+      if (typeof window !== "undefined") {
+        try {
+          const { isNativeAndroidPlatform, ZenoMedia3 } = await import("./native-media-muxer");
+          if (isNativeAndroidPlatform()) {
+            const sniffRes = await ZenoMedia3.sniffStreamViaWebView({ url: detected.cleanUrl });
+            const directUrl = sniffRes.directVideoSrc || (sniffRes.streamUrls && sniffRes.streamUrls[0]);
+            if (directUrl) {
+              const sniffedInfo: UniversalMediaInfo = {
+                id: `sniff_${Date.now()}`,
+                platform: detected.platform,
+                url: detected.cleanUrl,
+                title: sniffRes.ogTitle || `${detected.platform.toUpperCase()} Stream`,
+                author: "Media Sniffer",
+                thumbnailUrl: sniffRes.ogImage || "",
+                qualities: [
+                  {
+                    label: "High Speed Sniffed Stream",
+                    resolution: "HD",
+                    ext: "mp4",
+                    isAudioOnly: false,
+                    downloadUrl: directUrl,
+                    badge: "SNIFFED",
+                  },
+                ],
+              };
+              return { platformResult: detected, mediaInfo: ensureFullQualityLadder(sniffedInfo) };
+            }
+          }
+        } catch (sniffErr) {
+          console.warn("Native WebView sniffer deferred:", sniffErr);
+        }
+      }
+
+      throw new Error(
+        `Could not auto-extract streams from ${detected.platform}. Use the In-App Mini Browser Sniffer to open this page and capture the live stream.`
+      );
+    }
+
     default:
       throw new Error(
         `Could not resolve media for ${detected.platform}. Please ensure the URL is public and valid.`

@@ -1491,12 +1491,17 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     }
                 )
 
-                if (audioResult.isFailure) {
-                    return Result.failure(audioResult.exceptionOrNull() ?: Exception("Audio stream download failed"))
-                }
-
-                if (!aTempFile.exists() || aTempFile.length() < 1_000L) {
-                    return Result.failure(IOException("Audio file on disk is invalid or smaller than 1KB: ${aTempFile.length()} bytes"))
+                if (audioResult.isFailure || !aTempFile.exists() || aTempFile.length() < 1_000L) {
+                    val audioEx = audioResult.exceptionOrNull()
+                    Log.w(TAG, "Audio stream download failed or empty (${audioEx?.message}), checking if video-only can be saved: ${vTempFile.length()} bytes")
+                    if (vTempFile.exists() && vTempFile.length() > 5_000L) {
+                        Log.i(TAG, "Falling back to standalone video-only stream (silent video / animated GIF)")
+                        finalFile = copyToDestination(vTempFile, destinationFile)
+                        progressCallback(100, totalDownloaded.get(), totalDownloaded.get(), calculateSpeed(), "complete")
+                        return Result.success(finalFile)
+                    } else {
+                        return Result.failure(audioEx ?: IOException("Audio stream download failed and video is invalid"))
+                    }
                 }
 
                 // Stage 3: Native Hardware MediaMuxer

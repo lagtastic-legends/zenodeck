@@ -16,6 +16,7 @@ import {
 import { ZenoModal } from "@/components/ui/zeno-modal";
 import { useHaptics } from "@/hooks/use-haptics";
 import { formatBytes, type YouTubeVideoInfo, type YouTubeQualityOption } from "@/lib/youtube/innertube";
+import { APP_VERSION } from "@/config/version";
 
 export interface VidmateQualitySheetProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export function VidmateQualitySheet({
         </div>
       }
       subtitle="VidMate High-Speed Interleaved Engine"
-      badge="v1.0.13"
+      badge={APP_VERSION}
       badgeTone="emerald"
       size="lg"
       maxWidthClassName="sm:max-w-xl"

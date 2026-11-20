@@ -109,6 +109,64 @@ class DownloadQueueService {
         fileSizeBytes = result.fileSizeBytes;
       } else {
         // Universal Downloader for TikTok, Instagram, Twitter, Reddit, Facebook, Vimeo
+        const rawOpt = nextTask.qualityOption as any;
+        let actualDownloadUrl =
+          rawOpt?.downloadUrl ||
+          rawOpt?.videoUrl ||
+          rawOpt?.videoFormat?.url ||
+          rawOpt?.audioUrl ||
+          rawOpt?.audioFormat?.url ||
+          "";
+
+        let actualAudioUrl =
+          rawOpt?.audioUrl ||
+          rawOpt?.audioFormat?.url ||
+          undefined;
+
+        let requiresMuxing =
+          Boolean(rawOpt?.requiresMuxing) ||
+          Boolean(!nextTask.isAudioOnly && actualAudioUrl && actualDownloadUrl && actualAudioUrl !== actualDownloadUrl);
+
+        // If direct stream URL is missing or looks like an unparsed social media web page URL, re-resolve via universal-resolver
+        const isPageUrl =
+          !actualDownloadUrl ||
+          actualDownloadUrl === nextTask.url ||
+          /(?:tiktok\.com|instagram\.com|twitter\.com|x\.com|reddit\.com|facebook\.com|vimeo\.com)\//i.test(actualDownloadUrl);
+
+        if (isPageUrl && nextTask.url) {
+          try {
+            store.updateProgress(nextTask.id, {
+              phase: "resolving",
+              message: "Resolving fresh media stream URLs…",
+              percent: 5,
+            });
+            const { resolveMediaUrl } = await import("@/lib/media/universal-resolver");
+            const resolved = await resolveMediaUrl(nextTask.url);
+            const matchedOpt =
+              resolved.mediaInfo.qualities.find(
+                (q) =>
+                  q.isAudioOnly === nextTask.isAudioOnly &&
+                  ((q as any).id === nextTask.qualityOption.id ||
+                    q.itag === nextTask.qualityOption.id ||
+                    q.badge === nextTask.qualityOption.badge)
+              ) ||
+              resolved.mediaInfo.qualities.find((q) => q.isAudioOnly === nextTask.isAudioOnly) ||
+              resolved.mediaInfo.qualities[0];
+
+            if (matchedOpt) {
+              actualDownloadUrl = matchedOpt.downloadUrl || actualDownloadUrl;
+              actualAudioUrl = matchedOpt.audioUrl || actualAudioUrl;
+              requiresMuxing = Boolean(matchedOpt.requiresMuxing);
+            }
+          } catch (resErr) {
+            console.warn("Queue re-resolution error, falling back to direct URL:", resErr);
+          }
+        }
+
+        if (!actualDownloadUrl) {
+          actualDownloadUrl = nextTask.url;
+        }
+
         const universalMedia = {
           id: nextTask.id,
           platform: nextTask.platform,
@@ -121,7 +179,9 @@ class DownloadQueueService {
               id: nextTask.qualityOption.id,
               label: nextTask.qualityOption.label,
               ext: nextTask.format || "mp4",
-              downloadUrl: nextTask.url,
+              downloadUrl: actualDownloadUrl,
+              audioUrl: actualAudioUrl,
+              requiresMuxing,
               isAudioOnly: nextTask.isAudioOnly,
               fileSize: nextTask.qualityOption.approxSizeBytes,
             },
