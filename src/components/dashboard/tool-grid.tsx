@@ -81,7 +81,7 @@ const ToolCard = memo(function ToolCard({
       }}
       className={`panel-hud group relative flex min-h-11 flex-col justify-between text-left shadow-tactile transition-all duration-200 min-w-0 ${
         isMatrixView
-          ? "p-2 sm:p-3.5 md:p-4 gap-1.5 sm:gap-2.5 min-h-[96px] sm:min-h-11"
+          ? "p-2.5 xs:p-3 sm:p-3.5 md:p-4 gap-1.5 sm:gap-2.5 min-h-[120px] xs:min-h-[128px] sm:min-h-11"
           : "p-3.5 sm:p-4 gap-3"
       } ${
         locked
@@ -206,7 +206,7 @@ const ToolCard = memo(function ToolCard({
         <p
           className={`flex items-center gap-1 font-display font-bold text-foreground leading-[1.25] break-words ${
             isMatrixView
-              ? "text-[9px] xs:text-[10px] sm:text-xs md:text-[13px] tracking-tight sm:tracking-wide line-clamp-2 min-h-[25px] sm:min-h-0"
+              ? "text-[10px] xs:text-[11px] sm:text-xs md:text-[13px] tracking-tight sm:tracking-wide line-clamp-1 sm:line-clamp-2 min-h-[16px] sm:min-h-0"
               : "text-xs sm:text-[13px] tracking-wide"
           }`}
         >
@@ -216,9 +216,7 @@ const ToolCard = memo(function ToolCard({
           )}
         </p>
         <p
-          className={`mt-0.5 sm:mt-1 text-xs leading-relaxed text-muted-foreground line-clamp-2 ${
-            isMatrixView ? "hidden sm:block" : "block"
-          }`}
+          className={`mt-0.5 sm:mt-1 text-[9.5px] xs:text-[10.5px] sm:text-xs leading-[1.3] sm:leading-relaxed text-muted-foreground line-clamp-2 block`}
         >
           {tool.description}
         </p>
