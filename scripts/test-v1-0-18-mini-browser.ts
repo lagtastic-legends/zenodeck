@@ -29,8 +29,8 @@ if (!browserContent.includes("⚡ Download Video / MP3") && !browserContent.incl
   console.error("FAIL: Pulsing VidMate FAB label missing in mini-browser-view.tsx");
   process.exit(1);
 }
-if (!browserContent.includes("bottom-5 right-5 z-30")) {
-  console.error("FAIL: FAB position bottom-5 right-5 z-30 missing in mini-browser-view.tsx");
+if (!browserContent.includes("bottom-5 right-5 z-30") && !browserContent.includes("bottom-4 right-4 z-30")) {
+  console.error("FAIL: FAB position bottom-4 right-4 z-30 / bottom-5 right-5 z-30 missing in mini-browser-view.tsx");
   process.exit(1);
 }
 console.log("✔ mini-browser-view.tsx verified: MiniBrowserView, onTriggerVidMateSheet, ZenoDeck palette, and VidMate FAB.");

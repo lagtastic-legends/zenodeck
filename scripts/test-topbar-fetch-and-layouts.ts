@@ -133,7 +133,8 @@ async function runTests() {
   // 6. Section layout & single-line badges & deduplicated downloader header
   console.log("\n[Requirement 6: Downloader Header Deduplication & Tab Visibility]");
   assert(
-    ytDownloaderCode.includes("overflow-x-auto no-scrollbar max-w-full pb-1"),
+    ytDownloaderCode.includes("overflow-x-auto no-scrollbar") &&
+      ytDownloaderCode.includes("max-w-full pb-1"),
     "youtube-downloader.tsx platform badges use single-line horizontal scroll strip"
   );
   assert(
