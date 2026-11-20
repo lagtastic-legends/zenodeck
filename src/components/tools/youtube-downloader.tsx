@@ -104,7 +104,6 @@ import type {
 } from "@/lib/media/types";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { VidmateQualitySheet } from "./vidmate-quality-sheet";
-import { MiniBrowserView } from "./mini-browser-view";
 
 const DOWNLOADER_PRESETS: PresetItem[] = [
   {
@@ -178,7 +177,6 @@ export function YouTubeDownloader() {
   const { playSuccess, playError } = useUIAudio();
 
   const [inputUrl, setInputUrl] = useState("");
-  const [downloaderMode, setDownloaderMode] = useState<"quick-link" | "in-app-browser">("quick-link");
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<YouTubeVideoInfo | null>(null);
@@ -385,12 +383,7 @@ export function YouTubeDownloader() {
         setActiveViewTab("downloader");
         return true;
       }
-      // 3. In-app browser mode -> return to quick link mode
-      if (downloaderMode === "in-app-browser") {
-        setDownloaderMode("quick-link");
-        return true;
-      }
-      // 4. If viewing video details or results, clear back to input
+      // 3. If viewing video details or results, clear back to input
       if (videoInfo || downloadResult) {
         setVideoInfo(null);
         setDownloadResult(null);
@@ -399,7 +392,7 @@ export function YouTubeDownloader() {
       }
       return false; // let back bubble to close the tool
     });
-  }, [isQualitySheetOpen, isPresetModalOpen, activeViewTab, downloaderMode, videoInfo, downloadResult]);
+  }, [isQualitySheetOpen, isPresetModalOpen, activeViewTab, videoInfo, downloadResult]);
 
   // Handle Escape key and body scroll locking for subtitle transcript preview modal
   useEffect(() => {
@@ -1485,60 +1478,7 @@ export function YouTubeDownloader() {
       {/* 1. Downloader Main View */}
       {activeViewTab === "downloader" && (
         <div className="space-y-4">
-          {/* Dual Downloader Mode Toggle: Quick Link vs In-App Browser */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl border border-[#A79277]/30 bg-[#090D0C]/80 w-full sm:w-auto sm:inline-flex shadow-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setDownloaderMode("quick-link");
-                void haptics.light();
-              }}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
-                downloaderMode === "quick-link"
-                  ? "bg-[#102C26] text-[#F7E7CE] border border-[#F7E7CE]/40 shadow-xs"
-                  : "text-[#A79277] hover:text-[#F7E7CE]"
-              }`}
-            >
-              <span>🔗 Paste Link</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setDownloaderMode("in-app-browser");
-                void haptics.light();
-              }}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer ${
-                downloaderMode === "in-app-browser"
-                  ? "bg-[#102C26] text-[#F7E7CE] border border-[#F7E7CE]/40 shadow-xs"
-                  : "text-[#A79277] hover:text-[#F7E7CE]"
-              }`}
-            >
-              <span>🌐 In-App Browser</span>
-              <span className="px-1.5 py-0.2 rounded-full bg-[#102C26] text-[9px] font-bold text-[#F7E7CE] border border-[#F7E7CE]/30">
-                FAB Sniffer
-              </span>
-            </button>
-          </div>
-
-          {downloaderMode === "in-app-browser" ? (
-            <MiniBrowserView
-              activeUrl={inputUrl}
-              initialUrl={inputUrl}
-              onMediaSelect={(url) => setInputUrl(url)}
-              onDownloadDetected={(url) => {
-                setInputUrl(url);
-                void handleResolve(url);
-              }}
-              onTriggerVidMateSheet={(url) => {
-                setInputUrl(url);
-                setIsQualitySheetOpen(true);
-                void handleResolve(url);
-              }}
-            />
-          ) : (
-            <>
-              {/* URL Input Bar */}
+          {/* URL Input Bar */}
       <div className="panel-hud rounded-2xl border border-primary/20 bg-card/50 p-4 sm:p-5 shadow-elevation1 space-y-3">
         <div className="flex items-center justify-between">
           <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -1642,24 +1582,12 @@ export function YouTubeDownloader() {
                 </div>
                 <p className="text-xs text-red-200/80 leading-relaxed font-sans">
                   {resolveError.toLowerCase().includes("bot") || resolveError.includes("LOGIN_REQUIRED")
-                    ? "YouTube has restricted access for this video from the cloud. Please try a different quality tier, use the In-App Mini Browser sniffer, or download the Android APK for unthrottled streaming."
+                    ? "YouTube has restricted access for this video from the cloud. Please try a different quality tier or download the Android APK for unthrottled streaming."
                     : resolveError}
                 </p>
 
                 {/* Web Action Fallbacks */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDownloaderMode("in-app-browser");
-                      void haptics.light();
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#F7E7CE]/40 bg-[#102C26] text-[#F7E7CE] font-mono text-xs font-semibold hover:bg-[#102C26]/80 transition-all cursor-pointer shadow-xs active:scale-95"
-                  >
-                    <Globe className="size-3.5 text-[#F7E7CE]" />
-                    <span>🌐 Open in Mini Browser & Sniffer</span>
-                  </button>
-
                   <a
                     href="https://github.com/lagtastic-legends/zenodeck/releases/latest"
                     target="_blank"
@@ -2034,7 +1962,7 @@ export function YouTubeDownloader() {
                       </span>
                     </div>
                     <p className="text-[11px] text-amber-200/80 font-sans leading-relaxed">
-                      YouTube restricts direct file extraction from cloud datacenters. You can stream in the Web Player preview below, browse with the In-App Browser sniffer, or download the ZenoDeck Android APK for direct 8K 60FPS downloads.
+                      YouTube restricts direct file extraction from cloud datacenters. You can stream in the Web Player preview below or download the ZenoDeck Android APK for direct 8K 60FPS downloads.
                     </p>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <button
@@ -2047,18 +1975,6 @@ export function YouTubeDownloader() {
                       >
                         <Film className="size-3 text-[#F7E7CE]" />
                         <span>{isWebPlayerOpen ? "Hide Web Player" : "▶ Watch in Web Player"}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDownloaderMode("in-app-browser");
-                          void haptics.light();
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#A79277]/40 bg-[#090D0C] text-[#F7E7CE] font-mono text-xs font-semibold hover:border-[#F7E7CE]/60 transition-all cursor-pointer active:scale-95"
-                      >
-                        <Globe className="size-3 text-[#A79277]" />
-                        <span>Open in Mini Browser</span>
                       </button>
 
                       <a
@@ -2781,8 +2697,6 @@ export function YouTubeDownloader() {
           </motion.div>
         )}
       </AnimatePresence>
-            </>
-          )}
         </div>
       )}
 

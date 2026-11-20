@@ -323,7 +323,7 @@ export async function resolveMediaUrl(url: string): Promise<{
       }
 
       throw new Error(
-        `Could not auto-extract streams from ${detected.platform}. Use the In-App Mini Browser Sniffer to open this page and capture the live stream.`
+        `Could not auto-extract streams from ${detected.platform}. Please ensure the media link is public and accessible.`
       );
     }
 
