@@ -321,6 +321,18 @@ export async function extractTikTokMedia(url: string): Promise<UniversalMediaInf
         : `https://www.tikwm.com${d.music}`
       : undefined;
 
+    const slideQualities: UniversalQualityOption[] = items.map((item, idx) => ({
+      itag: `slide_${idx + 1}`,
+      label: `Photo Slide ${idx + 1}`,
+      resolution: "Photo",
+      ext: "jpg",
+      isAudioOnly: false,
+      downloadUrl: item.url,
+      badge: `SLIDE ${idx + 1}`,
+    }));
+
+    qualities.push(...slideQualities);
+
     if (musicUrl) {
       qualities.push({
         label: `Background Music (${d.music_info?.title || "MP3"})`,

@@ -146,6 +146,23 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
     );
 
     const primaryItem = carouselItems[0];
+    const allQualities: UniversalQualityOption[] = carouselItems.flatMap((item, idx) => {
+      const isVideo = item.type === "video";
+      return (
+        item.qualities || [
+          {
+            itag: `slide_${idx + 1}`,
+            label: `${isVideo ? "HD Video" : "HD Photo"} Slide ${idx + 1}`,
+            resolution: isVideo ? "1080p" : "Photo",
+            ext: isVideo ? "mp4" : "jpg",
+            isAudioOnly: false,
+            downloadUrl: item.url,
+            badge: `SLIDE ${idx + 1}`,
+          },
+        ]
+      );
+    });
+
     return {
       id: shortcode,
       platform: "instagram",
@@ -154,7 +171,7 @@ export async function extractInstagramMedia(url: string): Promise<UniversalMedia
       author,
       authorHandle,
       thumbnailUrl: primaryItem.thumbnailUrl || thumbnailUrl,
-      qualities: primaryItem.qualities || [],
+      qualities: allQualities,
       isCarousel: true,
       items: carouselItems,
     };

@@ -722,7 +722,16 @@ export async function downloadUniversalMedia(
 
 
   let finalBytes = bytes;
-  const mimeType = option.isAudioOnly
+  const isImage = ["jpg", "jpeg", "png", "webp", "gif"].includes(option.ext?.toLowerCase());
+  const mimeType = isImage
+    ? option.ext.toLowerCase() === "png"
+      ? "image/png"
+      : option.ext.toLowerCase() === "webp"
+      ? "image/webp"
+      : option.ext.toLowerCase() === "gif"
+      ? "image/gif"
+      : "image/jpeg"
+    : option.isAudioOnly
     ? option.ext === "mp3"
       ? "audio/mpeg"
       : option.ext === "wav"

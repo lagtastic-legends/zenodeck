@@ -50,6 +50,34 @@ export function synthesizeAudioLadder(
  * and a full audio options ladder for the Direct Audio tab.
  */
 export function ensureFullQualityLadder(info: UniversalMediaInfo): UniversalMediaInfo {
+  // If post is a carousel/gallery/slideshow with multiple items, ensure each item is present in qualities
+  if (info.items && info.items.length > 0) {
+    const existingUrls = new Set(info.qualities.map((q) => q.downloadUrl));
+    const carouselQualities: UniversalQualityOption[] = [];
+
+    info.items.forEach((item, idx) => {
+      const isVideo = item.type === "video";
+      const itemUrl = item.url;
+      if (!existingUrls.has(itemUrl)) {
+        existingUrls.add(itemUrl);
+        carouselQualities.push({
+          itag: `slide_${idx + 1}`,
+          label: `${isVideo ? "Video" : "Photo"} Slide ${idx + 1}`,
+          resolution: isVideo ? "1080p" : "Photo",
+          ext: isVideo ? "mp4" : itemUrl.includes(".png") ? "png" : itemUrl.includes(".gif") ? "gif" : "jpg",
+          isAudioOnly: false,
+          downloadUrl: itemUrl,
+          badge: `SLIDE ${idx + 1}`,
+          fileSize: item.qualities?.[0]?.fileSize,
+        });
+      }
+    });
+
+    if (carouselQualities.length > 0) {
+      info.qualities = [...carouselQualities, ...info.qualities];
+    }
+  }
+
   const videoOpts = info.qualities.filter((q) => !q.isAudioOnly);
   const audioOpts = info.qualities.filter((q) => q.isAudioOnly);
 

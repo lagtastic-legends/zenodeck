@@ -127,10 +127,62 @@ assert(
   "Missing direct stream or WebView sniffer support"
 );
 
+assert(
+  resolverSrc.includes("if (info.items && info.items.length > 0)"),
+  "universal-resolver.ts unpacks carousel/slideshow items into full qualities ladder",
+  "Missing carousel unpacking in ensureFullQualityLadder"
+);
+
 // -----------------------------------------------------------------------------
-// CHECK 5: Multi-Platform URL Detector Regression Suite
+// CHECK 5: Photo MIME Types & Multi-Slide Carousel Extractors
 // -----------------------------------------------------------------------------
-console.log("\n[TEST 5] Verifying detectPlatform() on 12 Real-World URL Formats");
+console.log("\n[TEST 5] Verifying Photo MIME Typing & Multi-Slide Extractors");
+
+assert(
+  downloaderSrc.includes("const isImage = [\"jpg\", \"jpeg\", \"png\", \"webp\", \"gif\"].includes"),
+  "downloader.ts assigns proper image MIME types instead of defaulting to video/mp4",
+  "Missing isImage MIME mapping in downloader.ts"
+);
+
+assert(
+  kotlinEngineSrc.includes("val isImageTarget = outputFileName.endsWith(\".jpg\"") &&
+  kotlinEngineSrc.includes("Environment.DIRECTORY_PICTURES"),
+  "ZenoHeadlessMediaEngine routes photo downloads to Pictures/ZenoDeck instead of Movies",
+  "Missing isImageTarget or DIRECTORY_PICTURES in Kotlin engine"
+);
+
+const pinterestPath = path.resolve(process.cwd(), "src/lib/media/extractors/pinterest.ts");
+const pinterestSrc = fs.readFileSync(pinterestPath, "utf-8");
+
+assert(
+  pinterestSrc.includes("title: title || \"Pinterest Photo\"") &&
+  pinterestSrc.includes("badge: \"IMAGE\""),
+  "pinterest.ts supports downloading high-resolution photo pins when no video exists",
+  "Missing Pinterest photo pin fallback"
+);
+
+const tiktokPath = path.resolve(process.cwd(), "src/lib/media/extractors/tiktok.ts");
+const tiktokSrc = fs.readFileSync(tiktokPath, "utf-8");
+
+assert(
+  tiktokSrc.includes("qualities.push(...slideQualities);"),
+  "tiktok.ts pushes individual slide qualities for photo album slideshows",
+  "Missing slide qualities push in tiktok.ts"
+);
+
+const igPath = path.resolve(process.cwd(), "src/lib/media/extractors/instagram.ts");
+const igSrc = fs.readFileSync(igPath, "utf-8");
+
+assert(
+  igSrc.includes("const allQualities: UniversalQualityOption[] = carouselItems.flatMap"),
+  "instagram.ts flattens all carousel slide items into selectable qualities",
+  "Missing carousel flatMap in instagram.ts"
+);
+
+// -----------------------------------------------------------------------------
+// CHECK 6: Multi-Platform URL Detector Regression Suite
+// -----------------------------------------------------------------------------
+console.log("\n[TEST 6] Verifying detectPlatform() on 12 Real-World URL Formats");
 
 const testUrls: Array<{ url: string; expectedPlatform: string }> = [
   { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", expectedPlatform: "youtube" },

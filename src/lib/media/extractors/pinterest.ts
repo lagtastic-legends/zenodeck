@@ -120,8 +120,28 @@ export async function extractPinterestMedia(url: string): Promise<UniversalMedia
   }
 
   if (!videoUrl) {
+    if (thumbnailUrl) {
+      return {
+        id: pinId,
+        platform: "pinterest",
+        url: cleanUrl,
+        title: title || "Pinterest Photo",
+        author,
+        thumbnailUrl,
+        qualities: [
+          {
+            label: "Pinterest Original HD Photo",
+            resolution: "Original",
+            ext: "jpg",
+            isAudioOnly: false,
+            downloadUrl: thumbnailUrl,
+            badge: "IMAGE",
+          },
+        ],
+      };
+    }
     throw new Error(
-      "Could not find a downloadable video in this Pinterest Pin. Ensure the pin is public and contains a video."
+      "Could not find a downloadable video or image in this Pinterest Pin. Ensure the pin is public."
     );
   }
 

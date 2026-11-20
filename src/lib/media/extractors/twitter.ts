@@ -133,6 +133,23 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
     );
 
     const primaryItem = items[0];
+    const allQualities: UniversalQualityOption[] = items.flatMap((item, idx) => {
+      const isVideo = item.type === "video";
+      return (
+        item.qualities || [
+          {
+            itag: `slide_${idx + 1}`,
+            label: `${isVideo ? "HD Video" : "HD Photo"} (${idx + 1}/${items.length})`,
+            resolution: isVideo ? "HD" : "Original",
+            ext: isVideo ? "mp4" : "jpg",
+            isAudioOnly: false,
+            downloadUrl: item.url,
+            badge: `SLIDE ${idx + 1}`,
+          },
+        ]
+      );
+    });
+
     return {
       id: tweetId,
       platform: "twitter",
@@ -141,7 +158,7 @@ export async function extractTwitterMedia(url: string): Promise<UniversalMediaIn
       author,
       authorHandle,
       thumbnailUrl: primaryItem.thumbnailUrl || (tweetData.mediaURLs && tweetData.mediaURLs[0]) || "",
-      qualities: primaryItem.qualities || [],
+      qualities: allQualities,
       isCarousel: true,
       items,
     };

@@ -149,6 +149,23 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
       );
 
       const primaryItem = items[0];
+      const allQualities: UniversalQualityOption[] = items.flatMap((item, idx) => {
+        const isVideo = item.type === "video";
+        return (
+          item.qualities || [
+            {
+              itag: `slide_${idx + 1}`,
+              label: `${isVideo ? "Animated GIF" : "Image"} Slide ${idx + 1}`,
+              resolution: "Original",
+              ext: isVideo ? "gif" : "jpg",
+              isAudioOnly: false,
+              downloadUrl: item.url,
+              badge: `SLIDE ${idx + 1}`,
+            },
+          ]
+        );
+      });
+
       return {
         id: postId,
         platform: "reddit",
@@ -157,7 +174,7 @@ export async function extractRedditMedia(url: string): Promise<UniversalMediaInf
         author,
         authorHandle,
         thumbnailUrl: primaryItem.thumbnailUrl || thumbnailUrl,
-        qualities: primaryItem.qualities || [],
+        qualities: allQualities,
         isCarousel: true,
         items,
       };

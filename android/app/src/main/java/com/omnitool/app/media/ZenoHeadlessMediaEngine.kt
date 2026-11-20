@@ -1330,15 +1330,20 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
         val isAudioOnlyTarget = outputFileName.endsWith(".mp3", ignoreCase = true) ||
                 outputFileName.endsWith(".m4a", ignoreCase = true) ||
                 outputFileName.endsWith(".wav", ignoreCase = true)
+        val isImageTarget = outputFileName.endsWith(".jpg", ignoreCase = true) ||
+                outputFileName.endsWith(".jpeg", ignoreCase = true) ||
+                outputFileName.endsWith(".png", ignoreCase = true) ||
+                outputFileName.endsWith(".webp", ignoreCase = true) ||
+                outputFileName.endsWith(".gif", ignoreCase = true)
 
-        val vExt = if (isWebmTarget) "webm" else if (isAudioOnlyTarget) (if (outputFileName.endsWith(".m4a", ignoreCase = true)) "m4a" else "mp3") else "mp4"
+        val vExt = if (isWebmTarget) "webm" else if (isAudioOnlyTarget) (if (outputFileName.endsWith(".m4a", ignoreCase = true)) "m4a" else "mp3") else if (isImageTarget) outputFileName.substringAfterLast(".").lowercase() else "mp4"
         val aExt = if (isWebmTarget) "webm" else "m4a"
 
         val vTempFile = File(tempDir, "v_${tempId}.$vExt.part")
         val aTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "a_${tempId}.$aExt.part") else null
         val muxTempFile = if (!audioUrl.isNullOrEmpty()) File(tempDir, "mux_${tempId}.${if (isWebmTarget) "webm" else "mp4"}.part") else null
 
-        // Determine destination directory: Music/ZenoDeck for audio, Movies/ZenoDeck for video
+        // Determine destination directory: Music/ZenoDeck for audio, Pictures/ZenoDeck for images, Movies/ZenoDeck for video
         val targetDir = if (isAudioOnlyTarget) {
             val musicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "ZenoDeck")
             if (!musicDir.exists()) musicDir.mkdirs()
@@ -1347,6 +1352,16 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 if (!downloadsDir.exists()) downloadsDir.mkdirs()
                 if (downloadsDir.exists() && downloadsDir.canWrite()) downloadsDir else {
                     context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
+                }
+            }
+        } else if (isImageTarget) {
+            val picturesDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "ZenoDeck")
+            if (!picturesDir.exists()) picturesDir.mkdirs()
+            if (picturesDir.exists() && picturesDir.canWrite()) picturesDir else {
+                val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "ZenoDeck")
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                if (downloadsDir.exists() && downloadsDir.canWrite()) downloadsDir else {
+                    context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir
                 }
             }
         } else {
@@ -1381,6 +1396,8 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 Log.w(TAG, "Direct copy to public destination failed (${e.message}), using app-specific external storage fallback")
                 val fallbackDir = if (isAudioOnlyTarget) {
                     context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir
+                } else if (isImageTarget) {
+                    context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir
                 } else {
                     context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
                 }

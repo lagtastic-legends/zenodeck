@@ -222,18 +222,27 @@ class ZenoMedia3Plugin : Plugin() {
     @PluginMethod
     fun scanMediaFile(call: PluginCall) {
         val filePath = call.getString("filePath")
-        val mimeType = call.getString("mimeType") ?: "video/mp4"
-
         if (filePath.isNullOrEmpty()) {
             call.reject("filePath is required.")
             return
+        }
+
+        val inferredMime = when {
+            filePath.endsWith(".jpg", ignoreCase = true) || filePath.endsWith(".jpeg", ignoreCase = true) -> "image/jpeg"
+            filePath.endsWith(".png", ignoreCase = true) -> "image/png"
+            filePath.endsWith(".webp", ignoreCase = true) -> "image/webp"
+            filePath.endsWith(".gif", ignoreCase = true) -> "image/gif"
+            filePath.endsWith(".mp3", ignoreCase = true) -> "audio/mpeg"
+            filePath.endsWith(".m4a", ignoreCase = true) -> "audio/mp4"
+            filePath.endsWith(".wav", ignoreCase = true) -> "audio/wav"
+            else -> call.getString("mimeType") ?: "video/mp4"
         }
 
         try {
             MediaScannerConnection.scanFile(
                 context,
                 arrayOf(filePath),
-                arrayOf(mimeType)
+                arrayOf(inferredMime)
             ) { path, uri ->
                 val ret = JSObject().apply {
                     put("success", true)
