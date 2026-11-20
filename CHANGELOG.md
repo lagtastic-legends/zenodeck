@@ -5,6 +5,28 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.34] — 2026-11-20
+
+### ⚡ Streamlined Universal Media Downloader Architecture
+- **Eliminated In-App Browser & Sniffer Overhead**:
+  - Removed `in-app-browser` tool from `TOOL_REGISTRY` and decoupled `MiniBrowserView` from `app-shell.tsx`.
+  - Removed dual-mode segmented tabs (`[🔗 Paste Link]` vs `[🌐 In-App Browser (FAB Sniffer)]`) in `youtube-downloader.tsx`.
+  - Removed confusing "Open in Mini Browser & Sniffer" buttons from 403 / datacenter restriction notices, focusing user attention purely on direct link downloading and Android APK native downloads.
+  - Replaced legacy sniffer error messages in `universal-resolver.ts` with clean, informative guidance.
+
+### 📱 Mobile & iPhone Web Clip Profile Feature Descriptions
+- **Restored Complete Tool Matrix Descriptions on Mobile Viewports (`tool-grid.tsx`)**:
+  - Removed `hidden sm:block` from `ToolCard` descriptions, ensuring feature descriptions are fully visible on Android phones, iPhones, and iOS Web Clip standalone profiles (`zenodeck.mobileconfig`).
+  - Tuned mobile typography with `text-[9.5px] xs:text-[10.5px] sm:text-xs leading-[1.3] line-clamp-2` for crisp, high-contrast readability.
+  - Adjusted mobile card min-height to `min-h-[120px] xs:min-h-[128px]` and padding to `p-2.5 xs:p-3` for balanced layout proportions.
+
+### 🛠️ Continuous Integration & Verification Hardening
+- **Historical Release Verification Compatibility**:
+  - Upgraded `scripts/test-v1-0-30-release.ts` to semver comparison `>= 1.0.30` and generalized modal card checks.
+  - Decoupled `overflow-x-auto no-scrollbar` assertion in `scripts/test-topbar-fetch-and-layouts.ts` to tolerate responsive padding classes.
+  - Updated `scripts/test-v1-0-18-mini-browser.ts` and `scripts/test-v1-0-19-mobile-gestures-and-browser.ts` to reflect the decoupled browser architecture.
+  - Verified 100% green test pass across all 43 test suites in `npm run test:ci`.
+
 ## [1.0.33] — 2026-11-20
 
 ### 🚀 Universal Media Downloader & Multi-Slide Carousel Architecture

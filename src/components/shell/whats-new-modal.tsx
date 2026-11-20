@@ -162,20 +162,29 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Download className="size-4.5 text-emerald-400" />}
-          title="Queue & Stream Resolution"
-          badge="Zero Stall 🚀"
-          description="Resolved background queue stream URLs, preserved DASH audio muxing, and auto-fallback for silent Reddit clips and animated GIFs."
+          title="Streamlined Downloader"
+          badge="Zero Overhead ⚡"
+          description="Removed in-app browser & sniffer overhead to deliver a fast, direct, distraction-free media extraction and downloading experience."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<Layers className="size-4.5 text-cyan-400" />}
+          icon={<Zap className="size-4.5 text-cyan-400" />}
+          title="Mobile & iPhone Profile Cards"
+          badge="Full Details 📱"
+          description="Enabled full feature descriptions across all mobile viewports and iPhone Web Clip standalone profiles with responsive typography."
+          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+        />
+
+        <FeatureCard
+          icon={<Layers className="size-4.5 text-indigo-400" />}
           title="Multi-Slide Carousel Hub"
           badge="All Slides 📸"
           description="Extract all photo and video slides from TikTok slideshows, Instagram carousels, Twitter/X posts, and Reddit multi-image galleries."
-          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+          accentClass="bg-indigo-500/15 text-indigo-400 border border-indigo-500/30"
+          badgeClass="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30"
         />
 
         <FeatureCard
@@ -185,15 +194,6 @@ export function WhatsNewModal() {
           description="Strict image MIME types and direct routing to Android Pictures/ZenoDeck with native MediaScanner indexing for Google Photos."
           accentClass="bg-rose-500/15 text-rose-400 border border-rose-500/30"
           badgeClass="bg-rose-500/15 text-rose-300 border border-rose-500/30"
-        />
-
-        <FeatureCard
-          icon={<Zap className="size-4.5 text-amber-400" />}
-          title="Dual Gemini 3.8 & Flash-Lite"
-          badge="Sub-Second ⚡"
-          description="Interactive speed toggle in Ask Zeno: switch between sub-second Gemini 3.5 Flash-Lite and flagship 3.8 Flash with smart zero-downtime failover."
-          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
-          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
         />
       </div>
     </ZenoModal>

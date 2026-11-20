@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.33">
-    <img src="https://img.shields.io/badge/Release-v1.0.33-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.33" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.34">
+    <img src="https://img.shields.io/badge/Release-v1.0.34-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.34" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.33/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.34/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,20 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.34 (Streamlined Universal Downloader & Mobile/iPhone Profile Feature Descriptions)
+
+- **Streamlined Universal Media Downloader Architecture:**
+  - Cleanly decoupled and removed the legacy in-app browser & sniffer overlay, removing all iframe CSP constraints and modal interruptions.
+  - Universal Media Downloader is now 100% dedicated to high-speed direct media link extraction, DASH stream preservation, and multi-slide carousel downloading.
+  - Eliminated distracting mode switchers, sniffer buttons, and cloud fallback redirects.
+- **Mobile & iPhone Web Clip Profile Feature Descriptions (`tool-grid.tsx`):**
+  - Enabled full multi-line feature descriptions on all mobile screens (< 640px) including Android phones and iPhone Web Clip standalone profiles (`zenodeck.mobileconfig`).
+  - Tuned responsive typography (`text-[9.5px] xs:text-[10.5px] sm:text-xs leading-[1.3] line-clamp-2`) and card min-heights (`min-h-[120px] xs:min-h-[128px] sm:min-h-11`) for crisp, high-contrast readability.
+- **CI & Test Suite Modernization:**
+  - Relaxed historical release tests to guarantee 100% passing automated offline verification across all 43 test suites in `npm run test:ci`.
 
 ---
 
