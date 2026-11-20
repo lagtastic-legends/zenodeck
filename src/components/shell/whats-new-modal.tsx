@@ -14,6 +14,8 @@ import {
   Music,
   Globe,
   Download,
+  Layers,
+  Image as ImageIcon,
 } from "lucide-react";
 import { APP_VERSION } from "@/config/version";
 import { useNavStore } from "@/lib/navigation/nav-store";
@@ -159,39 +161,39 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
+          icon={<Download className="size-4.5 text-emerald-400" />}
+          title="Queue & Stream Resolution"
+          badge="Zero Stall 🚀"
+          description="Resolved background queue stream URLs, preserved DASH audio muxing, and auto-fallback for silent Reddit clips and animated GIFs."
+          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+        />
+
+        <FeatureCard
+          icon={<Layers className="size-4.5 text-cyan-400" />}
+          title="Multi-Slide Carousel Hub"
+          badge="All Slides 📸"
+          description="Extract all photo and video slides from TikTok slideshows, Instagram carousels, Twitter/X posts, and Reddit multi-image galleries."
+          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+        />
+
+        <FeatureCard
+          icon={<ImageIcon className="size-4.5 text-rose-400" />}
+          title="True Photos & Android Gallery"
+          badge="Pure Image 🖼️"
+          description="Strict image MIME types and direct routing to Android Pictures/ZenoDeck with native MediaScanner indexing for Google Photos."
+          accentClass="bg-rose-500/15 text-rose-400 border border-rose-500/30"
+          badgeClass="bg-rose-500/15 text-rose-300 border border-rose-500/30"
+        />
+
+        <FeatureCard
           icon={<Zap className="size-4.5 text-amber-400" />}
           title="Dual Gemini 3.8 & Flash-Lite"
           badge="Sub-Second ⚡"
           description="Interactive speed toggle in Ask Zeno: switch between sub-second Gemini 3.5 Flash-Lite and flagship 3.8 Flash with smart zero-downtime failover."
           accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
           badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        />
-
-        <FeatureCard
-          icon={<ShieldCheck className="size-4.5 text-emerald-400" />}
-          title="UI Contrast & Global Shield"
-          badge="Zero Override 🎨"
-          description="Surgically shielded CSS preventing white input boxes, high-contrast champagne portal cards, and clean 2-line header subtitles."
-          accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-          badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        />
-
-        <FeatureCard
-          icon={<Globe className="size-4.5 text-[#F7E7CE]" />}
-          title="In-App Browser & VidMate FAB"
-          badge="Zero Block 🌐"
-          description="Ultra-low latency web hub, streamlined single-icon mode switcher, and always-visible floating download FAB."
-          accentClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
-          badgeClass="bg-[#102C26] text-[#F7E7CE] border border-[#A79277]/40"
-        />
-
-        <FeatureCard
-          icon={<Sliders className="size-4.5 text-cyan-400" />}
-          title="Ergonomic Toggle Switches"
-          badge="44×24 Pill 🔘"
-          description="Standardized horizontal pill toggles with smooth spring translation across audio DSP, PDF lock, and system preferences."
-          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />
       </div>
     </ZenoModal>

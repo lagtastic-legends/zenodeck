@@ -5,6 +5,37 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.33] — 2026-11-20
+
+### 🚀 Universal Media Downloader & Multi-Slide Carousel Architecture
+- **Queue Runner Universal Stream URL Resolution (`src/lib/media/download-queue-runner.ts`)**:
+  - Resolved critical queue runner bug where raw social webpage URLs were passed directly to `downloadUniversalMedia()`, causing downloads to fetch HTML text and fail with error block pages.
+  - Dynamically extracts verified binary stream URLs from `qualityOption.downloadUrl`, `videoFormat.url`, or `audioFormat.url`.
+  - Added on-the-fly re-resolution fallback for unparsed or expired social media CDN tokens.
+- **Preserved DASH Audio & Multi-Stream Muxing Flags (`src/lib/media/download-queue-runner.ts`)**:
+  - Ensured `audioUrl` and `requiresMuxing` flags are preserved when building queued task options, allowing Reddit DASH and YouTube adaptive downloads to mux video and audio tracks in the background.
+- **Exhaustive Multi-Slide Carousel & Slideshow Support (`universal-resolver.ts`, `tiktok.ts`, `instagram.ts`, `twitter.ts`, `reddit.ts`)**:
+  - Fixed carousel slide truncation across all social platforms.
+  - In `tiktok.ts`: Photo album slideshow slides (`d.images`) are now pushed directly to `qualities` alongside background MP3 music, allowing users to download individual photo slides.
+  - In `instagram.ts`, `twitter.ts`, and `reddit.ts`: Flattened all carousel items and gallery slides into selectable format options rather than truncating to Slide 1 only.
+  - In `universal-resolver.ts`: `ensureFullQualityLadder()` unpacks `info.items` into `info.qualities` with clear badges (`SLIDE 1`, `SLIDE 2`, etc.).
+
+### 🖼️ True Photo MIME Types & Native Android Gallery Indexing
+- **Strict Image MIME Type Resolution (`src/lib/media/downloader.ts`)**:
+  - Eliminated default `"video/mp4"` MIME type on photo downloads.
+  - Replaced with strict MIME mapping (`image/jpeg`, `image/png`, `image/webp`, `image/gif`), ensuring downloaded images are never misidentified as corrupted video containers.
+- **Native Android Pictures Directory Routing (`ZenoHeadlessMediaEngine.kt` & `ZenoMedia3Plugin.kt`)**:
+  - Added `isImageTarget` detection in `downloadAndMuxYouTubeStreams()`: photo files (`.jpg`, `.png`, `.webp`, `.gif`) are now routed to `Environment.DIRECTORY_PICTURES` (`Pictures/ZenoDeck`) instead of `Movies/ZenoDeck`.
+  - Updated `scanMediaFile()` to infer image MIME types so Google Photos and the Android Gallery immediately recognize and preview saved pictures natively.
+
+### 🛡️ Resilient Silent Video & Reddit DASH Fallbacks
+- **Non-Fatal DASH Audio 404 Handling (`ZenoHeadlessMediaEngine.kt` & `downloader.ts`)**:
+  - Added graceful fallback in `downloadAndMuxYouTubeStreams`: if audio returns 404 / empty (silent videos, animated GIFs) but the video stream succeeded (>5KB), automatically saves the video-only track with 100% completion rather than failing the entire download.
+- **Pinterest Full-Resolution Photo Pin Support (`src/lib/media/extractors/pinterest.ts`)**:
+  - Pinterest pins without video streams now automatically download original high-resolution JPG photos (`ext: "jpg"`, `badge: "IMAGE"`).
+- **VidMate Dynamic Badge (`src/components/tools/vidmate-quality-sheet.tsx`)**:
+  - Bound `badge={APP_VERSION}` dynamically from `@/config/version`, eliminating the hardcoded obsolete `v1.0.13` badge.
+
 ## [1.0.32] — 2026-11-19
 
 ### ⚡ Dual Gemini 3.8 & 3.5 Flash-Lite Neural Engine with Speed Switcher
