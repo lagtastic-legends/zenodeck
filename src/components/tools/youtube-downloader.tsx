@@ -185,7 +185,7 @@ export function YouTubeDownloader() {
 
   const [selectedQuality, setSelectedQuality] = useState<YouTubeQualityOption | null>(null);
   const [mediaTypeTab, setMediaTypeTab] = useState<"video" | "audio">("video");
-  const [workersCount, setWorkersCount] = useState<number>(6);
+  const workersCount = 2; // Optimal balanced streaming channels
 
   const [isDownloading, setIsDownloading] = useState(false);
   const [progress, setProgress] = useState<TurboProgress | null>(null);
@@ -950,12 +950,19 @@ export function YouTubeDownloader() {
       });
     };
 
-    // Watchdog: If direct chunk streaming hasn't received any bytes within 25s (extended for 4K/2K), switch to high-speed stream (Web only)
+    // Watchdog: If direct chunk streaming hasn't received any bytes within 20s (extended for 4K/2K), recover gracefully
     const isUltraHd = selectedQuality.is4K || selectedQuality.resolutionLabel?.includes("2160") || selectedQuality.resolutionLabel?.includes("1440");
-    const watchdogTimeoutMs = isUltraHd ? 25000 : 15000;
-    if (!Capacitor.isNativePlatform()) {
-      stallWatchdogTimer = setTimeout(() => {
-        if (!didFallback) {
+    const watchdogTimeoutMs = isUltraHd ? 25000 : 18000;
+    stallWatchdogTimer = setTimeout(() => {
+      if (!didFallback) {
+        if (Capacitor.isNativePlatform()) {
+          console.warn(`Native direct stream stalled after ${watchdogTimeoutMs}ms — aborting to prevent freeze`);
+          abortControllerRef.current?.abort();
+          setIsDownloading(false);
+          setResolveError("Stream connection timed out. Please tap Download to retry or select a different resolution.");
+          void haptics.error();
+          playError();
+        } else {
           console.warn(`Direct stream stalled at 0% after ${watchdogTimeoutMs}ms — switching to high-speed server stream`);
           didFallback = true;
           abortControllerRef.current?.abort();
@@ -970,8 +977,8 @@ export function YouTubeDownloader() {
             setIsDownloading(false);
           });
         }
-      }, watchdogTimeoutMs);
-    }
+      }
+    }, watchdogTimeoutMs);
 
     try {
       const result = await downloadYouTubeStream({
@@ -1114,6 +1121,8 @@ export function YouTubeDownloader() {
           void haptics.error();
           playError();
         }
+      } finally {
+        setIsDownloading(false);
       }
     } finally {
       void releaseWakeLock();
@@ -2133,35 +2142,6 @@ export function YouTubeDownloader() {
               )}
             </div>
 
-            {/* Speed & Acceleration Settings */}
-            <div className="panel-hud rounded-xl border border-border/70 bg-card/30 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Gauge className="size-4 text-amber-400 shrink-0" />
-                <div className="font-mono text-xs text-foreground">
-                  <span>Turbo Multi-Worker Acceleration:</span>{" "}
-                  <span className="font-bold text-amber-300">{workersCount} Parallel Channels</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                {[4, 6, 8].map((count) => (
-                  <button
-                    key={count}
-                    type="button"
-                    onClick={() => setWorkersCount(count)}
-                    disabled={isDownloading}
-                    className={`rounded-lg px-2.5 py-1 font-mono text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                      workersCount === count
-                        ? "border border-amber-500/50 bg-amber-500/20 text-amber-300"
-                        : "border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {count}x Threads
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Pre-Download Time-Range Clipper */}
             <div className="panel-hud rounded-xl border border-border/70 bg-card/30 p-3 space-y-2">
               <div className="flex items-center justify-between">
@@ -2466,9 +2446,9 @@ export function YouTubeDownloader() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">Channels</span>
-                    <span className="font-bold text-amber-300">
-                      {progress?.activeThreads || workersCount} Workers
+                    <span className="text-muted-foreground block">Engine</span>
+                    <span className="font-bold text-emerald-400">
+                      Direct Stream
                     </span>
                   </div>
                   <div>

@@ -696,8 +696,14 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             System.setProperty("java.net.preferIPv6Addresses", "false")
         } catch (_: Throwable) {}
 
-        val fallbackUa = "com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
-        val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else fallbackUa
+        val isIos = streamUrl.contains("c=IOS", ignoreCase = true)
+        val isAndroid = streamUrl.contains("c=ANDROID", ignoreCase = true)
+        val defaultUa = when {
+            isIos -> "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_1 like Mac OS X;)"
+            isAndroid -> "com.google.android.youtube/20.03.35 (Linux; U; Android 14) gzip"
+            else -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+        }
+        val effectiveUa = if (!userAgent.isNullOrBlank()) userAgent else defaultUa
 
         // Helper: Check if stream is a confirmed DASH adaptive stream on googlevideo.com
         fun isAdaptiveDashStream(url: String): Boolean {
@@ -803,6 +809,32 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
             throw IOException("Too many HTTP redirects ($redirects) from $initialUrl")
         }
 
+        // Helper: Resilient connection opener with automatic fallback from injected &range= to untouched original URL
+        fun openResilientStreamConnection(
+            targetUrl: String,
+            baseCandidate: String,
+            rangeHeader: String?
+        ): Pair<HttpURLConnection, String> {
+            return try {
+                val (conn, winningUrl) = openConnectionWithRedirects(targetUrl, rangeHeader)
+                val code = conn.responseCode
+                if (code in 200..299 || code == 416) {
+                    Pair(conn, winningUrl)
+                } else if (targetUrl != baseCandidate) {
+                    conn.disconnect()
+                    openConnectionWithRedirects(baseCandidate, rangeHeader)
+                } else {
+                    Pair(conn, winningUrl)
+                }
+            } catch (e: Exception) {
+                if (targetUrl != baseCandidate) {
+                    openConnectionWithRedirects(baseCandidate, rangeHeader)
+                } else {
+                    throw e
+                }
+            }
+        }
+
         // 1. Determine total file size:
         // First check for &clen= or ?clen= parameter in stream URL
         var totalBytes = -1L
@@ -859,7 +891,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 val baseCandidate = candidateUrls[candIdx]
                 val targetUrl = injectRangeQueryParam(baseCandidate, 0L, initialChunkSize - 1)
                 try {
-                    val (conn, _) = openConnectionWithRedirects(targetUrl, initialRangeHeader)
+                    val (conn, _) = openResilientStreamConnection(targetUrl, baseCandidate, initialRangeHeader)
                     val code = conn.responseCode
                     if (code in 200..299) {
                         probeConn = conn
@@ -966,7 +998,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     val targetUrl = injectRangeQueryParam(baseCandidate, chunkStart, chunkEnd)
 
                     try {
-                        val (conn, _) = openConnectionWithRedirects(targetUrl, chunkRangeHeader)
+                        val (conn, _) = openResilientStreamConnection(targetUrl, baseCandidate, chunkRangeHeader)
                         connection = conn
                         val responseCode = conn.responseCode
 
@@ -1085,12 +1117,10 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                 destinationFile.name.endsWith(".wav", ignoreCase = true) ||
                 streamUrl.contains("mime=audio", ignoreCase = true)
 
-        val targetConcurrency = if (maxWorkers > 0) {
+        val targetConcurrency = if (maxWorkers in 1..2) {
             maxWorkers
-        } else if (isAudioStream) {
-            2
         } else {
-            4
+            1
         }
         val workerConcurrency = minOf(targetConcurrency, maxOf(1, numChunks))
 
@@ -1179,7 +1209,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                         val targetUrl = injectRangeQueryParam(baseCandidate, chunkStart, chunkEnd)
 
                         try {
-                            val (connection, _) = openConnectionWithRedirects(targetUrl, rangeHeader)
+                            val (connection, _) = openResilientStreamConnection(targetUrl, baseCandidate, rangeHeader)
                             conn = connection
                             activeConnections.add(connection)
 
@@ -1445,7 +1475,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     destinationFile = vTempFile,
                     expectedTotalBytes = expectedVideoBytes,
                     isCancelled = isCancelled,
-                    maxWorkers = 4,
+                    maxWorkers = 2,
                     onProgress = { downloaded, total ->
                         totalDownloaded.set(downloaded)
                         val now = System.currentTimeMillis()
@@ -1487,7 +1517,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     destinationFile = aTempFile,
                     expectedTotalBytes = expectedAudioBytes,
                     isCancelled = isCancelled,
-                    maxWorkers = 2,
+                    maxWorkers = 1,
                     onProgress = { downloaded, total ->
                         val curTotal = videoBytesOnDisk + downloaded
                         totalDownloaded.set(curTotal)
@@ -1571,7 +1601,7 @@ class ZenoHeadlessMediaEngine private constructor(private val appContext: Contex
                     destinationFile = vTempFile,
                     expectedTotalBytes = approxSizeBytes,
                     isCancelled = isCancelled,
-                    maxWorkers = 4,
+                    maxWorkers = 1,
                     onProgress = { downloaded, total ->
                         totalDownloaded.set(downloaded)
                         val now = System.currentTimeMillis()
