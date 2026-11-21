@@ -162,18 +162,18 @@ export function WhatsNewModal() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
           icon={<Download className="size-4.5 text-emerald-400" />}
-          title="Streamlined Downloader"
-          badge="Zero Overhead ⚡"
-          description="Removed in-app browser & sniffer overhead to deliver a fast, direct, distraction-free media extraction and downloading experience."
+          title="Direct Stream Engine"
+          badge="Anti-Freeze 🛡️"
+          description="Resolved 5% download freeze with RFC 7233 byte-range fallback, dynamic User-Agent headers, and 18s stall watchdogs for a Streamlined Downloader."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
           icon={<Zap className="size-4.5 text-cyan-400" />}
-          title="Mobile & iPhone Profile Cards"
-          badge="Full Details 📱"
-          description="Enabled full feature descriptions across all mobile viewports and iPhone Web Clip standalone profiles with responsive typography."
+          title="Optimal 2-Worker Engine"
+          badge="Zero Clutter ⚡"
+          description="Removed confusing multi-worker thread controls. Mobile & iPhone Profile Cards now render crystal-clear feature descriptions."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />

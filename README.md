@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.34">
-    <img src="https://img.shields.io/badge/Release-v1.0.34-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.34" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.35">
+    <img src="https://img.shields.io/badge/Release-v1.0.35-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.35" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.34/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.35/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -46,17 +46,19 @@ Unlike conventional web tools that upload your sensitive media to remote cloud s
 
 ---
 
-## 💎 What's New in v1.0.34 (Streamlined Universal Downloader & Mobile/iPhone Profile Feature Descriptions)
+## 💎 What's New in v1.0.35 (Multi-Worker Turbo Removal & 5% Download Freeze Resolution)
 
-- **Streamlined Universal Media Downloader Architecture:**
-  - Cleanly decoupled and removed the legacy in-app browser & sniffer overlay, removing all iframe CSP constraints and modal interruptions.
-  - Universal Media Downloader is now 100% dedicated to high-speed direct media link extraction, DASH stream preservation, and multi-slide carousel downloading.
-  - Eliminated distracting mode switchers, sniffer buttons, and cloud fallback redirects.
-- **Mobile & iPhone Web Clip Profile Feature Descriptions (`tool-grid.tsx`):**
-  - Enabled full multi-line feature descriptions on all mobile screens (< 640px) including Android phones and iPhone Web Clip standalone profiles (`zenodeck.mobileconfig`).
-  - Tuned responsive typography (`text-[9.5px] xs:text-[10.5px] sm:text-xs leading-[1.3] line-clamp-2`) and card min-heights (`min-h-[120px] xs:min-h-[128px] sm:min-h-11`) for crisp, high-contrast readability.
-- **CI & Test Suite Modernization:**
-  - Relaxed historical release tests to guarantee 100% passing automated offline verification across all 43 test suites in `npm run test:ci`.
+- **Universal Downloader 5% Freeze Fix & Resilient Direct Streaming:**
+  - Fixed critical 5% download freeze caused by upstream CDN HMAC signature validation failures when appending `&range=`.
+  - Added `openResilientStreamConnection()` in `ZenoHeadlessMediaEngine.kt`: automatically falls back to untouched signed URLs with standard RFC 7233 HTTP `Range: bytes=start-end` headers.
+  - Implemented dynamic mobile client User-Agent negotiation matching iOS and Android devices to prevent CDN bot throttling and silent TCP drops.
+  - Added an 18-second zero-byte transfer watchdog timer and guaranteed `setIsDownloading(false)` execution inside `finally` blocks.
+- **Clean Downloader Experience & Turbo Multi-Worker UI Removal:**
+  - Removed confusing "Turbo Multi-Worker Acceleration" card and manual `4X / 6X / 8X` thread controls in `youtube-downloader.tsx`.
+  - Replaced with an automated, rock-solid 2-worker streaming engine designed for optimal throughput without CDN throttling.
+  - Updated live HUD telemetry inspector from multi-worker channel indicators to `Engine: Direct Stream`.
+- **Mobile & iPhone Web Clip Profile Descriptions:**
+  - Retained full feature descriptions on all mobile viewports and iPhone Web Clip standalone profiles (`zenodeck.mobileconfig`).
 
 ---
 

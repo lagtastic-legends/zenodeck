@@ -5,6 +5,24 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.35] — 2026-11-21
+
+### 🚀 Universal Downloader 5% Freeze Fix & Resilient Direct Streaming
+- **Resilient RFC 7233 Range Fallback Engine (`ZenoHeadlessMediaEngine.kt`)**:
+  - Resolved 5% download freeze caused by upstream CDN HMAC signature validation failures when appending query parameter `&range=`.
+  - Implemented `openResilientStreamConnection()` with automated fallback: directly streams using the untouched signed URL with standard RFC 7233 HTTP `Range: bytes=start-end` headers when query injection is rejected.
+  - Added dynamic mobile client User-Agent negotiation matching iOS and Android clients to eliminate CDN bot heuristics, rate-limiting, and silent TCP resets.
+  - Reduced worker concurrency to safe 1–2 sequential channels to prevent connection resets and dropped packets.
+- **Watchdog & UI State Safety Guards (`youtube-downloader.tsx`)**:
+  - Integrated an 18-second zero-byte transfer watchdog timer to catch stalled CDN connections and provide actionable status telemetry.
+  - Enforced `setIsDownloading(false)` execution inside guaranteed `finally` blocks, eliminating UI button lockup and frozen spinner states when downloads complete, abort, or encounter errors.
+
+### ⚡ Turbo Multi-Worker UI Removal & Clean Downloader Experience
+- **Decoupled Manual Multi-Worker Controls (`youtube-downloader.tsx`)**:
+  - Removed confusing "Turbo Multi-Worker Acceleration" card and manual `4X THREADS`, `6X THREADS`, `8X THREADS` button controls.
+  - Replaced manual concurrency selection with an automated, rock-solid 2-worker streaming engine designed for optimal throughput without CDN throttling.
+  - Updated live HUD telemetry inspector from multi-worker channel indicators to `Engine: Direct Stream`.
+
 ## [1.0.34] — 2026-11-20
 
 ### ⚡ Streamlined Universal Media Downloader Architecture
