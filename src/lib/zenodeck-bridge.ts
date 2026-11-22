@@ -40,9 +40,22 @@ interface ZenoDeckNativePlugin {
   getGestureTyping(): Promise<{ enabled: boolean }>;
   setKeyboardHeightScale(options: { scale: number }): Promise<{ scale: number }>;
   getKeyboardHeightScale(): Promise<{ scale: number }>;
+  setHapticStrength(options: { strength: number }): Promise<{ success: boolean; strength: number }>;
+  getHapticStrength(): Promise<{ strength: number }>;
+  setKeyPopupEnabled(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
+  getKeyPopupEnabled(): Promise<{ enabled: boolean }>;
+  setCursorScrubEnabled(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
+  getCursorScrubEnabled(): Promise<{ enabled: boolean }>;
+  setGlideTrailEnabled(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
+  getGlideTrailEnabled(): Promise<{ enabled: boolean }>;
+  setOneHandedMode(options: { mode: OneHandedMode }): Promise<{ success: boolean; mode: OneHandedMode }>;
+  getOneHandedMode(): Promise<{ mode: OneHandedMode }>;
   getClipboardHistory(): Promise<{ items: ClipboardVaultItemBridge[]; count: number }>;
   clearClipboardHistory(options?: { clearPinned?: boolean }): Promise<{ success: boolean }>;
 }
+
+export type HapticStrength = 0 | 1 | 2 | 3;
+export type OneHandedMode = "off" | "left" | "right";
 
 export interface ClipboardVaultItemBridge {
   id: string;
@@ -481,6 +494,166 @@ export async function getClipboardHistory(): Promise<ClipboardVaultItemBridge[]>
     return res.items || [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Sets tactile haptic feedback strength (0 = Off, 1 = Light, 2 = Crisp Default, 3 = Strong).
+ */
+export async function setHapticStrength(strength: HapticStrength): Promise<number> {
+  const clamped = Math.max(0, Math.min(3, Math.round(strength))) as HapticStrength;
+  setFallbackItem("zenotap_haptic_strength", clamped.toString());
+  if (!Capacitor.isNativePlatform()) return clamped;
+  try {
+    const res = await NativeBridge.setHapticStrength({ strength: clamped });
+    return res.strength;
+  } catch {
+    return clamped;
+  }
+}
+
+/**
+ * Retrieves current tactile haptic feedback strength.
+ */
+export async function getHapticStrength(): Promise<HapticStrength> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_haptic_strength");
+    if (stored !== null) {
+      const val = parseInt(stored, 10);
+      if (val >= 0 && val <= 3) return val as HapticStrength;
+    }
+    return 2;
+  }
+  try {
+    const res = await NativeBridge.getHapticStrength();
+    return (Math.max(0, Math.min(3, res.strength)) as HapticStrength) || 2;
+  } catch {
+    return 2;
+  }
+}
+
+/**
+ * Sets whether floating keycap character preview popups are enabled.
+ */
+export async function setKeyPopupEnabled(enabled: boolean): Promise<boolean> {
+  setFallbackItem("zenotap_key_popup_enabled", enabled ? "1" : "0");
+  if (!Capacitor.isNativePlatform()) return enabled;
+  try {
+    const res = await NativeBridge.setKeyPopupEnabled({ enabled });
+    return res.enabled;
+  } catch {
+    return enabled;
+  }
+}
+
+/**
+ * Retrieves whether floating keycap character preview popups are enabled.
+ */
+export async function getKeyPopupEnabled(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_key_popup_enabled");
+    if (stored !== null) return stored === "1";
+    return true;
+  }
+  try {
+    const res = await NativeBridge.getKeyPopupEnabled();
+    return res.enabled;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Sets whether spacebar horizontal cursor scrubbing is enabled.
+ */
+export async function setCursorScrubEnabled(enabled: boolean): Promise<boolean> {
+  setFallbackItem("zenotap_cursor_scrub_enabled", enabled ? "1" : "0");
+  if (!Capacitor.isNativePlatform()) return enabled;
+  try {
+    const res = await NativeBridge.setCursorScrubEnabled({ enabled });
+    return res.enabled;
+  } catch {
+    return enabled;
+  }
+}
+
+/**
+ * Retrieves whether spacebar horizontal cursor scrubbing is enabled.
+ */
+export async function getCursorScrubEnabled(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_cursor_scrub_enabled");
+    if (stored !== null) return stored === "1";
+    return true;
+  }
+  try {
+    const res = await NativeBridge.getCursorScrubEnabled();
+    return res.enabled;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Sets whether the 120fps glide typing particle trail is enabled.
+ */
+export async function setGlideTrailEnabled(enabled: boolean): Promise<boolean> {
+  setFallbackItem("zenotap_glide_trail_enabled", enabled ? "1" : "0");
+  if (!Capacitor.isNativePlatform()) return enabled;
+  try {
+    const res = await NativeBridge.setGlideTrailEnabled({ enabled });
+    return res.enabled;
+  } catch {
+    return enabled;
+  }
+}
+
+/**
+ * Retrieves whether the 120fps glide typing particle trail is enabled.
+ */
+export async function getGlideTrailEnabled(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_glide_trail_enabled");
+    if (stored !== null) return stored === "1";
+    return true;
+  }
+  try {
+    const res = await NativeBridge.getGlideTrailEnabled();
+    return res.enabled;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Sets one-handed keyboard mode ('off', 'left', or 'right').
+ */
+export async function setOneHandedMode(mode: OneHandedMode): Promise<OneHandedMode> {
+  const safeMode = mode === "left" || mode === "right" ? mode : "off";
+  setFallbackItem("zenotap_one_handed_mode", safeMode);
+  if (!Capacitor.isNativePlatform()) return safeMode;
+  try {
+    const res = await NativeBridge.setOneHandedMode({ mode: safeMode });
+    return res.mode;
+  } catch {
+    return safeMode;
+  }
+}
+
+/**
+ * Retrieves the active one-handed keyboard mode ('off', 'left', or 'right').
+ */
+export async function getOneHandedMode(): Promise<OneHandedMode> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_one_handed_mode");
+    if (stored === "left" || stored === "right" || stored === "off") return stored;
+    return "off";
+  }
+  try {
+    const res = await NativeBridge.getOneHandedMode();
+    return res.mode;
+  } catch {
+    return "off";
   }
 }
 

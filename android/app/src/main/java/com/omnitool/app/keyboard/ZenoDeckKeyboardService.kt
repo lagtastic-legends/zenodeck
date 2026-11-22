@@ -285,6 +285,43 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var isCapsLock: Boolean = false
     private var lastSpaceTimestamp: Long = 0L
 
+    // Tactile & Ergonomic Suite State
+    var hapticStrength: Int = ZenoDeckKeyboardBridgePlugin.DEFAULT_HAPTIC_STRENGTH
+    var isKeyPopupEnabled: Boolean = ZenoDeckKeyboardBridgePlugin.DEFAULT_KEY_POPUP_ENABLED
+    var isCursorScrubEnabled: Boolean = ZenoDeckKeyboardBridgePlugin.DEFAULT_CURSOR_SCRUB_ENABLED
+    var isGlideTrailEnabled: Boolean = ZenoDeckKeyboardBridgePlugin.DEFAULT_GLIDE_TRAIL_ENABLED
+    var oneHandedMode: String = ZenoDeckKeyboardBridgePlugin.DEFAULT_ONE_HANDED_MODE
+
+    // Secondary Character Alternates Map
+    private val KEY_ALTERNATES: Map<String, List<String>> = mapOf(
+        "q" to listOf("1"),
+        "w" to listOf("2"),
+        "e" to listOf("3", "è", "é", "ê", "ë"),
+        "r" to listOf("4"),
+        "t" to listOf("5"),
+        "y" to listOf("6"),
+        "u" to listOf("7", "û", "ü", "ù", "ú"),
+        "i" to listOf("8", "î", "ï", "í"),
+        "o" to listOf("9", "ô", "ö", "ò", "ó"),
+        "p" to listOf("0"),
+        "a" to listOf("@", "à", "á", "â", "ä", "æ"),
+        "s" to listOf("#", "$", "ß"),
+        "d" to listOf("&"),
+        "f" to listOf("%"),
+        "g" to listOf("*"),
+        "h" to listOf("/"),
+        "j" to listOf("+"),
+        "k" to listOf("-"),
+        "l" to listOf("="),
+        "z" to listOf("_"),
+        "x" to listOf("\""),
+        "c" to listOf("ç", "¢"),
+        "v" to listOf("<"),
+        "b" to listOf("!"),
+        "n" to listOf("~", "ñ"),
+        "m" to listOf("?")
+    )
+
     // Fast Zero-Allocation Multi-Touch Rollover Tracking
     class PointerTouchState {
         var active: Boolean = false
@@ -296,11 +333,30 @@ class ZenoDeckKeyboardService : InputMethodService() {
         var downTime: Long = 0L
         var isGlide: Boolean = false
         var characterCommitted: Boolean = false
+        var isLongPressActive: Boolean = false
     }
 
     private val pointerStates = Array(10) { PointerTouchState() }
     private val tempLocArray = IntArray(2)
     private val tempRootLocArray = IntArray(2)
+
+    // Long-Press Secondary Rail & Glide Trail Views
+    private var glideTrailOverlay: GlideTrailOverlayView? = null
+    private var layoutSecondaryRail: LinearLayout? = null
+    private val railSlots = arrayOfNulls<TextView>(6)
+    private val longPressHandler = Handler(Looper.getMainLooper())
+    private var activeRailAlternates = listOf<String>()
+    private var activeRailSelectedIndex = 0
+    private var activeRailButton: Button? = null
+
+    // One-Handed Mode Views
+    private var layoutOneHandedWrapper: View? = null
+    private var layoutGutterLeft: View? = null
+    private var layoutGutterRight: View? = null
+    private var btnOneHandedExpandLeft: Button? = null
+    private var btnOneHandedFlipLeft: Button? = null
+    private var btnOneHandedExpandRight: Button? = null
+    private var btnOneHandedFlipRight: Button? = null
 
     // Accelerated Backspace & Spacebar Timers
     private val backspaceHandler = Handler(Looper.getMainLooper())
@@ -452,6 +508,30 @@ class ZenoDeckKeyboardService : InputMethodService() {
         tvKeyEchoPreview = root.findViewById(R.id.tv_key_echo_preview)
         tvFloatingKeyPopup = root.findViewById(R.id.tv_floating_key_popup)
         btnVoiceInput = root.findViewById(R.id.btn_voice_input)
+
+        // Glide Trail & Secondary Character Alternate Rail
+        glideTrailOverlay = root.findViewById(R.id.glide_trail_overlay)
+        layoutSecondaryRail = root.findViewById(R.id.layout_secondary_rail)
+        railSlots[0] = root.findViewById(R.id.rail_slot_0)
+        railSlots[1] = root.findViewById(R.id.rail_slot_1)
+        railSlots[2] = root.findViewById(R.id.rail_slot_2)
+        railSlots[3] = root.findViewById(R.id.rail_slot_3)
+        railSlots[4] = root.findViewById(R.id.rail_slot_4)
+        railSlots[5] = root.findViewById(R.id.rail_slot_5)
+
+        // One-Handed Mode Layout & Gutter Quick-Action Buttons
+        layoutOneHandedWrapper = root.findViewById(R.id.layout_one_handed_wrapper)
+        layoutGutterLeft = root.findViewById(R.id.layout_one_handed_gutter_left)
+        layoutGutterRight = root.findViewById(R.id.layout_one_handed_gutter_right)
+        btnOneHandedExpandLeft = root.findViewById(R.id.btn_one_handed_expand_left)
+        btnOneHandedFlipLeft = root.findViewById(R.id.btn_one_handed_flip_left)
+        btnOneHandedExpandRight = root.findViewById(R.id.btn_one_handed_expand_right)
+        btnOneHandedFlipRight = root.findViewById(R.id.btn_one_handed_flip_right)
+
+        btnOneHandedExpandLeft?.setOnClickListener { setOneHandedModeLive("off") }
+        btnOneHandedExpandRight?.setOnClickListener { setOneHandedModeLive("off") }
+        btnOneHandedFlipLeft?.setOnClickListener { setOneHandedModeLive(if (oneHandedMode == "left") "right" else "left") }
+        btnOneHandedFlipRight?.setOnClickListener { setOneHandedModeLive(if (oneHandedMode == "left") "right" else "left") }
 
         // WindowInsets setup on outer container for gesture nav bars
         val outerContainer = root.findViewById<FrameLayout>(R.id.keyboard_outer_container) ?: root
@@ -745,16 +825,25 @@ class ZenoDeckKeyboardService : InputMethodService() {
     }
 
     fun performKeyHaptic(view: View) {
+        if (hapticStrength == 0) return
         try {
             val flags = HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-            val feedbackConstant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                HapticFeedbackConstants.KEYBOARD_PRESS
-            } else {
-                HapticFeedbackConstants.KEYBOARD_TAP
+            val feedbackConstant = when (hapticStrength) {
+                1 -> HapticFeedbackConstants.VIRTUAL_KEY
+                3 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.KEYBOARD_PRESS
+                else -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                    HapticFeedbackConstants.KEYBOARD_PRESS
+                } else {
+                    HapticFeedbackConstants.KEYBOARD_TAP
+                }
             }
             val performed = view.performHapticFeedback(feedbackConstant, flags)
             if (!performed) {
-                vibrateTick()
+                when (hapticStrength) {
+                    1 -> vibrateTick()
+                    3 -> vibrateTactileClick()
+                    else -> vibrateTick()
+                }
             }
         } catch (_: Exception) {
             vibrateTick()
@@ -774,6 +863,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
     }
 
     private fun showFloatingPopup(btn: Button, char: String) {
+        if (!isKeyPopupEnabled) return
         if (isPasswordInputType()) return
         val popup = tvFloatingKeyPopup ?: return
         val outer = keyboardRootView?.findViewById<View>(R.id.keyboard_outer_container) ?: keyboardRootView ?: return
@@ -799,6 +889,157 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
     private fun hideFloatingPopup() {
         tvFloatingKeyPopup?.visibility = View.GONE
+    }
+
+    fun showSecondaryCharacterRail(btn: Button, alternates: List<String>) {
+        if (isPasswordInputType()) return
+        val rail = layoutSecondaryRail ?: return
+        val outer = keyboardRootView?.findViewById<View>(R.id.keyboard_outer_container) ?: keyboardRootView ?: return
+
+        activeRailButton = btn
+        activeRailAlternates = alternates
+        activeRailSelectedIndex = 0
+
+        val maxSlots = minOf(alternates.size, 6)
+        for (i in 0 until 6) {
+            val slot = railSlots[i] ?: continue
+            if (i < maxSlots) {
+                slot.text = alternates[i]
+                slot.visibility = View.VISIBLE
+                if (i == 0) {
+                    slot.setBackgroundResource(R.drawable.bg_keycap_primary)
+                    slot.setTextColor(0xFFFFFFFF.toInt())
+                } else {
+                    slot.setBackgroundColor(0)
+                    slot.setTextColor(0xFF94A3B8.toInt())
+                }
+            } else {
+                slot.visibility = View.GONE
+            }
+        }
+
+        btn.getLocationInWindow(tempLocArray)
+        outer.getLocationInWindow(tempRootLocArray)
+
+        val density = resources.displayMetrics.density
+        val btnLeftInOuter = tempLocArray[0] - tempRootLocArray[0]
+        val btnTopInOuter = tempLocArray[1] - tempRootLocArray[1]
+
+        val railWidth = (maxSlots * 38 * density).toInt()
+        val railHeight = (46 * density).toInt()
+
+        var targetX = btnLeftInOuter + (btn.width - railWidth) / 2f
+        val maxX = outer.width - railWidth - (8 * density)
+        targetX = targetX.coerceIn(8 * density, maxX.coerceAtLeast(8 * density))
+
+        rail.translationX = targetX
+        rail.translationY = btnTopInOuter - railHeight - (8 * density)
+        rail.alpha = 1.0f
+        rail.visibility = View.VISIBLE
+    }
+
+    fun updateSecondaryCharacterRailSelection(rawX: Float) {
+        val rail = layoutSecondaryRail ?: return
+        if (rail.visibility != View.VISIBLE || activeRailAlternates.isEmpty()) return
+
+        rail.getLocationOnScreen(tempLocArray)
+        val railScreenLeft = tempLocArray[0].toFloat()
+        val density = resources.displayMetrics.density
+        val slotWidth = 38 * density
+        val maxSlots = minOf(activeRailAlternates.size, 6)
+
+        val relativeX = rawX - railScreenLeft
+        val selectedIdx = (relativeX / slotWidth).toInt().coerceIn(0, maxSlots - 1)
+
+        if (selectedIdx != activeRailSelectedIndex) {
+            activeRailSelectedIndex = selectedIdx
+            for (i in 0 until maxSlots) {
+                val slot = railSlots[i] ?: continue
+                if (i == selectedIdx) {
+                    slot.setBackgroundResource(R.drawable.bg_keycap_primary)
+                    slot.setTextColor(0xFFFFFFFF.toInt())
+                } else {
+                    slot.setBackgroundColor(0)
+                    slot.setTextColor(0xFF94A3B8.toInt())
+                }
+            }
+            vibrateTick()
+        }
+    }
+
+    fun getSelectedRailChar(): String {
+        return if (activeRailAlternates.isNotEmpty() && activeRailSelectedIndex in activeRailAlternates.indices) {
+            activeRailAlternates[activeRailSelectedIndex]
+        } else ""
+    }
+
+    fun hideSecondaryCharacterRail() {
+        layoutSecondaryRail?.visibility = View.GONE
+        activeRailButton = null
+        activeRailAlternates = emptyList()
+        activeRailSelectedIndex = 0
+    }
+
+    fun setOneHandedModeLive(mode: String) {
+        val safeMode = if (mode == "left" || mode == "right") mode else "off"
+        oneHandedMode = safeMode
+        val prefs = getSharedPreferences(ZenoDeckKeyboardBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(ZenoDeckKeyboardBridgePlugin.PREF_KEY_ONE_HANDED_MODE, safeMode).apply()
+
+        val intent = Intent(ZenoDeckKeyboardBridgePlugin.ACTION_SETTINGS_UPDATED).apply {
+            setPackage(packageName)
+            putExtra("setting", "one_handed")
+            putExtra("mode", safeMode)
+        }
+        sendBroadcast(intent)
+        applyOneHandedLayout()
+    }
+
+    fun applyOneHandedLayout() {
+        val root = keyboardRootView ?: return
+        val keyboardRoot = root.findViewById<LinearLayout>(R.id.keyboard_root) ?: return
+        val gutterLeft = root.findViewById<View>(R.id.layout_one_handed_gutter_left)
+        val gutterRight = root.findViewById<View>(R.id.layout_one_handed_gutter_right)
+
+        when (oneHandedMode) {
+            "left" -> {
+                gutterLeft?.visibility = View.GONE
+                gutterRight?.visibility = View.VISIBLE
+                (keyboardRoot.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                    lp.weight = 0.82f
+                    lp.width = 0
+                    keyboardRoot.layoutParams = lp
+                }
+                (gutterRight?.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                    lp.weight = 0.18f
+                    lp.width = 0
+                    gutterRight.layoutParams = lp
+                }
+            }
+            "right" -> {
+                gutterRight?.visibility = View.GONE
+                gutterLeft?.visibility = View.VISIBLE
+                (keyboardRoot.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                    lp.weight = 0.82f
+                    lp.width = 0
+                    keyboardRoot.layoutParams = lp
+                }
+                (gutterLeft?.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                    lp.weight = 0.18f
+                    lp.width = 0
+                    gutterLeft.layoutParams = lp
+                }
+            }
+            else -> {
+                gutterLeft?.visibility = View.GONE
+                gutterRight?.visibility = View.GONE
+                (keyboardRoot.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+                    lp.weight = 1.0f
+                    lp.width = 0
+                    keyboardRoot.layoutParams = lp
+                }
+            }
+        }
     }
 
     private fun isPasswordInputType(): Boolean {
@@ -915,6 +1156,30 @@ class ZenoDeckKeyboardService : InputMethodService() {
                             state.downTime = System.currentTimeMillis()
                             state.isGlide = false
                             state.characterCommitted = true
+                            state.isLongPressActive = false
+
+                            // Secondary alternates long-press timer (320ms)
+                            if (!isSymbolsMode && !isPasswordInputType()) {
+                                val alternates = KEY_ALTERNATES[rawChar.lowercase()]
+                                if (alternates != null && alternates.isNotEmpty()) {
+                                    longPressHandler.removeCallbacksAndMessages(null)
+                                    val targetPid = pointerId
+                                    longPressHandler.postDelayed({
+                                        val st = pointerStates[targetPid.coerceIn(0, 9)]
+                                        if (st.active && !st.isGlide) {
+                                            if (st.characterCommitted) {
+                                                currentInputConnection?.deleteSurroundingText(1, 0)
+                                                if (composingWord.isNotEmpty()) composingWord.deleteCharAt(composingWord.length - 1)
+                                                st.characterCommitted = false
+                                            }
+                                            st.isLongPressActive = true
+                                            hideFloatingPopup()
+                                            showSecondaryCharacterRail(targetBtn, alternates)
+                                            performKeyHaptic(targetBtn)
+                                        }
+                                    }, 320L)
+                                }
+                            }
 
                             // Gesture glide trajectory tracking (primary pointer only)
                             if (pointerId == 0) {
@@ -937,12 +1202,15 @@ class ZenoDeckKeyboardService : InputMethodService() {
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val state = pointerStates[pointerId.coerceIn(0, 9)]
-                        if (isGestureTypingEnabled && state.active && pointerId == 0 && !isSymbolsMode) {
+                        if (state.isLongPressActive) {
+                            updateSecondaryCharacterRailSelection(event.getRawX(pointerIndex))
+                        } else if (isGestureTypingEnabled && state.active && pointerId == 0 && !isSymbolsMode) {
                             val dist = Math.hypot(
                                 (event.getRawX(pointerIndex) - state.downX).toDouble(),
                                 (event.getRawY(pointerIndex) - state.downY).toDouble()
                             )
                             if (!state.isGlide && dist >= gestureThreshold) {
+                                longPressHandler.removeCallbacksAndMessages(null)
                                 state.isGlide = true
                                 if (state.characterCommitted) {
                                     currentInputConnection?.deleteSurroundingText(1, 0)
@@ -951,6 +1219,9 @@ class ZenoDeckKeyboardService : InputMethodService() {
                                 }
                             }
                             if (state.isGlide) {
+                                if (isGlideTrailEnabled) {
+                                    glideTrailOverlay?.addPoint(event.getRawX(pointerIndex), event.getRawY(pointerIndex))
+                                }
                                 val currentKey = findKeyAtLocation(event.getRawX(pointerIndex), event.getRawY(pointerIndex))
                                 if (currentKey != null) {
                                     val c = currentKey.tag as? String
@@ -966,7 +1237,18 @@ class ZenoDeckKeyboardService : InputMethodService() {
                         true
                     }
                     MotionEvent.ACTION_POINTER_UP -> {
+                        longPressHandler.removeCallbacksAndMessages(null)
                         val state = pointerStates[pointerId.coerceIn(0, 9)]
+                        if (state.isLongPressActive) {
+                            val chosen = getSelectedRailChar()
+                            if (chosen.isNotEmpty()) {
+                                currentInputConnection?.commitText(chosen, 1)
+                                composingWord.append(chosen)
+                                state.button?.let { performKeyHaptic(it) }
+                            }
+                            hideSecondaryCharacterRail()
+                            state.isLongPressActive = false
+                        }
                         if (state.active) {
                             state.button?.let { hideKeyHighlight(it) }
                             state.active = false
@@ -977,8 +1259,19 @@ class ZenoDeckKeyboardService : InputMethodService() {
                         true
                     }
                     MotionEvent.ACTION_UP -> {
+                        longPressHandler.removeCallbacksAndMessages(null)
                         val state = pointerStates[pointerId.coerceIn(0, 9)]
-                        if (state.isGlide && glideTrajectory.size >= 2 && !isSymbolsMode) {
+                        if (state.isLongPressActive) {
+                            val chosen = getSelectedRailChar()
+                            if (chosen.isNotEmpty()) {
+                                currentInputConnection?.commitText(chosen, 1)
+                                composingWord.append(chosen)
+                                state.button?.let { performKeyHaptic(it) }
+                            }
+                            hideSecondaryCharacterRail()
+                            state.isLongPressActive = false
+                        } else if (state.isGlide && glideTrajectory.size >= 2 && !isSymbolsMode) {
+                            glideTrailOverlay?.finishTrail()
                             // Retract any initial character if not already retracted during ACTION_MOVE
                             if (state.characterCommitted) {
                                 currentInputConnection?.deleteSurroundingText(1, 0)
@@ -999,27 +1292,36 @@ class ZenoDeckKeyboardService : InputMethodService() {
                             updatePredictiveCandidates()
                             checkAutoCapitalization()
                         } else if (state.isGlide && !state.characterCommitted && state.keyChar.isNotEmpty()) {
+                            glideTrailOverlay?.finishTrail()
                             // Short swipe aborted without reaching a valid word: restore original tapped character
                             currentInputConnection?.commitText(state.keyChar, 1)
                             composingWord.append(state.keyChar)
+                        } else {
+                            glideTrailOverlay?.finishTrail()
                         }
                         // Clean up all pointer states and visual feedback
                         hideFloatingPopup()
+                        hideSecondaryCharacterRail()
                         for (s in pointerStates) {
                             s.button?.let { hideKeyHighlight(it) }
                             s.active = false
                             s.characterCommitted = false
+                            s.isLongPressActive = false
                             s.button = null
                         }
                         glideTrajectory.clear()
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
+                        longPressHandler.removeCallbacksAndMessages(null)
+                        glideTrailOverlay?.finishTrail()
                         hideFloatingPopup()
+                        hideSecondaryCharacterRail()
                         for (s in pointerStates) {
                             s.button?.let { hideKeyHighlight(it) }
                             s.active = false
                             s.characterCommitted = false
+                            s.isLongPressActive = false
                             s.button = null
                         }
                         glideTrajectory.clear()
@@ -1201,7 +1503,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val totalDelta = event.x - downX
-                    if (!isScrubbing && Math.abs(totalDelta) >= scrubThreshold) {
+                    if (isCursorScrubEnabled && !isScrubbing && Math.abs(totalDelta) >= scrubThreshold) {
                         isScrubbing = true
                     }
                     if (isScrubbing) {
@@ -1650,6 +1952,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
     private fun applyKeyboardSettings() {
         applyKeyboardDimensions(keyboardRootView)
+        applyOneHandedLayout()
         applyKeyLayout(if (isSymbolsMode) "SYMBOLS" else currentLayout)
         layoutNumberRow?.visibility = if (layoutKeysView?.visibility == View.VISIBLE && isShowNumberRow) View.VISIBLE else View.GONE
     }
@@ -1677,6 +1980,26 @@ class ZenoDeckKeyboardService : InputMethodService() {
             isAutoCorrectEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_AUTO_CORRECT, true)
             isGestureTypingEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_GESTURE_TYPING, true)
             isDoubleSpacePeriodEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_DOUBLE_SPACE_PERIOD, true)
+            hapticStrength = prefs.getInt(
+                ZenoDeckKeyboardBridgePlugin.PREF_KEY_HAPTIC_STRENGTH,
+                ZenoDeckKeyboardBridgePlugin.DEFAULT_HAPTIC_STRENGTH
+            ).coerceIn(0, 3)
+            isKeyPopupEnabled = prefs.getBoolean(
+                ZenoDeckKeyboardBridgePlugin.PREF_KEY_KEY_POPUP_ENABLED,
+                ZenoDeckKeyboardBridgePlugin.DEFAULT_KEY_POPUP_ENABLED
+            )
+            isCursorScrubEnabled = prefs.getBoolean(
+                ZenoDeckKeyboardBridgePlugin.PREF_KEY_CURSOR_SCRUB_ENABLED,
+                ZenoDeckKeyboardBridgePlugin.DEFAULT_CURSOR_SCRUB_ENABLED
+            )
+            isGlideTrailEnabled = prefs.getBoolean(
+                ZenoDeckKeyboardBridgePlugin.PREF_KEY_GLIDE_TRAIL_ENABLED,
+                ZenoDeckKeyboardBridgePlugin.DEFAULT_GLIDE_TRAIL_ENABLED
+            )
+            oneHandedMode = prefs.getString(
+                ZenoDeckKeyboardBridgePlugin.PREF_KEY_ONE_HANDED_MODE,
+                ZenoDeckKeyboardBridgePlugin.DEFAULT_ONE_HANDED_MODE
+            ) ?: ZenoDeckKeyboardBridgePlugin.DEFAULT_ONE_HANDED_MODE
         } catch (e: Exception) {
             Log.e(TAG, "Error loading keyboard settings", e)
         }
@@ -1909,11 +2232,15 @@ class ZenoDeckKeyboardService : InputMethodService() {
         hidePopupOverlay()
         hideKeyEcho()
         hideFloatingPopup()
+        hideSecondaryCharacterRail()
+        glideTrailOverlay?.clearBuffer()
         backspaceHandler.removeCallbacksAndMessages(null)
+        longPressHandler.removeCallbacksAndMessages(null)
         for (s in pointerStates) {
             s.button?.let { hideKeyHighlight(it) }
             s.active = false
             s.characterCommitted = false
+            s.isLongPressActive = false
             s.button = null
         }
     }
@@ -1922,10 +2249,15 @@ class ZenoDeckKeyboardService : InputMethodService() {
         super.onDestroy()
         echoHandler.removeCallbacksAndMessages(null)
         backspaceHandler.removeCallbacksAndMessages(null)
+        longPressHandler.removeCallbacksAndMessages(null)
         hideFloatingPopup()
+        hideSecondaryCharacterRail()
+        glideTrailOverlay?.clearBuffer()
         for (s in pointerStates) {
             s.button?.let { hideKeyHighlight(it) }
             s.active = false
+            s.characterCommitted = false
+            s.isLongPressActive = false
             s.button = null
         }
         if (isReceiverRegistered) {

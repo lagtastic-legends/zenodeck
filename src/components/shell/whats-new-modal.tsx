@@ -179,19 +179,19 @@ export function WhatsNewModal() {
         />
 
         <FeatureCard
-          icon={<Download className="size-4.5 text-amber-400" />}
-          title="Direct Stream Engine"
-          badge="Anti-Freeze 🛡️"
-          description="Resolved 5% download freeze with RFC 7233 byte-range fallback, dynamic User-Agent headers, and 18s stall watchdogs for a streamlined downloader."
+          icon={<Zap className="size-4.5 text-amber-400" />}
+          title="Tactile &amp; Ergonomics Suite"
+          badge="v1.0.37 🎛️"
+          description="4-tier hardware haptics (Off, Light, Crisp, Strong), 320ms long-press secondary character rail with instant retraction, and spacebar scrubbing toggles."
           accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
           badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
         />
 
         <FeatureCard
           icon={<Layers className="size-4.5 text-indigo-400" />}
-          title="Multi-Slide Carousel Hub"
-          badge="All Slides 📸"
-          description="Extract all photo and video slides from TikTok slideshows, Instagram carousels, Twitter/X posts, and Reddit multi-image galleries."
+          title="One-Handed &amp; Glide Trail"
+          badge="120fps ✨"
+          description="82% ergonomic docked grid with 18% expand and flip side gutters, plus a zero-allocation 24-point Champagne Gold glide typing particle trail."
           accentClass="bg-indigo-500/15 text-indigo-400 border border-indigo-500/30"
           badgeClass="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30"
         />

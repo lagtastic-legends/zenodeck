@@ -87,12 +87,24 @@ import {
   getGestureTyping,
   setKeyboardHeightScale,
   getKeyboardHeightScale,
+  setHapticStrength,
+  getHapticStrength,
+  setKeyPopupEnabled,
+  getKeyPopupEnabled,
+  setCursorScrubEnabled,
+  getCursorScrubEnabled,
+  setGlideTrailEnabled,
+  getGlideTrailEnabled,
+  setOneHandedMode,
+  getOneHandedMode,
   getClipboardHistory,
   clearClipboardHistory,
   type DeckGifItem,
   type KeyboardStatus,
   type KeyboardTheme,
   type KeyboardLayoutMode,
+  type HapticStrength,
+  type OneHandedMode,
   type ClipboardVaultItemBridge,
 } from "@/lib/zenodeck-bridge";
 import {
@@ -451,6 +463,11 @@ export function KeyboardDeckManager() {
   const [autoCorrect, setAutoCorrectState] = useState<boolean>(true);
   const [gestureTyping, setGestureTypingState] = useState<boolean>(true);
   const [keyboardHeightScale, setKeyboardHeightScaleState] = useState<number>(1.18);
+  const [hapticStrength, setHapticStrengthState] = useState<HapticStrength>(2);
+  const [keyPopupEnabled, setKeyPopupEnabledState] = useState<boolean>(true);
+  const [cursorScrubEnabled, setCursorScrubEnabledState] = useState<boolean>(true);
+  const [glideTrailEnabled, setGlideTrailEnabledState] = useState<boolean>(true);
+  const [oneHandedMode, setOneHandedModeState] = useState<OneHandedMode>("off");
   const [clipboardItems, setClipboardItems] = useState<ClipboardVaultItemBridge[]>([]);
   const [testSandboxText, setTestSandboxText] = useState<string>("");
   const heightDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -480,6 +497,11 @@ export function KeyboardDeckManager() {
         savedClips,
         savedGesture,
         savedHeightScale,
+        savedHaptic,
+        savedKeyPopup,
+        savedCursorScrub,
+        savedGlideTrail,
+        savedOneHanded,
       ] = await Promise.all([
         getKeyboardDeckGifs(),
         getKeyboardStatus(),
@@ -490,6 +512,11 @@ export function KeyboardDeckManager() {
         getClipboardHistory(),
         getGestureTyping(),
         getKeyboardHeightScale(),
+        getHapticStrength(),
+        getKeyPopupEnabled(),
+        getCursorScrubEnabled(),
+        getGlideTrailEnabled(),
+        getOneHandedMode(),
       ]);
       setGifs(deckItems);
       setStatus(imeStatus);
@@ -499,6 +526,11 @@ export function KeyboardDeckManager() {
       setAutoCorrectState(savedAutoCorr);
       setGestureTypingState(savedGesture);
       setKeyboardHeightScaleState(savedHeightScale || 1.18);
+      setHapticStrengthState(savedHaptic ?? 2);
+      setKeyPopupEnabledState(savedKeyPopup ?? true);
+      setCursorScrubEnabledState(savedCursorScrub ?? true);
+      setGlideTrailEnabledState(savedGlideTrail ?? true);
+      setOneHandedModeState(savedOneHanded ?? "off");
       setClipboardItems(savedClips);
       setSyncToken(getStoredSyncToken());
       setPairedDeviceName(getStoredDeviceName());
@@ -704,6 +736,47 @@ export function KeyboardDeckManager() {
     await setKeyboardHeightScale(defaultScale);
     void haptics.impact();
     toast.success("Keyboard height restored to default (1.18x · 305dp)");
+  };
+
+  const handleHapticStrengthChange = async (strength: HapticStrength) => {
+    setHapticStrengthState(strength);
+    await setHapticStrength(strength);
+    void haptics.impact();
+    const labels = ["Off", "Light", "Crisp", "Strong"];
+    toast.success(`Haptic feedback set to ${labels[strength]}`);
+  };
+
+  const handleOneHandedModeChange = async (mode: OneHandedMode) => {
+    setOneHandedModeState(mode);
+    await setOneHandedMode(mode);
+    void haptics.impact();
+    const labels: Record<OneHandedMode, string> = {
+      off: "Full Width",
+      left: "Left-Hand Mode (82%)",
+      right: "Right-Hand Mode (82%)",
+    };
+    toast.success(`One-handed mode set to ${labels[mode]}`);
+  };
+
+  const handleKeyPopupChange = async (enabled: boolean) => {
+    setKeyPopupEnabledState(enabled);
+    await setKeyPopupEnabled(enabled);
+    void haptics.impact();
+    toast.success(`Key popovers ${enabled ? "enabled" : "disabled"}`);
+  };
+
+  const handleCursorScrubChange = async (enabled: boolean) => {
+    setCursorScrubEnabledState(enabled);
+    await setCursorScrubEnabled(enabled);
+    void haptics.impact();
+    toast.success(`Cursor scrubbing ${enabled ? "enabled" : "disabled"}`);
+  };
+
+  const handleGlideTrailChange = async (enabled: boolean) => {
+    setGlideTrailEnabledState(enabled);
+    await setGlideTrailEnabled(enabled);
+    void haptics.impact();
+    toast.success(`120fps glide trail ${enabled ? "enabled" : "disabled"}`);
   };
 
   const handleClearClipboard = async () => {
@@ -1255,6 +1328,10 @@ export function KeyboardDeckManager() {
         injectedItem={injectedItem}
         onSelectInspectItem={selectVaultItemForInspection}
         heightScale={keyboardHeightScale}
+        oneHandedMode={oneHandedMode}
+        keyPopupEnabled={keyPopupEnabled}
+        glideTrailEnabled={glideTrailEnabled}
+        onOneHandedModeChanged={handleOneHandedModeChange}
       />
 
       {/* 8. Gboard-Grade Native Keyboard Engine & Layout Studio */}
@@ -1537,6 +1614,161 @@ export function KeyboardDeckManager() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Tactile & Ergonomics Control Suite (v1.0.37) */}
+        <div className="p-4 rounded-xl border border-sky-400/20 bg-[#111828]/80 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-sky-400/10 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="size-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Sparkles className="size-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-[#e0e8f0] flex items-center gap-2">
+                  Tactile &amp; Ergonomics Control Suite
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    v1.0.37
+                  </span>
+                </span>
+                <p className="text-[10px] text-[#a0b4c4] mt-0.5">
+                  Hardware haptics, one-handed docked grid, long-press secondary rail, and 120fps glide trail.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 1: Tactile Haptic Feedback Strength */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+                📳 Haptic Feedback Strength
+              </span>
+              <span className="text-[10px] font-mono text-cyan-400 font-bold">
+                {["0 · Off", "1 · Light", "2 · Crisp Default", "3 · Strong"][hapticStrength]}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[
+                { label: "Off", value: 0 as HapticStrength, desc: "Silent" },
+                { label: "Light", value: 1 as HapticStrength, desc: "Subtle" },
+                { label: "Crisp", value: 2 as HapticStrength, desc: "Tactile" },
+                { label: "Strong", value: 3 as HapticStrength, desc: "Click" },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => void handleHapticStrengthChange(item.value)}
+                  className={`py-2 px-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex flex-col items-center justify-center border ${
+                    hapticStrength === item.value
+                      ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.25)]"
+                      : "bg-[#141c2e] border-sky-400/15 text-[#a0b4c4] hover:text-[#e0e8f0] hover:border-sky-400/30"
+                  }`}
+                >
+                  <span className="font-bold">{item.label}</span>
+                  <span className="text-[9px] opacity-70 font-mono">{item.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 2: One-Handed Mode */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-[#e0e8f0] flex items-center gap-1.5">
+                📱 One-Handed Docking
+              </span>
+              <span className="text-[10px] font-mono text-cyan-400 font-bold">
+                {oneHandedMode === "off" ? "100% Full Width" : oneHandedMode === "left" ? "82% Left-Docked" : "82% Right-Docked"}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Full Width", mode: "off" as OneHandedMode, icon: "⛶" },
+                { label: "Left Hand", mode: "left" as OneHandedMode, icon: "◀" },
+                { label: "Right Hand", mode: "right" as OneHandedMode, icon: "▶" },
+              ].map((item) => (
+                <button
+                  key={item.mode}
+                  type="button"
+                  onClick={() => void handleOneHandedModeChange(item.mode)}
+                  className={`py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                    oneHandedMode === item.mode
+                      ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.25)]"
+                      : "bg-[#141c2e] border-sky-400/15 text-[#a0b4c4] hover:text-[#e0e8f0] hover:border-sky-400/30"
+                  }`}
+                >
+                  <span>{item.icon}</span>
+                  <span className="font-bold">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 3: Feature Toggles */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-sky-400/10">
+            {/* Key Popovers Toggle */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
+              <div>
+                <p className="text-xs font-semibold text-[#e0e8f0]">Key Popovers</p>
+                <p className="text-[9px] text-[#a0b4c4]">Instant floating preview</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleKeyPopupChange(!keyPopupEnabled)}
+                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                  keyPopupEnabled ? "bg-cyan-500" : "bg-neutral-700"
+                }`}
+              >
+                <div
+                  className={`size-3.5 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 ${
+                    keyPopupEnabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Cursor Scrubbing Toggle */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
+              <div>
+                <p className="text-xs font-semibold text-[#e0e8f0]">Cursor Scrub</p>
+                <p className="text-[9px] text-[#a0b4c4]">Spacebar trackpad</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleCursorScrubChange(!cursorScrubEnabled)}
+                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                  cursorScrubEnabled ? "bg-cyan-500" : "bg-neutral-700"
+                }`}
+              >
+                <div
+                  className={`size-3.5 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 ${
+                    cursorScrubEnabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 120fps Glide Trail Toggle */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
+              <div>
+                <p className="text-xs font-semibold text-[#e0e8f0]">Glide Trail</p>
+                <p className="text-[9px] text-[#a0b4c4]">120fps particle trail</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleGlideTrailChange(!glideTrailEnabled)}
+                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                  glideTrailEnabled ? "bg-cyan-500" : "bg-neutral-700"
+                }`}
+              >
+                <div
+                  className={`size-3.5 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 ${
+                    glideTrailEnabled ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </div>
 

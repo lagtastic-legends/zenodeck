@@ -5,12 +5,58 @@
     android:layout_height="@dimen/keyboard_total_height">
 
     <LinearLayout
-        android:id="@+id/keyboard_root"
+        android:id="@+id/layout_one_handed_wrapper"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="#0E0F14"
-        android:padding="@dimen/keyboard_padding">
+        android:orientation="horizontal">
+
+        <!-- Left Ergonomic Gutter (shown when one_handed_mode == "right") -->
+        <LinearLayout
+            android:id="@+id/layout_one_handed_gutter_left"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.18"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="#12141C"
+            android:visibility="gone"
+            android:padding="4dp">
+
+            <Button
+                android:id="@+id/btn_one_handed_expand_left"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="38dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_keycap_special"
+                android:text="⤢"
+                android:textColor="#F7E7CE"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="16dp" />
+
+            <Button
+                android:id="@+id/btn_one_handed_flip_left"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="38dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_keycap_special"
+                android:text="⇄"
+                android:textColor="#22D3EE"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/keyboard_root"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.0"
+            android:orientation="vertical"
+            android:background="#0E0F14"
+            android:padding="@dimen/keyboard_padding">
 
         <!-- Top Morphing Utility Ribbon: Controls, Mode Pills & Status Indicator -->
         <LinearLayout
@@ -909,6 +955,54 @@
         </LinearLayout>
     </LinearLayout>
 
+        <!-- Right Ergonomic Gutter (shown when one_handed_mode == "left") -->
+        <LinearLayout
+            android:id="@+id/layout_one_handed_gutter_right"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0.18"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="#12141C"
+            android:visibility="gone"
+            android:padding="4dp">
+
+            <Button
+                android:id="@+id/btn_one_handed_expand_right"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="38dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_keycap_special"
+                android:text="⤢"
+                android:textColor="#F7E7CE"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="16dp" />
+
+            <Button
+                android:id="@+id/btn_one_handed_flip_right"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="38dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_keycap_special"
+                android:text="⇄"
+                android:textColor="#22D3EE"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 120fps Zero-Allocation Glide Typing Trail Overlay -->
+    <com.omnitool.app.keyboard.GlideTrailOverlayView
+        android:id="@+id/glide_trail_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false" />
+
     <!-- 120fps GPU-Accelerated Floating Key Character Preview Popup -->
     <TextView
         android:id="@+id/tv_floating_key_popup"
@@ -922,6 +1016,80 @@
         android:textStyle="bold"
         android:elevation="16dp"
         android:visibility="gone" />
+
+    <!-- Long-Press Floating Secondary Character Alternate Rail -->
+    <LinearLayout
+        android:id="@+id/layout_secondary_rail"
+        android:layout_width="wrap_content"
+        android:layout_height="46dp"
+        android:layout_gravity="top|start"
+        android:orientation="horizontal"
+        android:background="@drawable/bg_utility_pill"
+        android:elevation="20dp"
+        android:paddingHorizontal="4dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/rail_slot_0"
+            android:layout_width="36dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/rail_slot_1"
+            android:layout_width="36dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/rail_slot_2"
+            android:layout_width="36dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/rail_slot_3"
+            android:layout_width="36dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/rail_slot_4"
+            android:layout_width="36dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/rail_slot_5"
+            android:layout_width="36dp"
+            android:layout_height="38dp"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <!-- Inline Glassmorphic Popup Overlay (Avoids BadTokenException) -->
     <FrameLayout

@@ -5,6 +5,34 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.37] — 2026-11-22
+
+### 🎛️ ZenoTap Tactile & Ergonomic Control Suite
+- **Unified Settings Schema (Native + Capacitor Bridge + Web Fallback)**:
+  - Extended `ZenoDeckKeyboardBridgePlugin.kt`, `src/lib/zenodeck-bridge.ts`, and `ZenoDeckKeyboardService.kt` with persistent preferences:
+    - `keyboard_haptic_strength`: 4-tier tactile haptic feedback (`0` = Off, `1` = Light, `2` = Crisp Default, `3` = Strong).
+    - `keyboard_key_popup_enabled`: Toggle floating character preview popups.
+    - `keyboard_cursor_scrub_enabled`: Toggle spacebar horizontal trackpad cursor scrubbing.
+    - `keyboard_glide_trail_enabled`: Toggle 120fps glide typing particle trail.
+    - `keyboard_one_handed_mode`: `"off"`, `"left"`, or `"right"`.
+  - Live broadcast synchronization via `ACTION_SETTINGS_UPDATED` without restarting the IME.
+- **One-Handed Mode (82% Width Docked Grid & 18% Side Gutters)**:
+  - Compresses key grid to 82% of screen width aligned to the left or right edge while maintaining proportional height scaling.
+  - Ergonomic 18% side gutter featuring **Expand to Full Width** (`⤢`) and **Flip Hand (Left ↔ Right)** (`⇄`) action buttons with instant preference persistence.
+  - Automatic hit-testing alignment for docked key positions.
+- **Long-Press Character Rail (320ms Timer & Instant Retraction)**:
+  - Preallocated 320ms long-press timer on character keys with secondary alternates (numbers 1-0 on top row Q-P, punctuation, accented vowels).
+  - Automatically retracts speculative `ACTION_DOWN` character via `deleteSurroundingText(1, 0)` upon timer expiration and reveals a floating alternate character rail above the keycap.
+  - Smooth horizontal dragging across rail slots highlights alternates and commits the selected character on `ACTION_UP`.
+  - Automatically suppressed in password fields (`isPasswordInputType()`).
+- **120fps Zero-Allocation Glide Typing Trail**:
+  - `GlideTrailOverlayView` custom view featuring a preallocated 24-point circular ring buffer `(x, y, timestamp)` and reusable `Path`/`Paint` objects.
+  - Renders smooth Champagne Gold (`#F7E7CE`) trajectory overlay with a 140ms hardware-accelerated fade-out animator upon pointer release.
+  - Strictly zero allocations on hot touch (`onTouchEvent`) and draw (`onDraw`) paths.
+- **React Keyboard Deck UI & Interactive Simulator Synchronization**:
+  - Added "Tactile & Ergonomics Control Suite" card in `keyboard-deck-manager.tsx`.
+  - Synchronized one-handed docking, key popovers, and particle trail states with `ZenoTapKeyboardSimulator.tsx`.
+
 ## [1.0.36] — 2026-11-21
 
 ### ⌨️ Flagship Zero-Latency Android IME Upgrade & Proportional Scaling

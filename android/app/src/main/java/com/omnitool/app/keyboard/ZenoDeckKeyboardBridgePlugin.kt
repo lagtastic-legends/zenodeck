@@ -48,6 +48,16 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         const val PREF_KEY_DOUBLE_SPACE_PERIOD = "keyboard_double_space_period"
         const val PREF_KEY_KEYBOARD_HEIGHT_SCALE = "keyboard_height_scale"
         const val DEFAULT_KEYBOARD_HEIGHT_SCALE = 1.18f
+        const val PREF_KEY_HAPTIC_STRENGTH = "keyboard_haptic_strength"
+        const val DEFAULT_HAPTIC_STRENGTH = 2
+        const val PREF_KEY_KEY_POPUP_ENABLED = "keyboard_key_popup_enabled"
+        const val DEFAULT_KEY_POPUP_ENABLED = true
+        const val PREF_KEY_CURSOR_SCRUB_ENABLED = "keyboard_cursor_scrub_enabled"
+        const val DEFAULT_CURSOR_SCRUB_ENABLED = true
+        const val PREF_KEY_GLIDE_TRAIL_ENABLED = "keyboard_glide_trail_enabled"
+        const val DEFAULT_GLIDE_TRAIL_ENABLED = true
+        const val PREF_KEY_ONE_HANDED_MODE = "keyboard_one_handed_mode"
+        const val DEFAULT_ONE_HANDED_MODE = "off"
         const val PREF_KEY_CLIPBOARD_VAULT = "zenotap_clipboard_vault"
 
         const val THEME_OBSIDIAN = "obsidian"
@@ -513,6 +523,188 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
             call.resolve(JSObject().put("scale", scale.toDouble()))
         } catch (e: Exception) {
             call.reject("Failed to get keyboard height scale: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets tactile haptic feedback strength (0 = Off, 1 = Light, 2 = Crisp Default, 3 = Strong).
+     */
+    @PluginMethod
+    fun setHapticStrength(call: PluginCall) {
+        val rawStrength = call.getInt("strength") ?: DEFAULT_HAPTIC_STRENGTH
+        val strength = rawStrength.coerceIn(0, 3)
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putInt(PREF_KEY_HAPTIC_STRENGTH, strength).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "haptic_strength")
+                putExtra("strength", strength)
+            }
+            context.sendBroadcast(intent)
+            call.resolve(JSObject().put("success", true).put("strength", strength))
+        } catch (e: Exception) {
+            call.reject("Failed to set haptic strength: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves current tactile haptic feedback strength.
+     */
+    @PluginMethod
+    fun getHapticStrength(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val strength = prefs.getInt(PREF_KEY_HAPTIC_STRENGTH, DEFAULT_HAPTIC_STRENGTH)
+            call.resolve(JSObject().put("strength", strength))
+        } catch (e: Exception) {
+            call.reject("Failed to get haptic strength: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets whether floating keycap character preview popups are enabled.
+     */
+    @PluginMethod
+    fun setKeyPopupEnabled(call: PluginCall) {
+        val enabled = call.getBoolean("enabled", DEFAULT_KEY_POPUP_ENABLED) ?: DEFAULT_KEY_POPUP_ENABLED
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(PREF_KEY_KEY_POPUP_ENABLED, enabled).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "key_popup")
+                putExtra("enabled", enabled)
+            }
+            context.sendBroadcast(intent)
+            call.resolve(JSObject().put("success", true).put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to set key popup setting: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves whether floating keycap character preview popups are enabled.
+     */
+    @PluginMethod
+    fun getKeyPopupEnabled(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val enabled = prefs.getBoolean(PREF_KEY_KEY_POPUP_ENABLED, DEFAULT_KEY_POPUP_ENABLED)
+            call.resolve(JSObject().put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to get key popup setting: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets whether spacebar horizontal cursor scrubbing is enabled.
+     */
+    @PluginMethod
+    fun setCursorScrubEnabled(call: PluginCall) {
+        val enabled = call.getBoolean("enabled", DEFAULT_CURSOR_SCRUB_ENABLED) ?: DEFAULT_CURSOR_SCRUB_ENABLED
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(PREF_KEY_CURSOR_SCRUB_ENABLED, enabled).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "cursor_scrub")
+                putExtra("enabled", enabled)
+            }
+            context.sendBroadcast(intent)
+            call.resolve(JSObject().put("success", true).put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to set cursor scrub setting: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves whether spacebar horizontal cursor scrubbing is enabled.
+     */
+    @PluginMethod
+    fun getCursorScrubEnabled(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val enabled = prefs.getBoolean(PREF_KEY_CURSOR_SCRUB_ENABLED, DEFAULT_CURSOR_SCRUB_ENABLED)
+            call.resolve(JSObject().put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to get cursor scrub setting: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets whether the 120fps glide typing particle trail is enabled.
+     */
+    @PluginMethod
+    fun setGlideTrailEnabled(call: PluginCall) {
+        val enabled = call.getBoolean("enabled", DEFAULT_GLIDE_TRAIL_ENABLED) ?: DEFAULT_GLIDE_TRAIL_ENABLED
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putBoolean(PREF_KEY_GLIDE_TRAIL_ENABLED, enabled).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "glide_trail")
+                putExtra("enabled", enabled)
+            }
+            context.sendBroadcast(intent)
+            call.resolve(JSObject().put("success", true).put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to set glide trail setting: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves whether the 120fps glide typing particle trail is enabled.
+     */
+    @PluginMethod
+    fun getGlideTrailEnabled(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val enabled = prefs.getBoolean(PREF_KEY_GLIDE_TRAIL_ENABLED, DEFAULT_GLIDE_TRAIL_ENABLED)
+            call.resolve(JSObject().put("enabled", enabled))
+        } catch (e: Exception) {
+            call.reject("Failed to get glide trail setting: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Sets one-handed keyboard mode ('off', 'left', or 'right').
+     */
+    @PluginMethod
+    fun setOneHandedMode(call: PluginCall) {
+        val rawMode = call.getString("mode")?.lowercase() ?: DEFAULT_ONE_HANDED_MODE
+        val mode = if (rawMode == "left" || rawMode == "right") rawMode else "off"
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putString(PREF_KEY_ONE_HANDED_MODE, mode).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "one_handed")
+                putExtra("mode", mode)
+            }
+            context.sendBroadcast(intent)
+            call.resolve(JSObject().put("success", true).put("mode", mode))
+        } catch (e: Exception) {
+            call.reject("Failed to set one-handed mode: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves the active one-handed keyboard mode ('off', 'left', or 'right').
+     */
+    @PluginMethod
+    fun getOneHandedMode(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val mode = prefs.getString(PREF_KEY_ONE_HANDED_MODE, DEFAULT_ONE_HANDED_MODE) ?: DEFAULT_ONE_HANDED_MODE
+            call.resolve(JSObject().put("mode", mode))
+        } catch (e: Exception) {
+            call.reject("Failed to get one-handed mode: ${e.message}", e)
         }
     }
 

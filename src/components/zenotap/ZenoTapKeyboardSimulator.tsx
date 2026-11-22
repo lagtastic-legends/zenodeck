@@ -21,6 +21,7 @@ import {
   getKeyboardTheme,
   type DeckGifItem,
   type KeyboardTheme,
+  type OneHandedMode,
 } from "@/lib/zenodeck-bridge";
 import { useSensoryFeedback } from "@/hooks/useSensoryFeedback";
 import { toast } from "sonner";
@@ -49,6 +50,10 @@ interface ZenoTapKeyboardSimulatorProps {
   injectedItem?: ZenoTapInjectedItem | null;
   onSelectInspectItem?: (item: DeckGifItem) => void;
   heightScale?: number;
+  oneHandedMode?: OneHandedMode;
+  keyPopupEnabled?: boolean;
+  glideTrailEnabled?: boolean;
+  onOneHandedModeChanged?: (mode: OneHandedMode) => void;
 }
 
 const DEFAULT_SAMPLE_ITEMS: DeckGifItem[] = [
@@ -65,6 +70,10 @@ export function ZenoTapKeyboardSimulator({
   injectedItem = null,
   onSelectInspectItem,
   heightScale = 1.18,
+  oneHandedMode = "off",
+  keyPopupEnabled = true,
+  glideTrailEnabled = true,
+  onOneHandedModeChanged,
 }: ZenoTapKeyboardSimulatorProps) {
   const sensory = useSensoryFeedback();
   const [theme, setTheme] = useState<KeyboardTheme>("glacier");
@@ -141,6 +150,7 @@ export function ZenoTapKeyboardSimulator({
   };
 
   const triggerEcho = (text: string, duration = 800) => {
+    if (!keyPopupEnabled) return;
     setKeyEcho(text);
     setTimeout(() => {
       setKeyEcho((curr) => (curr === text ? null : curr));
@@ -600,39 +610,76 @@ export function ZenoTapKeyboardSimulator({
                 </div>
               </div>
             ) : (
-              /* Miniature QWERTY Keys */
+              /* Miniature QWERTY Keys with One-Handed Ergonomic Docking */
               <div
-                className="text-center font-mono w-full max-w-full overflow-hidden px-0.5 flex flex-col transition-all duration-150"
-                style={{ gap: `${scaledRowGap}px` }}
+                className={`w-full max-w-full overflow-hidden flex items-center transition-all duration-200 ${
+                  oneHandedMode === "right" ? "flex-row-reverse" : "flex-row"
+                }`}
               >
-                {["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row, rowIdx) => (
-                  <div key={rowIdx} className="flex justify-center gap-0.5 sm:gap-1 w-full">
-                    {row.split("").map((char) => (
-                      <motion.button
-                        key={char}
-                        whileTap={{ scale: 0.88 }}
-                        onClick={() => {
-                          sensory.triggerTap();
-                          const updated =
-                            inputText.slice(0, cursorPos) + char + inputText.slice(cursorPos);
-                          setInputText(updated);
-                          setCursorPos((p) => p + 1);
-                          triggerEcho(char, 200);
-                        }}
-                        style={{ height: `${scaledKeyHeight}px` }}
-                        className={`flex-1 min-w-0 max-w-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center p-0 ${
-                          isGlacier
-                            ? "bg-[#141c2e]/90 text-[#e0e8f0] border border-sky-400/20 hover:border-[#7dd3fc]/60 hover:bg-[#1a2438]"
-                            : isTerracotta
-                            ? "bg-[#342A24] text-[#FAF5EE] hover:bg-[#43362E]"
-                            : "bg-[#27272E] text-neutral-100 border border-neutral-700/60 hover:bg-neutral-800"
-                        }`}
-                      >
-                        {char}
-                      </motion.button>
-                    ))}
+                {/* 82% Key Grid Container (or 100% in full-width mode) */}
+                <div
+                  className={`text-center font-mono overflow-hidden px-0.5 flex flex-col transition-all duration-150 ${
+                    oneHandedMode === "left" || oneHandedMode === "right" ? "w-[82%]" : "w-full"
+                  }`}
+                  style={{ gap: `${scaledRowGap}px` }}
+                >
+                  {["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row, rowIdx) => (
+                    <div key={rowIdx} className="flex justify-center gap-0.5 sm:gap-1 w-full">
+                      {row.split("").map((char) => (
+                        <motion.button
+                          key={char}
+                          whileTap={{ scale: 0.88 }}
+                          onClick={() => {
+                            sensory.triggerTap();
+                            const updated =
+                              inputText.slice(0, cursorPos) + char + inputText.slice(cursorPos);
+                            setInputText(updated);
+                            setCursorPos((p) => p + 1);
+                            triggerEcho(char, 200);
+                          }}
+                          style={{ height: `${scaledKeyHeight}px` }}
+                          className={`flex-1 min-w-0 max-w-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center p-0 ${
+                            isGlacier
+                              ? "bg-[#141c2e]/90 text-[#e0e8f0] border border-sky-400/20 hover:border-[#7dd3fc]/60 hover:bg-[#1a2438]"
+                              : isTerracotta
+                              ? "bg-[#342A24] text-[#FAF5EE] hover:bg-[#43362E]"
+                              : "bg-[#27272E] text-neutral-100 border border-neutral-700/60 hover:bg-neutral-800"
+                          }`}
+                        >
+                          {char}
+                        </motion.button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 18% Ergonomic Side Gutter (Visible only in One-Handed Mode) */}
+                {(oneHandedMode === "left" || oneHandedMode === "right") && (
+                  <div className="w-[18%] flex flex-col items-center justify-center gap-2 px-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sensory.triggerTap();
+                        onOneHandedModeChanged?.("off");
+                      }}
+                      title="Expand to Full Width"
+                      className="w-full py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/30 text-sky-300 hover:bg-sky-900/80 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
+                    >
+                      ⤢
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sensory.triggerTap();
+                        onOneHandedModeChanged?.(oneHandedMode === "left" ? "right" : "left");
+                      }}
+                      title="Flip Hand (Left ↔ Right)"
+                      className="w-full py-1.5 rounded-lg bg-cyan-950/60 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-900/80 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
+                    >
+                      ⇄
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
