@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.35">
-    <img src="https://img.shields.io/badge/Release-v1.0.35-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.35" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.36">
+    <img src="https://img.shields.io/badge/Release-v1.0.36-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.36" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.35/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.36/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,24 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.36 (Flagship Zero-Latency Android IME Upgrade & Live Height Scale Configurator)
+
+- **Flagship Zero-Latency Android Keyboard Upgrade:**
+  - Implemented centralized `keyboardHeightScale` multiplier (configurable `0.85f`–`1.30f`, default `1.18f`), proportionally elevating character key rows to 54dp with 6dp–8dp vertical gaps (~305dp portrait height) without dead bottom padding.
+  - Commits standard character keys immediately on `ACTION_DOWN` / `ACTION_POINTER_DOWN` via `InputConnection.commitText()` for zero perceived typing latency.
+  - Added multi-touch rollover tracking via preallocated pointer states array to guarantee rapid two-thumb typing registers keystrokes in exact chronological order.
+  - Immediate glide-typing retraction: crossing the swiping threshold immediately deletes the speculative touch-down letter, preventing duplicated first characters in swiped words.
+  - 120fps GPU key popups and keypress highlights using hardware layer properties (`scaleX`, `scaleY`, `alpha`, `translationY`) with zero object allocations in hot touch paths.
+  - Smart progressive backspace (350ms repeat -> 1200ms word deletion) safely handling multi-codepoint emojis and surrogate pairs.
+  - Horizontal drag on Spacebar (> 12dp threshold) controls cursor scrubbing with subtle haptic ticks.
+- **Live Keyboard Height Scale Configurator & Interactive Preview (`keyboard-deck-manager.tsx`):**
+  - Integrated a dedicated ergonomic height control card featuring an `0.85x`–`1.30x` range slider with real-time percentage and portrait dp readouts (`Math.round(258 * scale)`).
+  - Quick preset pills: `Compact (0.95x)`, `Standard (1.00x)`, `Ergonomic (1.18x)`, and `Tall (1.28x)`, with active highlighting and a one-tap `Reset (1.18x)` button.
+  - Interactive preview in `ZenoTapKeyboardSimulator.tsx` scales key heights and row gaps dynamically in real time at 120fps.
+  - Synchronized with native Android IME bridge via `OnSharedPreferenceChangeListener` and `ACTION_SETTINGS_UPDATED` broadcast without requiring keyboard restarts.
 
 ---
 

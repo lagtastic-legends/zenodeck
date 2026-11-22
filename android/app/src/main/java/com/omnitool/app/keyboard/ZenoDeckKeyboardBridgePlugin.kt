@@ -46,6 +46,8 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
         const val PREF_KEY_AUTO_CORRECT = "keyboard_auto_correct"
         const val PREF_KEY_GESTURE_TYPING = "keyboard_gesture_typing"
         const val PREF_KEY_DOUBLE_SPACE_PERIOD = "keyboard_double_space_period"
+        const val PREF_KEY_KEYBOARD_HEIGHT_SCALE = "keyboard_height_scale"
+        const val DEFAULT_KEYBOARD_HEIGHT_SCALE = 1.18f
         const val PREF_KEY_CLIPBOARD_VAULT = "zenotap_clipboard_vault"
 
         const val THEME_OBSIDIAN = "obsidian"
@@ -474,6 +476,43 @@ class ZenoDeckKeyboardBridgePlugin : Plugin() {
             call.resolve(JSObject().put("enabled", enabled))
         } catch (e: Exception) {
             call.reject("Failed to get gesture typing: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Updates the proportional keyboard height scale (0.85f - 1.30f).
+     */
+    @PluginMethod
+    fun setKeyboardHeightScale(call: PluginCall) {
+        val rawScale = call.getDouble("scale") ?: 1.18
+        val scale = rawScale.toFloat().coerceIn(0.85f, 1.30f)
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putFloat(PREF_KEY_KEYBOARD_HEIGHT_SCALE, scale).apply()
+
+            val intent = Intent(ACTION_SETTINGS_UPDATED).apply {
+                setPackage(context.packageName)
+                putExtra("setting", "height_scale")
+                putExtra("scale", scale)
+            }
+            context.sendBroadcast(intent)
+            call.resolve(JSObject().put("scale", scale.toDouble()))
+        } catch (e: Exception) {
+            call.reject("Failed to set keyboard height scale: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves the current keyboard height scale.
+     */
+    @PluginMethod
+    fun getKeyboardHeightScale(call: PluginCall) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val scale = prefs.getFloat(PREF_KEY_KEYBOARD_HEIGHT_SCALE, DEFAULT_KEYBOARD_HEIGHT_SCALE)
+            call.resolve(JSObject().put("scale", scale.toDouble()))
+        } catch (e: Exception) {
+            call.reject("Failed to get keyboard height scale: ${e.message}", e)
         }
     }
 

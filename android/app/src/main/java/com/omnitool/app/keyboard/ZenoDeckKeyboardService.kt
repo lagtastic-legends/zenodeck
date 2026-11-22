@@ -16,8 +16,11 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.content.res.Configuration
+import android.graphics.Rect
 import android.speech.RecognizerIntent
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -25,12 +28,17 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.view.inputmethod.InputContentInfoCompat
@@ -150,6 +158,26 @@ class ZenoDeckKeyboardService : InputMethodService() {
             listOf("S", "X", "B", "M", "W", "V", "Z")
         )
 
+        val LAYOUT_SYMBOLS = listOf(
+            listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
+            listOf("@", "#", "$", "%", "&", "-", "+", "(", ")"),
+            listOf("*", "\"", "'", ":", ";", "!", "?")
+        )
+        val LAYOUT_SYMBOLS_SHIFT = listOf(
+            listOf("~", "`", "|", "•", "√", "π", "÷", "×", "¶", "∆"),
+            listOf("£", "¢", "€", "¥", "^", "°", "=", "{", "}"),
+            listOf("\\", "%", "©", "®", "™", "[", "]")
+        )
+
+        const val DEFAULT_KEYBOARD_HEIGHT_SCALE = 1.18f
+        const val MIN_KEYBOARD_HEIGHT_SCALE = 0.85f
+        const val MAX_KEYBOARD_HEIGHT_SCALE = 1.30f
+        const val TARGET_CHAR_ROW_HEIGHT_DP = 54f
+        const val TARGET_TOOLBAR_HEIGHT_DP = 44f
+        const val TARGET_ROW_SPACING_DP = 6f
+        const val TARGET_BOTTOM_STRIP_HEIGHT_DP = 54f
+        const val TARGET_NUMBER_ROW_HEIGHT_DP = 36f
+
         // 8 Emoji Categories
         val EMOJI_SMILEYS = listOf(
             "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥲", "🥹", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗",
@@ -195,6 +223,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var deckTitleTextView: TextView? = null
     private var viewMimeDot: View? = null
     private var tvKeyEchoPreview: TextView? = null
+    private var tvFloatingKeyPopup: TextView? = null
     private var btnVoiceInput: Button? = null
 
     // Mode Buttons
@@ -246,6 +275,8 @@ class ZenoDeckKeyboardService : InputMethodService() {
     // State Variables
     private var currentTheme: String = ZenoDeckKeyboardBridgePlugin.THEME_GLACIER
     private var currentLayout: String = "QWERTY"
+    var keyboardHeightScale: Float = DEFAULT_KEYBOARD_HEIGHT_SCALE
+    var isSymbolsMode: Boolean = false
     private var isShowNumberRow: Boolean = true
     private var isAutoCorrectEnabled: Boolean = true
     private var isGestureTypingEnabled: Boolean = true
@@ -253,6 +284,29 @@ class ZenoDeckKeyboardService : InputMethodService() {
     private var isShifted: Boolean = false
     private var isCapsLock: Boolean = false
     private var lastSpaceTimestamp: Long = 0L
+
+    // Fast Zero-Allocation Multi-Touch Rollover Tracking
+    class PointerTouchState {
+        var active: Boolean = false
+        var pointerId: Int = -1
+        var keyChar: String = ""
+        var button: Button? = null
+        var downX: Float = 0f
+        var downY: Float = 0f
+        var downTime: Long = 0L
+        var isGlide: Boolean = false
+        var characterCommitted: Boolean = false
+    }
+
+    private val pointerStates = Array(10) { PointerTouchState() }
+    private val tempLocArray = IntArray(2)
+    private val tempRootLocArray = IntArray(2)
+
+    // Accelerated Backspace & Spacebar Timers
+    private val backspaceHandler = Handler(Looper.getMainLooper())
+    private var backspacePressStartTime = 0L
+    private var isBackspaceLongPressed = false
+    private var isBackspaceSwipeDeleting = false
 
     // In-memory composing word buffer & Gesture Glide trajectory
     private val composingWord = StringBuilder()
@@ -376,11 +430,17 @@ class ZenoDeckKeyboardService : InputMethodService() {
         setupMultiLayoutKeys(view)
         setupEmojiDeck(view)
         setupClipboardVault(view)
+        applyKeyboardDimensions(view)
         applyKeyboardTheme(currentTheme)
         applyKeyboardSettings()
         refreshDeckFiles()
         switchUIMode("keys")
         return view
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyKeyboardDimensions(keyboardRootView)
     }
 
     private fun bindKeyboardViews(root: View) {
@@ -390,7 +450,18 @@ class ZenoDeckKeyboardService : InputMethodService() {
         deckTitleTextView = root.findViewById(R.id.tv_deck_title)
         viewMimeDot = root.findViewById(R.id.view_mime_dot)
         tvKeyEchoPreview = root.findViewById(R.id.tv_key_echo_preview)
+        tvFloatingKeyPopup = root.findViewById(R.id.tv_floating_key_popup)
         btnVoiceInput = root.findViewById(R.id.btn_voice_input)
+
+        // WindowInsets setup on outer container for gesture nav bars
+        val outerContainer = root.findViewById<FrameLayout>(R.id.keyboard_outer_container) ?: root
+        ViewCompat.setOnApplyWindowInsetsListener(outerContainer) { v, insets ->
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val cutouts = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val bottomInset = maxOf(navBars.bottom, cutouts.bottom)
+            v.setPadding(0, 0, 0, bottomInset)
+            insets
+        }
 
         // Mode Switchers
         btnModeKeys = root.findViewById(R.id.btn_mode_keys)
@@ -429,10 +500,12 @@ class ZenoDeckKeyboardService : InputMethodService() {
             R.id.btn_num_0 to "0"
         )
         for ((id, char) in numIds) {
-            root.findViewById<Button>(id)?.setOnClickListener {
-                currentInputConnection?.commitText(char, 1)
-                vibrateTick()
-                showKeyEcho(char, 400)
+            root.findViewById<Button>(id)?.let { btn ->
+                btn.setOnClickListener {
+                    currentInputConnection?.commitText(char, 1)
+                    performKeyHaptic(btn)
+                    showKeyEcho(char, 400)
+                }
             }
         }
 
@@ -455,20 +528,20 @@ class ZenoDeckKeyboardService : InputMethodService() {
         btnComma?.setOnClickListener {
             finalizeComposingWord()
             currentInputConnection?.commitText(",", 1)
-            vibrateTick()
+            btnComma?.let { performKeyHaptic(it) }
         }
         btnPeriod?.setOnClickListener {
             finalizeComposingWord()
             currentInputConnection?.commitText(".", 1)
-            vibrateTick()
+            btnPeriod?.let { performKeyHaptic(it) }
             checkAutoCapitalization()
         }
         btnOpenApp?.setOnClickListener {
-            // Toggles between letters and common symbols
-            val intent = Intent(this, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-            }
-            startActivity(intent)
+            // Toggles between letters and symbols deck
+            isSymbolsMode = !isSymbolsMode
+            btnOpenApp?.text = if (isSymbolsMode) "ABC" else "?123"
+            applyKeyLayout(if (isSymbolsMode) "SYMBOLS" else currentLayout)
+            btnOpenApp?.let { performKeyHaptic(it) }
         }
 
         btnSpacebar?.let { setupSpacebarTrackpadGesture(it) }
@@ -581,6 +654,13 @@ class ZenoDeckKeyboardService : InputMethodService() {
         btnEnter = root.findViewById(R.id.btn_enter)
 
         btnShift?.setOnClickListener {
+            if (isSymbolsMode) {
+                isShifted = !isShifted
+                btnShift?.setTextColor(if (isShifted) 0xFF38BDF8.toInt() else 0xFF94A3B8.toInt())
+                applyKeyLayout("SYMBOLS")
+                btnShift?.let { performKeyHaptic(it) }
+                return@setOnClickListener
+            }
             if (isShifted && !isCapsLock) {
                 isCapsLock = true
                 btnShift?.setTextColor(0xFF38BDF8.toInt())
@@ -594,7 +674,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 btnShift?.setTextColor(0xFFF1F5F9.toInt())
             }
             updateKeyCapsText()
-            vibrateTick()
+            btnShift?.let { performKeyHaptic(it) }
         }
 
         btnEnter?.setOnClickListener {
@@ -610,23 +690,194 @@ class ZenoDeckKeyboardService : InputMethodService() {
             vibrateTactileClick()
         }
 
+        setupGutterTouchInterception(root)
         applyKeyLayout(currentLayout)
     }
 
+    private fun setupGutterTouchInterception(root: View) {
+        val row1 = root.findViewById<View>(R.id.row_keys_1)
+        val row2 = root.findViewById<View>(R.id.row_keys_2)
+        val row3 = root.findViewById<View>(R.id.row_keys_3)
+        val rows = listOfNotNull(row1, row2, row3)
+
+        for (row in rows) {
+            row.setOnTouchListener { _, event ->
+                if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                    val pIdx = event.actionIndex
+                    val targetKey = findKeyAtLocation(event.getRawX(pIdx), event.getRawY(pIdx))
+                    if (targetKey != null) {
+                        targetKey.dispatchTouchEvent(event)
+                        return@setOnTouchListener true
+                    }
+                }
+                false
+            }
+        }
+    }
+
+    fun findKeyAtLocation(rawX: Float, rawY: Float): Button? {
+        var closestBtn: Button? = null
+        var minDistanceSq = Float.MAX_VALUE
+        val gutterPaddingX = 4 * resources.displayMetrics.density
+        val gutterPaddingY = 6 * resources.displayMetrics.density
+
+        for (btn in keyButtons) {
+            if (!btn.isShown) continue
+            btn.getLocationOnScreen(tempLocArray)
+            val left = tempLocArray[0] - gutterPaddingX
+            val top = tempLocArray[1] - gutterPaddingY
+            val right = tempLocArray[0] + btn.width + gutterPaddingX
+            val bottom = tempLocArray[1] + btn.height + gutterPaddingY
+
+            if (rawX in left..right && rawY in top..bottom) {
+                val centerX = tempLocArray[0] + btn.width / 2f
+                val centerY = tempLocArray[1] + btn.height / 2f
+                val dx = rawX - centerX
+                val dy = rawY - centerY
+                val distSq = dx * dx + dy * dy
+                if (distSq < minDistanceSq) {
+                    minDistanceSq = distSq
+                    closestBtn = btn
+                }
+            }
+        }
+        return closestBtn
+    }
+
+    fun performKeyHaptic(view: View) {
+        try {
+            val flags = HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+            val feedbackConstant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                HapticFeedbackConstants.KEYBOARD_PRESS
+            } else {
+                HapticFeedbackConstants.KEYBOARD_TAP
+            }
+            val performed = view.performHapticFeedback(feedbackConstant, flags)
+            if (!performed) {
+                vibrateTick()
+            }
+        } catch (_: Exception) {
+            vibrateTick()
+        }
+    }
+
+    private fun showKeyHighlight(btn: Button) {
+        btn.scaleX = 0.94f
+        btn.scaleY = 0.94f
+        btn.alpha = 0.85f
+    }
+
+    private fun hideKeyHighlight(btn: Button) {
+        btn.scaleX = 1.0f
+        btn.scaleY = 1.0f
+        btn.alpha = 1.0f
+    }
+
+    private fun showFloatingPopup(btn: Button, char: String) {
+        if (isPasswordInputType()) return
+        val popup = tvFloatingKeyPopup ?: return
+        val outer = keyboardRootView?.findViewById<View>(R.id.keyboard_outer_container) ?: keyboardRootView ?: return
+
+        btn.getLocationInWindow(tempLocArray)
+        outer.getLocationInWindow(tempRootLocArray)
+
+        val density = resources.displayMetrics.density
+        val btnLeftInOuter = tempLocArray[0] - tempRootLocArray[0]
+        val btnTopInOuter = tempLocArray[1] - tempRootLocArray[1]
+
+        val popupWidth = popup.width.takeIf { it > 0 } ?: (54 * density).toInt()
+        val popupHeight = popup.height.takeIf { it > 0 } ?: (62 * density).toInt()
+
+        popup.translationX = btnLeftInOuter + (btn.width - popupWidth) / 2f
+        popup.translationY = btnTopInOuter - popupHeight - (6 * density)
+        popup.text = char
+        popup.alpha = 1.0f
+        popup.scaleX = 1.12f
+        popup.scaleY = 1.12f
+        popup.visibility = View.VISIBLE
+    }
+
+    private fun hideFloatingPopup() {
+        tvFloatingKeyPopup?.visibility = View.GONE
+    }
+
+    private fun isPasswordInputType(): Boolean {
+        val info = currentEditorInfo ?: return false
+        val variation = info.inputType and EditorInfo.TYPE_MASK_VARIATION
+        val clazz = info.inputType and EditorInfo.TYPE_MASK_CLASS
+        return clazz == EditorInfo.TYPE_CLASS_TEXT &&
+                (variation == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD ||
+                 variation == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                 variation == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD)
+    }
+
+    fun applyKeyboardDimensions(root: View? = keyboardRootView) {
+        val r = root ?: return
+        val dm = resources.displayMetrics
+        val density = dm.density
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val scale = keyboardHeightScale.coerceIn(MIN_KEYBOARD_HEIGHT_SCALE, MAX_KEYBOARD_HEIGHT_SCALE)
+
+        val outerContainer = r.findViewById<View>(R.id.keyboard_outer_container) ?: r
+        val ribbon = r.findViewById<View>(R.id.layout_utility_ribbon)
+        val numberRow = r.findViewById<View>(R.id.layout_number_row)
+        val row1 = r.findViewById<View>(R.id.row_keys_1)
+        val row2 = r.findViewById<View>(R.id.row_keys_2)
+        val row3 = r.findViewById<View>(R.id.row_keys_3)
+        val bottomStrip = r.findViewById<View>(R.id.btn_spacebar)?.parent as? View
+
+        if (isLandscape) {
+            val maxLandscapePx = (dm.heightPixels * 0.45f).toInt()
+            val landscapeTargetPx = (175f * scale * density).toInt().coerceAtMost(maxLandscapePx)
+            outerContainer.layoutParams?.let { lp ->
+                lp.height = landscapeTargetPx
+                outerContainer.layoutParams = lp
+            }
+            val landCharRowPx = (34f * scale * density).toInt().coerceAtMost((maxLandscapePx / 4.5f).toInt())
+            val landSpacingPx = (2f * density).toInt()
+            val landToolbarPx = (30f * scale * density).toInt()
+
+            ribbon?.layoutParams?.let { lp -> lp.height = landToolbarPx; ribbon.layoutParams = lp }
+            bottomStrip?.layoutParams?.let { lp -> lp.height = landCharRowPx; bottomStrip.layoutParams = lp }
+            row1?.let { v -> (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp -> lp.bottomMargin = landSpacingPx; v.layoutParams = lp } }
+            row2?.let { v -> (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp -> lp.bottomMargin = landSpacingPx; v.layoutParams = lp } }
+        } else {
+            // Portrait: Target 285dp - 315dp total (base 258dp * 1.18f = ~305dp)
+            val totalPortraitPx = (258f * scale * density).toInt()
+            outerContainer.layoutParams?.let { lp ->
+                lp.height = totalPortraitPx
+                outerContainer.layoutParams = lp
+            }
+
+            val toolbarPx = (TARGET_TOOLBAR_HEIGHT_DP * scale * density).toInt()
+            val spacingPx = (TARGET_ROW_SPACING_DP * scale * density).toInt()
+            val bottomStripPx = (TARGET_BOTTOM_STRIP_HEIGHT_DP * scale * density).toInt()
+            val numberRowPx = (TARGET_NUMBER_ROW_HEIGHT_DP * scale * density).toInt()
+
+            ribbon?.layoutParams?.let { lp -> lp.height = toolbarPx; ribbon.layoutParams = lp }
+            numberRow?.layoutParams?.let { lp -> lp.height = numberRowPx; numberRow.layoutParams = lp }
+            bottomStrip?.layoutParams?.let { lp -> lp.height = bottomStripPx; bottomStrip.layoutParams = lp }
+
+            row1?.let { v -> (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp -> lp.bottomMargin = spacingPx; v.layoutParams = lp } }
+            row2?.let { v -> (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp -> lp.bottomMargin = spacingPx; v.layoutParams = lp } }
+        }
+    }
+
     private fun applyKeyLayout(layoutName: String) {
-        currentLayout = layoutName
-        val matrix = when (layoutName.uppercase()) {
-            "AZERTY" -> LAYOUT_AZERTY
-            "QWERTZ" -> LAYOUT_QWERTZ
-            "DVORAK" -> LAYOUT_DVORAK
+        if (!isSymbolsMode) {
+            currentLayout = layoutName
+        }
+        val matrix = when {
+            isSymbolsMode && isShifted -> LAYOUT_SYMBOLS_SHIFT
+            isSymbolsMode -> LAYOUT_SYMBOLS
+            layoutName.uppercase() == "AZERTY" -> LAYOUT_AZERTY
+            layoutName.uppercase() == "QWERTZ" -> LAYOUT_QWERTZ
+            layoutName.uppercase() == "DVORAK" -> LAYOUT_DVORAK
             else -> LAYOUT_QWERTY
         }
 
         val allChars = matrix.flatten()
         val gestureThreshold = 22 * resources.displayMetrics.density
-        var downX = 0f
-        var downY = 0f
-        var isGlideActive = false
 
         for (i in 0 until minOf(allChars.size, keyButtons.size)) {
             val char = allChars[i]
@@ -634,71 +885,143 @@ class ZenoDeckKeyboardService : InputMethodService() {
             btn.tag = char
 
             btn.setOnTouchListener { v, event ->
-                val keyChar = (v.tag as? String) ?: ""
+                val pointerIndex = event.actionIndex
+                val pointerId = event.getPointerId(pointerIndex)
+                val targetBtn = (v as? Button) ?: btn
+
                 when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        downX = event.rawX
-                        downY = event.rawY
-                        isGlideActive = false
-                        glideTrajectory.clear()
-                        if (keyChar.isNotEmpty()) glideTrajectory.add(keyChar)
-                        v.isPressed = true
+                    MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                        val rawChar = (targetBtn.tag as? String) ?: ""
+                        if (rawChar.isNotEmpty()) {
+                            val typedChar = if (!isSymbolsMode && (isShifted || isCapsLock)) rawChar.uppercase() else rawChar.lowercase()
+
+                            // Zero-Latency Direct Commit on Pointer Down
+                            currentInputConnection?.commitText(typedChar, 1)
+                            composingWord.append(typedChar)
+
+                            // 120fps Key Highlight & Floating Popup
+                            showKeyHighlight(targetBtn)
+                            showFloatingPopup(targetBtn, typedChar)
+                            performKeyHaptic(targetBtn)
+
+                            // Multi-touch Rollover State Tracking
+                            val state = pointerStates[pointerId.coerceIn(0, 9)]
+                            state.active = true
+                            state.pointerId = pointerId
+                            state.keyChar = typedChar
+                            state.button = targetBtn
+                            state.downX = event.getRawX(pointerIndex)
+                            state.downY = event.getRawY(pointerIndex)
+                            state.downTime = System.currentTimeMillis()
+                            state.isGlide = false
+                            state.characterCommitted = true
+
+                            // Gesture glide trajectory tracking (primary pointer only)
+                            if (pointerId == 0) {
+                                glideTrajectory.clear()
+                                glideTrajectory.add(rawChar)
+                            }
+
+                            // Single-character auto-unshift
+                            if (!isSymbolsMode && isShifted && !isCapsLock) {
+                                isShifted = false
+                                btnShift?.setTextColor(0xFF94A3B8.toInt())
+                                updateKeyCapsText()
+                            }
+
+                            if (!isPasswordInputType()) {
+                                updatePredictiveCandidates()
+                            }
+                        }
                         true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        if (isGestureTypingEnabled) {
-                            val dist = Math.hypot((event.rawX - downX).toDouble(), (event.rawY - downY).toDouble())
-                            if (!isGlideActive && dist >= gestureThreshold) {
-                                isGlideActive = true
+                        val state = pointerStates[pointerId.coerceIn(0, 9)]
+                        if (isGestureTypingEnabled && state.active && pointerId == 0 && !isSymbolsMode) {
+                            val dist = Math.hypot(
+                                (event.getRawX(pointerIndex) - state.downX).toDouble(),
+                                (event.getRawY(pointerIndex) - state.downY).toDouble()
+                            )
+                            if (!state.isGlide && dist >= gestureThreshold) {
+                                state.isGlide = true
+                                if (state.characterCommitted) {
+                                    currentInputConnection?.deleteSurroundingText(1, 0)
+                                    if (composingWord.isNotEmpty()) composingWord.deleteCharAt(composingWord.length - 1)
+                                    state.characterCommitted = false
+                                }
                             }
-                            if (isGlideActive) {
-                                val loc = IntArray(2)
-                                for (candidate in keyButtons) {
-                                    candidate.getLocationOnScreen(loc)
-                                    val left = loc[0]
-                                    val top = loc[1]
-                                    val right = left + candidate.width
-                                    val bottom = top + candidate.height
-                                    if (event.rawX >= left && event.rawX <= right && event.rawY >= top && event.rawY <= bottom) {
-                                        val c = candidate.tag as? String
-                                        if (c != null && (glideTrajectory.isEmpty() || glideTrajectory.last() != c)) {
-                                            glideTrajectory.add(c)
-                                            vibrateTick()
-                                            val preview = resolveGlideWord(glideTrajectory) ?: glideTrajectory.joinToString("").lowercase()
-                                            showKeyEcho("~ $preview", 600)
-                                        }
-                                        break
+                            if (state.isGlide) {
+                                val currentKey = findKeyAtLocation(event.getRawX(pointerIndex), event.getRawY(pointerIndex))
+                                if (currentKey != null) {
+                                    val c = currentKey.tag as? String
+                                    if (c != null && (glideTrajectory.isEmpty() || glideTrajectory.last() != c)) {
+                                        glideTrajectory.add(c)
+                                        vibrateTick()
+                                        val preview = resolveGlideWord(glideTrajectory) ?: glideTrajectory.joinToString("").lowercase()
+                                        showKeyEcho("~ $preview", 600)
                                     }
                                 }
                             }
                         }
                         true
                     }
+                    MotionEvent.ACTION_POINTER_UP -> {
+                        val state = pointerStates[pointerId.coerceIn(0, 9)]
+                        if (state.active) {
+                            state.button?.let { hideKeyHighlight(it) }
+                            state.active = false
+                            state.characterCommitted = false
+                            state.button = null
+                        }
+                        hideFloatingPopup()
+                        true
+                    }
                     MotionEvent.ACTION_UP -> {
-                        v.isPressed = false
-                        if (isGlideActive && glideTrajectory.size >= 2) {
+                        val state = pointerStates[pointerId.coerceIn(0, 9)]
+                        if (state.isGlide && glideTrajectory.size >= 2 && !isSymbolsMode) {
+                            // Retract any initial character if not already retracted during ACTION_MOVE
+                            if (state.characterCommitted) {
+                                currentInputConnection?.deleteSurroundingText(1, 0)
+                                if (composingWord.isNotEmpty()) composingWord.deleteCharAt(composingWord.length - 1)
+                                state.characterCommitted = false
+                            }
+
                             val word = resolveGlideWord(glideTrajectory) ?: glideTrajectory.joinToString("").lowercase()
                             val formatted = if (isShifted || isCapsLock) word.replaceFirstChar { it.uppercase() } else word
                             currentInputConnection?.commitText("$formatted ", 1)
                             vibrateTactileClick()
                             showKeyEcho("✓ $formatted", 800)
-                            userWordFreq[word.lowercase()] = (userWordFreq[word.lowercase()] ?: 0) + 1
-                            saveUserDictionary()
+                            if (!isPasswordInputType()) {
+                                userWordFreq[word.lowercase()] = (userWordFreq[word.lowercase()] ?: 0) + 1
+                                saveUserDictionary()
+                            }
                             composingWord.clear()
                             updatePredictiveCandidates()
                             checkAutoCapitalization()
-                        } else {
-                            if (keyChar.isNotEmpty()) {
-                                onLetterKeyTapped(keyChar)
-                            }
+                        } else if (state.isGlide && !state.characterCommitted && state.keyChar.isNotEmpty()) {
+                            // Short swipe aborted without reaching a valid word: restore original tapped character
+                            currentInputConnection?.commitText(state.keyChar, 1)
+                            composingWord.append(state.keyChar)
                         }
-                        isGlideActive = false
+                        // Clean up all pointer states and visual feedback
+                        hideFloatingPopup()
+                        for (s in pointerStates) {
+                            s.button?.let { hideKeyHighlight(it) }
+                            s.active = false
+                            s.characterCommitted = false
+                            s.button = null
+                        }
                         glideTrajectory.clear()
                         true
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        v.isPressed = false
-                        isGlideActive = false
+                        hideFloatingPopup()
+                        for (s in pointerStates) {
+                            s.button?.let { hideKeyHighlight(it) }
+                            s.active = false
+                            s.characterCommitted = false
+                            s.button = null
+                        }
                         glideTrajectory.clear()
                         hideKeyEcho()
                         true
@@ -891,7 +1214,11 @@ class ZenoDeckKeyboardService : InputMethodService() {
                                 sendDownUpKeyEvents(KeyEvent.KEYCODE_DPAD_LEFT)
                                 showKeyEcho("◀ CURSOR", 800)
                             }
-                            vibrateTick()
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                spacebar.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE)
+                            } else {
+                                vibrateTick()
+                            }
                             lastScrubX = event.x
                         }
                     }
@@ -923,7 +1250,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
         val now = System.currentTimeMillis()
 
         // Auto-correct active composing word before committing space
-        if (isAutoCorrectEnabled && composingWord.isNotEmpty()) {
+        if (isAutoCorrectEnabled && composingWord.isNotEmpty() && !isPasswordInputType()) {
             val current = composingWord.toString().lowercase()
             val replacement = AUTO_REPLACE_DICT[current]
             if (replacement != null) {
@@ -962,12 +1289,20 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
         val repeatRunnable = object : Runnable {
             override fun run() {
-                isLongPressed = true
-                performBackspace()
-                vibrateTactileClick()
-                showKeyEcho("⌫ DELETING", 500)
-                currentInterval = (currentInterval * 0.82).toLong().coerceAtLeast(45L)
-                repeatHandler.postDelayed(this, currentInterval)
+                isBackspaceLongPressed = true
+                val holdDuration = System.currentTimeMillis() - backspacePressStartTime
+
+                if (holdDuration >= 1200L) {
+                    deletePreviousWord()
+                    vibrateHeavy()
+                    showKeyEcho("⌫ WORD", 300)
+                    backspaceHandler.postDelayed(this, 100L)
+                } else {
+                    performSafeBackspace()
+                    vibrateTick()
+                    showKeyEcho("⌫", 300)
+                    backspaceHandler.postDelayed(this, 50L)
+                }
             }
         }
 
@@ -975,18 +1310,20 @@ class ZenoDeckKeyboardService : InputMethodService() {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = event.x
-                    isSwipeDeleting = false
-                    isLongPressed = false
-                    currentInterval = 350L
+                    backspacePressStartTime = System.currentTimeMillis()
+                    isBackspaceLongPressed = false
+                    isBackspaceSwipeDeleting = false
                     v.isPressed = true
-                    repeatHandler.postDelayed(repeatRunnable, currentInterval)
+                    performKeyHaptic(v)
+                    backspaceHandler.removeCallbacksAndMessages(null)
+                    backspaceHandler.postDelayed(repeatRunnable, 350L)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val deltaX = event.x - downX
-                    if (!isSwipeDeleting && deltaX <= -swipeThreshold) {
-                        isSwipeDeleting = true
-                        repeatHandler.removeCallbacks(repeatRunnable)
+                    if (!isBackspaceSwipeDeleting && deltaX <= -swipeThreshold) {
+                        isBackspaceSwipeDeleting = true
+                        backspaceHandler.removeCallbacksAndMessages(null)
                         deletePreviousWord()
                         vibrateHeavy()
                         showKeyEcho("⌫ WORD DELETED", 800)
@@ -995,9 +1332,9 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 }
                 MotionEvent.ACTION_UP -> {
                     v.isPressed = false
-                    repeatHandler.removeCallbacks(repeatRunnable)
-                    if (!isSwipeDeleting && !isLongPressed) {
-                        performBackspace()
+                    backspaceHandler.removeCallbacksAndMessages(null)
+                    if (!isBackspaceSwipeDeleting && !isBackspaceLongPressed) {
+                        performSafeBackspace()
                         vibrateTactileClick()
                     }
                     hideKeyEcho()
@@ -1005,7 +1342,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     v.isPressed = false
-                    repeatHandler.removeCallbacks(repeatRunnable)
+                    backspaceHandler.removeCallbacksAndMessages(null)
                     hideKeyEcho()
                     true
                 }
@@ -1014,12 +1351,30 @@ class ZenoDeckKeyboardService : InputMethodService() {
         }
     }
 
-    private fun performBackspace() {
+    private fun performSafeBackspace() {
         if (composingWord.isNotEmpty()) {
             composingWord.deleteCharAt(composingWord.length - 1)
             updatePredictiveCandidates()
+            currentInputConnection?.deleteSurroundingText(1, 0)
+            return
         }
-        sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        val ic = currentInputConnection ?: return
+        val textBefore = ic.getTextBeforeCursor(4, 0)?.toString() ?: ""
+        if (textBefore.isNotEmpty()) {
+            val lastChar = textBefore.last()
+            // Safely delete multi-codepoint surrogate pair (emoji / astral plane characters)
+            if (Character.isLowSurrogate(lastChar) && textBefore.length >= 2 && Character.isHighSurrogate(textBefore[textBefore.length - 2])) {
+                ic.deleteSurroundingText(2, 0)
+            } else {
+                ic.deleteSurroundingText(1, 0)
+            }
+        } else {
+            sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        }
+    }
+
+    private fun performBackspace() {
+        performSafeBackspace()
     }
 
     private fun deletePreviousWord() {
@@ -1281,12 +1636,21 @@ class ZenoDeckKeyboardService : InputMethodService() {
                     tvSuggestionCenter?.setTextColor(0xFFFFFFFF.toInt())
                 }
             }
+            tvFloatingKeyPopup?.let { popup ->
+                when {
+                    isForest -> popup.setTextColor(0xFFF7E7CE.toInt())
+                    isTerracotta -> popup.setTextColor(0xFF342A24.toInt())
+                    isGlacier -> popup.setTextColor(0xFF7DD3FC.toInt())
+                    else -> popup.setTextColor(0xFFFFFFFF.toInt())
+                }
+            }
             filterDeckByCategory(selectedCategory)
         }
     }
 
     private fun applyKeyboardSettings() {
-        applyKeyLayout(currentLayout)
+        applyKeyboardDimensions(keyboardRootView)
+        applyKeyLayout(if (isSymbolsMode) "SYMBOLS" else currentLayout)
         layoutNumberRow?.visibility = if (layoutKeysView?.visibility == View.VISIBLE && isShowNumberRow) View.VISIBLE else View.GONE
     }
 
@@ -1305,6 +1669,10 @@ class ZenoDeckKeyboardService : InputMethodService() {
         try {
             val prefs = getSharedPreferences(ZenoDeckKeyboardBridgePlugin.PREFS_NAME, Context.MODE_PRIVATE)
             currentLayout = prefs.getString(ZenoDeckKeyboardBridgePlugin.PREF_KEY_LAYOUT_MODE, "QWERTY") ?: "QWERTY"
+            keyboardHeightScale = prefs.getFloat(
+                ZenoDeckKeyboardBridgePlugin.PREF_KEY_KEYBOARD_HEIGHT_SCALE,
+                DEFAULT_KEYBOARD_HEIGHT_SCALE
+            ).coerceIn(MIN_KEYBOARD_HEIGHT_SCALE, MAX_KEYBOARD_HEIGHT_SCALE)
             isShowNumberRow = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_SHOW_NUMBER_ROW, true)
             isAutoCorrectEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_AUTO_CORRECT, true)
             isGestureTypingEnabled = prefs.getBoolean(ZenoDeckKeyboardBridgePlugin.PREF_KEY_GESTURE_TYPING, true)
@@ -1516,6 +1884,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
 
         loadSavedTheme()
         loadSavedSettings()
+        applyKeyboardDimensions(keyboardRootView)
         applyKeyboardTheme(currentTheme)
         applyKeyboardSettings()
         refreshDeckFiles()
@@ -1539,11 +1908,26 @@ class ZenoDeckKeyboardService : InputMethodService() {
         finalizeComposingWord()
         hidePopupOverlay()
         hideKeyEcho()
+        hideFloatingPopup()
+        backspaceHandler.removeCallbacksAndMessages(null)
+        for (s in pointerStates) {
+            s.button?.let { hideKeyHighlight(it) }
+            s.active = false
+            s.characterCommitted = false
+            s.button = null
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         echoHandler.removeCallbacksAndMessages(null)
+        backspaceHandler.removeCallbacksAndMessages(null)
+        hideFloatingPopup()
+        for (s in pointerStates) {
+            s.button?.let { hideKeyHighlight(it) }
+            s.active = false
+            s.button = null
+        }
         if (isReceiverRegistered) {
             try { unregisterReceiver(deckUpdateReceiver) } catch (_: Exception) {}
         }

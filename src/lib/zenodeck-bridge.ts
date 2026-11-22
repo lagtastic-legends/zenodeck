@@ -38,6 +38,8 @@ interface ZenoDeckNativePlugin {
   getAutoCorrect(): Promise<{ enabled: boolean }>;
   setGestureTyping(options: { enabled: boolean }): Promise<{ success: boolean; enabled: boolean }>;
   getGestureTyping(): Promise<{ enabled: boolean }>;
+  setKeyboardHeightScale(options: { scale: number }): Promise<{ scale: number }>;
+  getKeyboardHeightScale(): Promise<{ scale: number }>;
   getClipboardHistory(): Promise<{ items: ClipboardVaultItemBridge[]; count: number }>;
   clearClipboardHistory(options?: { clearPinned?: boolean }): Promise<{ success: boolean }>;
 }
@@ -430,6 +432,40 @@ export async function getGestureTyping(): Promise<boolean> {
     return res.enabled;
   } catch {
     return true;
+  }
+}
+
+/**
+ * Updates the proportional keyboard height scale (0.85 - 1.30, default 1.18).
+ */
+export async function setKeyboardHeightScale(scale: number): Promise<number> {
+  const clamped = Math.max(0.85, Math.min(1.30, scale));
+  if (!Capacitor.isNativePlatform()) {
+    setFallbackItem("zenotap_keyboard_height_scale", clamped.toString());
+    return clamped;
+  }
+  try {
+    const res = await NativeBridge.setKeyboardHeightScale({ scale: clamped });
+    return res.scale;
+  } catch {
+    return clamped;
+  }
+}
+
+/**
+ * Retrieves the proportional keyboard height scale (default 1.18).
+ */
+export async function getKeyboardHeightScale(): Promise<number> {
+  if (!Capacitor.isNativePlatform()) {
+    const stored = getFallbackItem("zenotap_keyboard_height_scale");
+    if (stored !== null) return parseFloat(stored) || 1.18;
+    return 1.18;
+  }
+  try {
+    const res = await NativeBridge.getKeyboardHeightScale();
+    return res.scale;
+  } catch {
+    return 1.18;
   }
 }
 

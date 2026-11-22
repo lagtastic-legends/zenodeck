@@ -45,6 +45,7 @@ import {
   Play,
   Pause,
   SlidersHorizontal,
+  RotateCcw,
 } from "lucide-react";
 import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-selector-modal";
 import { APP_VERSION } from "@/config/version";
@@ -84,6 +85,8 @@ import {
   getAutoCorrect,
   setGestureTyping,
   getGestureTyping,
+  setKeyboardHeightScale,
+  getKeyboardHeightScale,
   getClipboardHistory,
   clearClipboardHistory,
   type DeckGifItem,
@@ -447,8 +450,10 @@ export function KeyboardDeckManager() {
   const [showNumberRow, setShowNumberRowState] = useState<boolean>(true);
   const [autoCorrect, setAutoCorrectState] = useState<boolean>(true);
   const [gestureTyping, setGestureTypingState] = useState<boolean>(true);
+  const [keyboardHeightScale, setKeyboardHeightScaleState] = useState<number>(1.18);
   const [clipboardItems, setClipboardItems] = useState<ClipboardVaultItemBridge[]>([]);
   const [testSandboxText, setTestSandboxText] = useState<string>("");
+  const heightDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const dndId = useId();
   const sensors = useSensors(
@@ -465,7 +470,17 @@ export function KeyboardDeckManager() {
   const loadDeck = useCallback(async () => {
     setLoading(true);
     try {
-      const [deckItems, imeStatus, savedTheme, savedLayout, savedNumRow, savedAutoCorr, savedClips, savedGesture] = await Promise.all([
+      const [
+        deckItems,
+        imeStatus,
+        savedTheme,
+        savedLayout,
+        savedNumRow,
+        savedAutoCorr,
+        savedClips,
+        savedGesture,
+        savedHeightScale,
+      ] = await Promise.all([
         getKeyboardDeckGifs(),
         getKeyboardStatus(),
         getKeyboardTheme(),
@@ -474,6 +489,7 @@ export function KeyboardDeckManager() {
         getAutoCorrect(),
         getClipboardHistory(),
         getGestureTyping(),
+        getKeyboardHeightScale(),
       ]);
       setGifs(deckItems);
       setStatus(imeStatus);
@@ -482,6 +498,7 @@ export function KeyboardDeckManager() {
       setShowNumberRowState(savedNumRow);
       setAutoCorrectState(savedAutoCorr);
       setGestureTypingState(savedGesture);
+      setKeyboardHeightScaleState(savedHeightScale || 1.18);
       setClipboardItems(savedClips);
       setSyncToken(getStoredSyncToken());
       setPairedDeviceName(getStoredDeviceName());
@@ -640,6 +657,53 @@ export function KeyboardDeckManager() {
     setGestureTypingState(next);
     await setGestureTyping(next);
     toast.success(`Gesture glide typing ${next ? "enabled" : "disabled"}`);
+  };
+
+  const handleHeightScaleChange = (val: number) => {
+    const clamped = Math.min(1.3, Math.max(0.85, Number(val.toFixed(2))));
+    setKeyboardHeightScaleState(clamped);
+    if (heightDebounceRef.current) {
+      clearTimeout(heightDebounceRef.current);
+    }
+    heightDebounceRef.current = setTimeout(() => {
+      void setKeyboardHeightScale(clamped);
+    }, 120);
+  };
+
+  const handleHeightScaleCommit = (val: number) => {
+    const clamped = Math.min(1.3, Math.max(0.85, Number(val.toFixed(2))));
+    if (heightDebounceRef.current) {
+      clearTimeout(heightDebounceRef.current);
+      heightDebounceRef.current = null;
+    }
+    setKeyboardHeightScaleState(clamped);
+    void setKeyboardHeightScale(clamped);
+    void haptics.impact();
+  };
+
+  const handleHeightPreset = async (preset: number) => {
+    const clamped = Math.min(1.3, Math.max(0.85, Number(preset.toFixed(2))));
+    if (heightDebounceRef.current) {
+      clearTimeout(heightDebounceRef.current);
+      heightDebounceRef.current = null;
+    }
+    setKeyboardHeightScaleState(clamped);
+    await setKeyboardHeightScale(clamped);
+    void haptics.impact();
+    const dp = Math.round(258 * clamped);
+    toast.success(`Keyboard height scaled to ${clamped.toFixed(2)}x (${dp}dp)`);
+  };
+
+  const handleResetHeight = async () => {
+    const defaultScale = 1.18;
+    if (heightDebounceRef.current) {
+      clearTimeout(heightDebounceRef.current);
+      heightDebounceRef.current = null;
+    }
+    setKeyboardHeightScaleState(defaultScale);
+    await setKeyboardHeightScale(defaultScale);
+    void haptics.impact();
+    toast.success("Keyboard height restored to default (1.18x · 305dp)");
   };
 
   const handleClearClipboard = async () => {
@@ -1190,6 +1254,7 @@ export function KeyboardDeckManager() {
         vaultItems={gifs}
         injectedItem={injectedItem}
         onSelectInspectItem={selectVaultItemForInspection}
+        heightScale={keyboardHeightScale}
       />
 
       {/* 8. Gboard-Grade Native Keyboard Engine & Layout Studio */}
@@ -1384,6 +1449,94 @@ export function KeyboardDeckManager() {
               <span>{gestureTyping ? "Glide Typing Active" : "Glide Typing Disabled"}</span>
               <span className="font-mono">{gestureTyping ? "ON" : "OFF"}</span>
             </button>
+          </div>
+        </div>
+
+        {/* Keyboard Height Scale Configurator (0.85x - 1.30x) */}
+        <div className="p-4 rounded-xl border border-sky-400/25 bg-[#111828]/90 space-y-3.5 backdrop-blur-md shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <div className="size-7 rounded-lg bg-cyan-400/10 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+                <Sliders className="size-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-[#e0e8f0] flex items-center gap-2">
+                  Keyboard Height &amp; Ergonomic Scale
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    {keyboardHeightScale.toFixed(2)}x · {Math.round(keyboardHeightScale * 100)}%
+                  </span>
+                </span>
+                <p className="text-[10px] text-[#a0b4c4] mt-0.5">
+                  Proportionally scales character key rows (52dp–56dp) and spacing. Estimated portrait height:{" "}
+                  <span className="font-mono font-semibold text-emerald-400">{Math.round(258 * keyboardHeightScale)}dp</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleResetHeight()}
+              className="self-start sm:self-auto px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#a0b4c4] hover:text-[#e0e8f0] bg-[#141c2e] hover:bg-[#1a2438] border border-sky-400/20 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+              title="Reset to default height (1.18x · 305dp)"
+            >
+              <RotateCcw className="size-3 text-[#7dd3fc]" />
+              <span>Reset (1.18x)</span>
+            </button>
+          </div>
+
+          {/* Range Slider with 120fps Real-Time Touch Updates */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-mono text-[#a0b4c4]">
+              <span>Compact (0.85x · 219dp)</span>
+              <span className="font-bold text-cyan-300">
+                {keyboardHeightScale.toFixed(2)}x ({Math.round(258 * keyboardHeightScale)}dp)
+              </span>
+              <span>Tall (1.30x · 335dp)</span>
+            </div>
+            <input
+              type="range"
+              min="0.85"
+              max="1.30"
+              step="0.01"
+              value={keyboardHeightScale}
+              onChange={(e) => handleHeightScaleChange(parseFloat(e.target.value))}
+              onPointerUp={(e) => handleHeightScaleCommit(parseFloat((e.target as HTMLInputElement).value))}
+              onTouchEnd={(e) => handleHeightScaleCommit(parseFloat((e.target as HTMLInputElement).value))}
+              onKeyUp={(e) => handleHeightScaleCommit(parseFloat((e.target as HTMLInputElement).value))}
+              className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-[#0e1424] border border-sky-400/30 accent-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              aria-label="Keyboard Height Scale"
+            />
+          </div>
+
+          {/* Quick Preset Pills */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#7dd3fc]/80 font-mono">
+              Presets:
+            </span>
+            {[
+              { label: "Compact", scale: 0.95 },
+              { label: "Standard", scale: 1.00 },
+              { label: "Ergonomic", scale: 1.18 },
+              { label: "Tall", scale: 1.28 },
+            ].map(({ label, scale }) => {
+              const isActive = Math.abs(keyboardHeightScale - scale) < 0.015;
+              const dp = Math.round(258 * scale);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => void handleHeightPreset(scale)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer flex items-center gap-1.5 border ${
+                    isActive
+                      ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.25)]"
+                      : "bg-[#141c2e] border-sky-400/15 text-[#a0b4c4] hover:text-[#e0e8f0] hover:border-sky-400/30"
+                  }`}
+                >
+                  <span>{label}</span>
+                  <span className="text-[10px] opacity-75">({scale.toFixed(2)}x · {dp}dp)</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

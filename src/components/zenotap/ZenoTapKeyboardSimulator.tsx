@@ -48,6 +48,7 @@ interface ZenoTapKeyboardSimulatorProps {
   className?: string;
   injectedItem?: ZenoTapInjectedItem | null;
   onSelectInspectItem?: (item: DeckGifItem) => void;
+  heightScale?: number;
 }
 
 const DEFAULT_SAMPLE_ITEMS: DeckGifItem[] = [
@@ -63,6 +64,7 @@ export function ZenoTapKeyboardSimulator({
   className = "",
   injectedItem = null,
   onSelectInspectItem,
+  heightScale = 1.18,
 }: ZenoTapKeyboardSimulatorProps) {
   const sensory = useSensoryFeedback();
   const [theme, setTheme] = useState<KeyboardTheme>("glacier");
@@ -234,6 +236,10 @@ export function ZenoTapKeyboardSimulator({
   const isGlacier = theme === "glacier";
   const isTerracotta = theme === "terracotta";
   const isForest = theme === "forest_champagne";
+
+  const clampedScale = Math.min(1.3, Math.max(0.85, heightScale));
+  const scaledKeyHeight = Math.round(30 * (clampedScale / 1.18));
+  const scaledRowGap = Math.max(2, Math.round(4 * (clampedScale / 1.18)));
 
   return (
     <div
@@ -595,7 +601,10 @@ export function ZenoTapKeyboardSimulator({
               </div>
             ) : (
               /* Miniature QWERTY Keys */
-              <div className="space-y-1 text-center font-mono w-full max-w-full overflow-hidden px-0.5">
+              <div
+                className="text-center font-mono w-full max-w-full overflow-hidden px-0.5 flex flex-col transition-all duration-150"
+                style={{ gap: `${scaledRowGap}px` }}
+              >
                 {["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((row, rowIdx) => (
                   <div key={rowIdx} className="flex justify-center gap-0.5 sm:gap-1 w-full">
                     {row.split("").map((char) => (
@@ -610,7 +619,8 @@ export function ZenoTapKeyboardSimulator({
                           setCursorPos((p) => p + 1);
                           triggerEcho(char, 200);
                         }}
-                        className={`flex-1 min-w-0 max-w-8 h-7 sm:h-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center p-0 ${
+                        style={{ height: `${scaledKeyHeight}px` }}
+                        className={`flex-1 min-w-0 max-w-8 rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center p-0 ${
                           isGlacier
                             ? "bg-[#141c2e]/90 text-[#e0e8f0] border border-sky-400/20 hover:border-[#7dd3fc]/60 hover:bg-[#1a2438]"
                             : isTerracotta
@@ -636,7 +646,8 @@ export function ZenoTapKeyboardSimulator({
                 sensory.triggerTap();
                 toast.info("Navigates to main ZenoDeck studio");
               }}
-              className={`w-[25%] h-8 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer truncate px-1 flex items-center justify-center ${
+              style={{ height: `${scaledKeyHeight}px` }}
+              className={`w-[25%] rounded-lg text-[10px] font-bold border transition-colors cursor-pointer truncate px-1 flex items-center justify-center ${
                 isGlacier
                   ? "bg-[#141c2e] border-sky-400/25 text-[#7dd3fc]"
                   : isTerracotta
@@ -654,7 +665,8 @@ export function ZenoTapKeyboardSimulator({
               onPointerMove={handleSpacePointerMove}
               onPointerUp={handleSpacePointerUp}
               onPointerCancel={handleSpacePointerUp}
-              className={`w-[50%] h-8 rounded-lg flex flex-col items-center justify-center cursor-ew-resize select-none border transition-all ${
+              style={{ height: `${scaledKeyHeight}px` }}
+              className={`w-[50%] rounded-lg flex flex-col items-center justify-center cursor-ew-resize select-none border transition-all ${
                 isScrubbing
                   ? isGlacier
                     ? "bg-sky-950/90 border-[#7dd3fc] text-[#7dd3fc] shadow-[0_0_15px_rgba(125,211,252,0.35)]"
@@ -694,7 +706,8 @@ export function ZenoTapKeyboardSimulator({
                 sensory.triggerTap();
                 setActiveMode((m) => (m === "vault" ? "keys" : "vault"));
               }}
-              className={`w-[12%] h-8 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer flex items-center justify-center ${
+              style={{ height: `${scaledKeyHeight}px` }}
+              className={`w-[12%] rounded-lg text-[11px] font-bold border transition-colors cursor-pointer flex items-center justify-center ${
                 isGlacier
                   ? "bg-[#141c2e] border-sky-400/25 text-[#88b4cc]"
                   : isTerracotta
@@ -710,7 +723,8 @@ export function ZenoTapKeyboardSimulator({
             <button
               type="button"
               onClick={handleBackspace}
-              className={`w-[13%] h-8 rounded-lg text-[12px] font-bold border transition-colors cursor-pointer flex items-center justify-center ${
+              style={{ height: `${scaledKeyHeight}px` }}
+              className={`w-[13%] rounded-lg text-[12px] font-bold border transition-colors cursor-pointer flex items-center justify-center ${
                 isGlacier
                   ? "bg-[#141c2e] border-sky-400/25 text-[#c8a0f0] hover:bg-sky-500/10"
                   : isTerracotta

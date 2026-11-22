@@ -161,21 +161,30 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Download className="size-4.5 text-emerald-400" />}
-          title="Direct Stream Engine"
-          badge="Anti-Freeze 🛡️"
-          description="Resolved 5% download freeze with RFC 7233 byte-range fallback, dynamic User-Agent headers, and 18s stall watchdogs for a Streamlined Downloader."
+          icon={<Keyboard className="size-4.5 text-cyan-400" />}
+          title="Zero-Latency Android IME"
+          badge="Flagship ⚡"
+          description="Immediate ACTION_DOWN character commits, multi-touch rollover, 120fps GPU popups, smart backspace repeat, and spacebar trackpad cursor scrubbing."
+          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+        />
+
+        <FeatureCard
+          icon={<Sliders className="size-4.5 text-emerald-400" />}
+          title="Live Height Scale Slider"
+          badge="0.85x – 1.30x 🎛️"
+          description="Configure ergonomic keyboard height with live dp readouts, one-tap quick preset pills, instant reset, and 120fps preview scaling in the Keyboard Deck."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<Zap className="size-4.5 text-cyan-400" />}
-          title="Optimal 2-Worker Engine"
-          badge="Zero Clutter ⚡"
-          description="Removed confusing multi-worker thread controls. Mobile & iPhone Profile Cards now render crystal-clear feature descriptions."
-          accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-          badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+          icon={<Download className="size-4.5 text-amber-400" />}
+          title="Direct Stream Engine"
+          badge="Anti-Freeze 🛡️"
+          description="Resolved 5% download freeze with RFC 7233 byte-range fallback, dynamic User-Agent headers, and 18s stall watchdogs for a streamlined downloader."
+          accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
+          badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
         />
 
         <FeatureCard
@@ -185,15 +194,6 @@ export function WhatsNewModal() {
           description="Extract all photo and video slides from TikTok slideshows, Instagram carousels, Twitter/X posts, and Reddit multi-image galleries."
           accentClass="bg-indigo-500/15 text-indigo-400 border border-indigo-500/30"
           badgeClass="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30"
-        />
-
-        <FeatureCard
-          icon={<ImageIcon className="size-4.5 text-rose-400" />}
-          title="True Photos & Android Gallery"
-          badge="Pure Image 🖼️"
-          description="Strict image MIME types and direct routing to Android Pictures/ZenoDeck with native MediaScanner indexing for Google Photos."
-          accentClass="bg-rose-500/15 text-rose-400 border border-rose-500/30"
-          badgeClass="bg-rose-500/15 text-rose-300 border border-rose-500/30"
         />
       </div>
     </ZenoModal>

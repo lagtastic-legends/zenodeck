@@ -485,6 +485,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
+                    android:layout_marginBottom="6dp"
                     android:orientation="horizontal">
 
                     <Button android:id="@+id/btn_key_q" style="?android:attr/borderlessButtonStyle" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="1dp" android:background="@drawable/bg_keycap_normal" android:text="Q" android:textColor="#F1F5F9" android:textSize="@dimen/keyboard_key_text_size" />
@@ -505,6 +506,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
+                    android:layout_marginBottom="6dp"
                     android:paddingHorizontal="14dp"
                     android:orientation="horizontal">
 
@@ -906,6 +908,20 @@
                 android:paddingHorizontal="2dp" />
         </LinearLayout>
     </LinearLayout>
+
+    <!-- 120fps GPU-Accelerated Floating Key Character Preview Popup -->
+    <TextView
+        android:id="@+id/tv_floating_key_popup"
+        android:layout_width="54dp"
+        android:layout_height="62dp"
+        android:layout_gravity="top|start"
+        android:background="@drawable/bg_keycap_primary"
+        android:gravity="center"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:elevation="16dp"
+        android:visibility="gone" />
 
     <!-- Inline Glassmorphic Popup Overlay (Avoids BadTokenException) -->
     <FrameLayout

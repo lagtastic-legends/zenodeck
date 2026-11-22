@@ -5,6 +5,34 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.36] — 2026-11-21
+
+### ⌨️ Flagship Zero-Latency Android IME Upgrade & Proportional Scaling
+- **Proportional Height Scaling (`keyboardHeightScale`)**:
+  - Implemented centralized `keyboardHeightScale` multiplier (range `0.85f`–`1.30f`, default `1.18f`), proportionally scaling character key rows to 54dp with 6dp–8dp vertical gaps (~305dp portrait height) without dead bottom padding.
+  - Dynamically respects `WindowInsets` (`navigationBars()`, `displayCutout()`) and enforces strict 45% screen height clamping in landscape orientation.
+  - Synchronized live with React Keyboard Deck UI via `OnSharedPreferenceChangeListener` and `ACTION_SETTINGS_UPDATED` broadcast without restarting the IME.
+- **Zero-Latency Touch Pipeline & Multi-Touch Rollover**:
+  - Character keys commit immediately on `ACTION_DOWN` / `ACTION_POINTER_DOWN` via `InputConnection.commitText()`.
+  - Added multi-touch rollover tracking via preallocated `pointerStates` array for flawless rapid-fire typing.
+  - Expanded key hitboxes into inter-key padding gutters with nearest-key center snapping.
+- **Immediate Glide-Typing Retraction**:
+  - Automatically retracts any speculative `ACTION_DOWN` character as soon as a swiped trajectory crosses the gesture threshold, ensuring swiped words never duplicate their initial letter.
+- **120fps GPU Key Popups & Non-Blocking Haptics**:
+  - Hardware haptic feedback (`KEYBOARD_PRESS`, `KEYBOARD_TAP`) triggered immediately on touch down.
+  - Floating character preview popups and key highlights rendered via GPU properties (`scaleX`, `scaleY`, `alpha`, `translationY`) with zero allocations in hot touch paths.
+- **Smart Backspace & Spacebar Trackpad Cursor Scrubbing**:
+  - UTF-16 surrogate pair safe backspace with progressive acceleration (350ms initial repeat -> 1200ms word deletion).
+  - Horizontal drag on Spacebar (> 12dp threshold) controls cursor scrubbing with subtle haptic ticks.
+
+### 🎛️ Live Keyboard Height Scale Configurator & Interactive Preview
+- **Interactive Keyboard Height Card (`keyboard-deck-manager.tsx`)**:
+  - Range slider (`0.85x`–`1.30x`, step `0.01`, default `1.18x`) with live multiplier and computed portrait dp readouts (`Math.round(258 * scale)`).
+  - Quick preset pills: `Compact (0.95x)`, `Standard (1.00x)`, `Ergonomic (1.18x)`, `Tall (1.28x)`, and `Reset (1.18x)`.
+  - 120ms debounced persistence and immediate pointer-up commits to native bridge.
+- **Dynamic 120fps Preview Scaling (`ZenoTapKeyboardSimulator.tsx`)**:
+  - Connected `heightScale` to dynamically scale key heights and row spacing in the interactive preview card.
+
 ## [1.0.35] — 2026-11-21
 
 ### 🚀 Universal Downloader 5% Freeze Fix & Resilient Direct Streaming
