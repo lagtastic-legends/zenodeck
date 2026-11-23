@@ -252,6 +252,7 @@ export function clampGain(gain: number): number {
 /* -------------------------------------------------------------------------- */
 
 export type FXRackModuleId =
+  | "tempo-changer"
   | "pre-amp"
   | "bass-booster"
   | "equalizer"

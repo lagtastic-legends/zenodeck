@@ -20,6 +20,13 @@ export const DEFAULT_FX_RACK_CONFIG: FXRackConfig = {
   masterGainDb: 0,
   modules: [
     {
+      id: "tempo-changer",
+      name: "Tempo & Pitch Shifter",
+      enabled: false,
+      wetDry: 1.0,
+      params: { tempo: 0.87, preservePitch: false },
+    },
+    {
       id: "pre-amp",
       name: "Pre-Amp & DC Guard",
       enabled: false,
@@ -72,6 +79,137 @@ export const DEFAULT_FX_RACK_CONFIG: FXRackConfig = {
 };
 
 /**
+ * Default "Slowed + Reverb (Studio Balanced)" Preset:
+ * Signal Chain Order: 1. Tempo Changer -> 2. Reverb
+ * - Tempo Changer: tempo 0.87, preservePitch false (analog tape pitch drop)
+ * - Reverb: reverberance 45%, roomScale 90%, hfDamping 65% (~4800Hz),
+ *           preDelayMs 35ms, stereoDepth 100%, wetGainDb -5.0dB, wetHighPassHz 140Hz
+ */
+export const SLOWED_REVERB_STUDIO_PRESET: FXRackConfig = {
+  isBypassed: false,
+  masterGainDb: 0,
+  modules: [
+    {
+      id: "tempo-changer",
+      name: "Tempo & Pitch Shifter",
+      enabled: true,
+      wetDry: 1.0,
+      params: {
+        tempo: 0.87,
+        preservePitch: false,
+      },
+    },
+    {
+      id: "reverb",
+      name: "Studio Reverb",
+      enabled: true,
+      wetDry: 0.562, // 10^(-5/20) = ~0.5623
+      params: {
+        preset: "slowed-reverb",
+        reverberance: 45,
+        roomScale: 90,
+        hfDamping: 65,
+        preDelayMs: 35,
+        stereoDepth: 100,
+        wetGainDb: -5,
+        wetHighPassHz: 140,
+      },
+    },
+    {
+      id: "master-limiter",
+      name: "Broadcast Peak Limiter",
+      enabled: true,
+      wetDry: 1.0,
+      params: { ceilingDb: -0.5, attackMs: 4, releaseMs: 60 },
+    },
+  ],
+};
+
+/**
+ * Secondary Preset "Slowed + Reverb (Deep Atmospheric / Phonk)":
+ * - Tempo: 0.84 (preservePitch: false)
+ * - Reverb: reverberance 58%, roomScale 100%, hfDamping 70%,
+ *           preDelayMs 25ms, stereoDepth 100%, wetGainDb -3.5dB, wetHighPassHz 150Hz
+ */
+export const SLOWED_REVERB_PHONK_PRESET: FXRackConfig = {
+  isBypassed: false,
+  masterGainDb: 0,
+  modules: [
+    {
+      id: "tempo-changer",
+      name: "Tempo & Pitch Shifter",
+      enabled: true,
+      wetDry: 1.0,
+      params: {
+        tempo: 0.84,
+        preservePitch: false,
+      },
+    },
+    {
+      id: "reverb",
+      name: "Studio Reverb",
+      enabled: true,
+      wetDry: 0.668, // 10^(-3.5/20) = ~0.6683
+      params: {
+        preset: "slowed-reverb-phonk",
+        reverberance: 58,
+        roomScale: 100,
+        hfDamping: 70,
+        preDelayMs: 25,
+        stereoDepth: 100,
+        wetGainDb: -3.5,
+        wetHighPassHz: 150,
+      },
+    },
+    {
+      id: "master-limiter",
+      name: "Broadcast Peak Limiter",
+      enabled: true,
+      wetDry: 1.0,
+      params: { ceilingDb: -0.5, attackMs: 4, releaseMs: 60 },
+    },
+  ],
+};
+
+export const SLOWED_REVERB_PRESETS = {
+  "studio-balanced": SLOWED_REVERB_STUDIO_PRESET,
+  "deep-atmospheric-phonk": SLOWED_REVERB_PHONK_PRESET,
+} as const;
+
+/**
+ * Synthesizes a deterministic stereo Impulse Response buffer (early reflections + velvet noise decay)
+ */
+export function createStudioImpulseResponse(
+  ctx: BaseAudioContext,
+  decaySec: number = 2.5,
+  dampingHz: number = 4800,
+  preDelayMs: number = 0
+): AudioBuffer {
+  const sampleRate = ctx.sampleRate;
+  const length = Math.max(1, Math.floor(sampleRate * decaySec));
+  const buffer = ctx.createBuffer(2, length, sampleRate);
+  const left = buffer.getChannelData(0);
+  const right = buffer.getChannelData(1);
+  const preDelaySamples = Math.floor((preDelayMs / 1000) * sampleRate);
+  const decayConstant = 6.91 / (decaySec * sampleRate);
+
+  for (let i = 0; i < length; i++) {
+    if (i < preDelaySamples) {
+      left[i] = 0;
+      right[i] = 0;
+      continue;
+    }
+    const n = i - preDelaySamples;
+    const env = Math.exp(-decayConstant * n);
+    const isEarly = n < sampleRate * 0.05;
+    const density = isEarly ? 0.35 : 1.0;
+    left[i] = (Math.random() * 2 - 1) * env * density;
+    right[i] = (Math.random() * 2 - 1) * env * density;
+  }
+  return buffer;
+}
+
+/**
  * Compiles the active FX rack configuration into an optimized FFmpeg filterchain.
  */
 export function buildFXRackFilterChain(config: FXRackConfig): string[] {
@@ -88,6 +226,21 @@ export function buildFXRackFilterChain(config: FXRackConfig): string[] {
     if (!mod.enabled) continue;
 
     switch (mod.id) {
+      case "tempo-changer": {
+        const tempo = Number(mod.params.tempo ?? 0.87);
+        const preservePitch = mod.params.preservePitch === true;
+        if (!preservePitch) {
+          filters.push(`asetrate=44100*${tempo.toFixed(4)}`);
+          filters.push("aresample=44100");
+        } else {
+          let rem = tempo;
+          while (rem < 0.5) { filters.push("atempo=0.5"); rem /= 0.5; }
+          while (rem > 2.0) { filters.push("atempo=2.0"); rem /= 2.0; }
+          filters.push(`atempo=${rem.toFixed(4)}`);
+        }
+        break;
+      }
+
       case "pre-amp": {
         const hp = mod.params.highpassHz || 25;
         filters.push(`highpass=f=${hp}:p=2`);
@@ -145,12 +298,24 @@ export function buildFXRackFilterChain(config: FXRackConfig): string[] {
       }
 
       case "reverb": {
-        const spacePreset = mod.params.preset || "medium-room";
-        const space = REVERB_SPACES[spacePreset] || REVERB_SPACES["medium-room"];
-        const spaceFilters = space.buildFilter(44100);
-        // Exclude trailing limiter from sub-space to prevent limiter cascade
-        const filtered = spaceFilters.filter((f) => !f.startsWith("alimiter="));
-        filters.push(...filtered);
+        const p = mod.params || {};
+        if (p.preset?.startsWith("slowed-reverb") || p.preDelayMs !== undefined) {
+          const preDelayMs = p.preDelayMs ?? 35;
+          const wetHighPassHz = p.wetHighPassHz ?? 140;
+          const hfDamping = p.hfDamping ?? 65;
+          const lowpassHz = p.lowpassHz ?? Math.round(14000 - (hfDamping / 100) * 14154);
+          const wetGainDb = p.wetGainDb ?? -5.0;
+          filters.push(
+            `asplit=2[dry][wet];[wet]adelay=${preDelayMs}|${preDelayMs},highpass=f=${wetHighPassHz},aecho=0.8:0.88:60|120:0.4|0.25,lowpass=f=${lowpassHz},stereotools=mlev=1.0:slev=1.2,volume=${wetGainDb}dB[w];[dry][w]amix=inputs=2:weights=1 1:normalize=0,alimiter=limit=0.944`
+          );
+        } else {
+          const spacePreset = p.preset || "medium-room";
+          const space = REVERB_SPACES[spacePreset] || REVERB_SPACES["medium-room"];
+          const spaceFilters = space.buildFilter(44100);
+          // Exclude trailing limiter from sub-space to prevent limiter cascade
+          const filtered = spaceFilters.filter((f) => !f.startsWith("alimiter="));
+          filters.push(...filtered);
+        }
         break;
       }
 
@@ -209,6 +374,11 @@ export function createFXRackWebAudioNodes(
     if (!mod.enabled) continue;
 
     switch (mod.id) {
+      case "tempo-changer": {
+        // Handled via audioRef.playbackRate & preservesPitch in MediaElement
+        break;
+      }
+
       case "pre-amp": {
         const hpf = ctx.createBiquadFilter();
         hpf.type = "highpass";
@@ -305,30 +475,68 @@ export function createFXRackWebAudioNodes(
       }
 
       case "reverb": {
-        const wet = Math.max(0, Math.min(1, mod.wetDry ?? 0.3));
-        const wetGain = ctx.createGain();
-        wetGain.gain.value = wet;
-        const dryGain = ctx.createGain();
-        dryGain.gain.value = 1.0 - wet * 0.4;
+        const p = mod.params || {};
+        const preDelayMs = typeof p.preDelayMs === "number" ? p.preDelayMs : 35;
+        const wetHighPassHz = typeof p.wetHighPassHz === "number" ? p.wetHighPassHz : 140;
+        const hfDamping = typeof p.hfDamping === "number" ? p.hfDamping : 65;
+        const lowpassHz = typeof p.lowpassHz === "number" ? p.lowpassHz : Math.round(14000 - (hfDamping / 100) * 14154);
+        const wetGainDb = typeof p.wetGainDb === "number" ? p.wetGainDb : -5.0;
+        const wetGainLinear = typeof p.wetGainDb === "number" ? Math.pow(10, wetGainDb / 20) : (mod.wetDry ?? 0.562);
+        const dryGainLinear = 1.0;
 
-        const delay = ctx.createDelay();
-        delay.delayTime.value = 0.028;
-        const damp = ctx.createBiquadFilter();
-        damp.type = "lowpass";
-        damp.frequency.value = 4800;
+        const dryGain = ctx.createGain();
+        dryGain.gain.value = dryGainLinear;
+
+        // 1. DelayNode for pre-delay (preDelayMs / 1000, 0.035s default)
+        const delay = ctx.createDelay(1.0);
+        delay.delayTime.value = Math.max(0, Math.min(1.0, preDelayMs / 1000));
+
+        // 2. BiquadFilterNode highpass at 140Hz (strips low-mid mud from wet path)
+        const highpass = ctx.createBiquadFilter();
+        highpass.type = "highpass";
+        highpass.frequency.value = wetHighPassHz;
+
+        // 3. BiquadFilterNode lowpass mapped from hfDamping (~4800Hz at 65% damping)
+        const lowpass = ctx.createBiquadFilter();
+        lowpass.type = "lowpass";
+        lowpass.frequency.value = lowpassHz;
+
+        // 4. ConvolverNode + wet GainNode (Math.pow(10, wetGainDb / 20) = 0.562 at -5 dB)
+        const convolver = ctx.createConvolver();
+        try {
+          const roomSec = typeof p.roomScale === "number" ? p.roomScale / 30 : 3.0;
+          convolver.buffer = createStudioImpulseResponse(ctx, roomSec, lowpassHz, 0);
+        } catch {}
+
+        const wetGain = ctx.createGain();
+        wetGain.gain.value = wetGainLinear;
 
         const summer = ctx.createGain();
 
+        // Connect Dry Path: currentHead -> dryGain -> summer
         currentHead.connect(dryGain);
         dryGain.connect(summer);
 
+        // Connect Wet Path: currentHead -> delay -> highpass -> lowpass -> convolver -> wetGain -> summer
         currentHead.connect(delay);
-        delay.connect(damp);
-        damp.connect(wetGain);
+        delay.connect(highpass);
+        highpass.connect(lowpass);
+        lowpass.connect(convolver);
+        convolver.connect(wetGain);
         wetGain.connect(summer);
 
-        currentHead = summer;
-        nodesToCleanup.push(wetGain, dryGain, delay, damp, summer);
+        // Master brickwall safety limiter with -0.5 dB ceiling
+        const brickwallLimiter = ctx.createDynamicsCompressor();
+        brickwallLimiter.threshold.value = -0.5;
+        brickwallLimiter.knee.value = 0;
+        brickwallLimiter.ratio.value = 20;
+        brickwallLimiter.attack.value = 0.003;
+        brickwallLimiter.release.value = 0.05;
+
+        summer.connect(brickwallLimiter);
+        currentHead = brickwallLimiter;
+
+        nodesToCleanup.push(dryGain, delay, highpass, lowpass, convolver, wetGain, summer, brickwallLimiter);
         break;
       }
 

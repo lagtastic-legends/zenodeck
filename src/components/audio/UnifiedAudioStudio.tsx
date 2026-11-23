@@ -88,11 +88,11 @@ const AUDIO_STUDIO_PRESETS: PresetItem[] = [
   {
     id: "slowed-reverb-vibes",
     name: "Slowed + Reverb Nostalgia",
-    description: "Moody aesthetic pitch downshift with lush cathedral reverberation and warm stereo warmth.",
+    description: "Moody aesthetic pitch downshift with 35ms pre-delay, 65% HF damping, and tight 140Hz sub-bass punch.",
     category: "social",
     engineTier: "Tier 4: Wasm MT",
-    chips: ["Cathedral Reverb", "Warm Echo", "55% Wet"],
-    params: { effect: "reverb", space: "cathedral", wetPercent: 55, dryPercent: 70 },
+    chips: ["0.87x Pitch", "35ms Pre-Delay", "-5dB Wet"],
+    params: { effect: "slowed-reverb", speed: 0.87, preservePitch: false, preDelayMs: 35, hfDamping: 65, wetHighPassHz: 140, wetGainDb: -5.0 },
   },
   {
     id: "bass-boost-extreme",
@@ -576,16 +576,62 @@ export function UnifiedAudioStudio({
 
         case "reverb":
         case "slowed-reverb": {
-          // True Algorithmic IR Convolver Reverb with parallel Wet/Dry
           const isSlowed = activeEffect === "slowed-reverb";
-          const decay = isSlowed ? 3.5 : 2.2;
+          if (isSlowed) {
+            const preDelayMs = typeof params.preDelayMs === "number" ? params.preDelayMs : 35;
+            const hfDamping = typeof params.hfDamping === "number" ? params.hfDamping : 65;
+            const wetHighPassHz = typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140;
+            const wetGainDb = typeof params.wetGainDb === "number" ? params.wetGainDb : -5.0;
+            const wetGainLinear = typeof params.reverbMix === "number" ? params.reverbMix : Math.pow(10, wetGainDb / 20);
+            const lowpassHz = Math.round(14000 - (hfDamping / 100) * 14154);
+
+            const dryGain = ctx.createGain();
+            dryGain.gain.value = 1.0;
+
+            const delay = ctx.createDelay(1.0);
+            delay.delayTime.value = Math.max(0, Math.min(1.0, preDelayMs / 1000));
+
+            const hpf = ctx.createBiquadFilter();
+            hpf.type = "highpass";
+            hpf.frequency.value = wetHighPassHz;
+
+            const lpf = ctx.createBiquadFilter();
+            lpf.type = "lowpass";
+            lpf.frequency.value = lowpassHz;
+
+            const convolver = ctx.createConvolver();
+            convolver.buffer = createStudioImpulseResponse(ctx, 3.5, lowpassHz, 0);
+
+            const wetGain = ctx.createGain();
+            wetGain.gain.value = wetGainLinear;
+
+            const sumGain = ctx.createGain();
+            sumGain.gain.value = 1.0;
+
+            fadeGain.connect(dryGain);
+            dryGain.connect(sumGain);
+
+            fadeGain.connect(delay);
+            delay.connect(hpf);
+            hpf.connect(lpf);
+            lpf.connect(convolver);
+            convolver.connect(wetGain);
+            wetGain.connect(sumGain);
+
+            sumGain.connect(masterLimiter);
+            currentDspNodesRef.current = [fadeGain, dryGain, delay, hpf, lpf, convolver, wetGain, sumGain, masterLimiter];
+            return;
+          }
+
+          // Algorithmic IR Convolver Reverb with parallel Wet/Dry
+          const decay = 2.2;
           const convolver = ctx.createConvolver();
           convolver.buffer = createStudioImpulseResponse(ctx, decay, 5000, 20);
 
           const dryGain = ctx.createGain();
-          dryGain.gain.value = isSlowed ? 0.70 : 0.85;
+          dryGain.gain.value = 0.85;
           const wetGain = ctx.createGain();
-          wetGain.gain.value = isSlowed ? 0.50 : 0.35;
+          wetGain.gain.value = 0.35;
 
           const sumGain = ctx.createGain();
           sumGain.gain.value = 1.0;
@@ -849,9 +895,9 @@ export function UnifiedAudioStudio({
     } else {
       if (activeEffect === "tempo-changer" || activeEffect === "slowed-reverb") {
         try {
-          audioRef.current.preservesPitch = true;
+          audioRef.current.preservesPitch = params.preservePitch === true;
         } catch {}
-        audioRef.current.playbackRate = Math.max(0.5, Math.min(2.0, params.speed || 1.0));
+        audioRef.current.playbackRate = Math.max(0.5, Math.min(2.0, params.speed || (activeEffect === "slowed-reverb" ? 0.87 : 1.0)));
       } else {
         audioRef.current.playbackRate = 1.0;
       }
@@ -1938,7 +1984,7 @@ export function UnifiedAudioStudio({
               <div className="space-y-4">
                 <ParamSlider
                   label="Playback Speed (Slowed Tempo)"
-                  value={Math.round((params.speed || 0.85) * 100)}
+                  value={Math.round((params.speed ?? 0.87) * 100)}
                   min={60}
                   max={100}
                   step={1}
@@ -1949,13 +1995,51 @@ export function UnifiedAudioStudio({
                   disabled={busy}
                 />
                 <ParamSlider
-                  label="Cathedral Reverb Wet Balance"
-                  value={params.wetPercent || 50}
-                  min={10}
+                  label="Pre-Delay (Transient Separation)"
+                  value={params.preDelayMs ?? 35}
+                  min={0}
                   max={80}
+                  step={1}
+                  onChange={(v) => updateParam("preDelayMs", v)}
+                  display={(v) => `${v} ms`}
+                  hintLeft="0 ms (Instant)"
+                  hintRight="80 ms (Deep Pocket)"
+                  disabled={busy}
+                />
+                <ParamSlider
+                  label="HF Damping (Warm Analog Roll-off)"
+                  value={params.hfDamping ?? 65}
+                  min={0}
+                  max={100}
                   step={5}
-                  onChange={(v) => updateParam("wetPercent", v)}
-                  display={(v) => `${v}%`}
+                  onChange={(v) => updateParam("hfDamping", v)}
+                  display={(v) => `${v}% (~4.8kHz)`}
+                  hintLeft="0% (Bright Shimmer)"
+                  hintRight="100% (Dark Tape Decay)"
+                  disabled={busy}
+                />
+                <ParamSlider
+                  label="Wet Gain & Balance"
+                  value={params.wetGainDb ?? -5.0}
+                  min={-12.0}
+                  max={0.0}
+                  step={0.5}
+                  onChange={(v) => updateParam("wetGainDb", v)}
+                  display={(v) => `${v.toFixed(1)} dB`}
+                  hintLeft="-12 dB (Subtle)"
+                  hintRight="0 dB (Full Bloom)"
+                  disabled={busy}
+                />
+                <ParamSlider
+                  label="Wet High-Pass Filter (Sub-Bass Tightness)"
+                  value={params.wetHighPassHz ?? 140}
+                  min={80}
+                  max={250}
+                  step={5}
+                  onChange={(v) => updateParam("wetHighPassHz", v)}
+                  display={(v) => `${v} Hz`}
+                  hintLeft="80 Hz (Full Sub)"
+                  hintRight="250 Hz (Punchy)"
                   disabled={busy}
                 />
               </div>

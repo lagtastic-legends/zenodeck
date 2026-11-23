@@ -286,12 +286,9 @@ export const REVERB_SPACES: Record<ReverbSpacePreset, ReverbPresetMeta> = {
     desc: "Late-night lowered pitch and tempo with lush cavernous space",
     badge: "Late Night",
     buildFilter: (sampleRate = 44100) => [
-      `asetrate=${Math.round(sampleRate * 0.85)}`,
+      `asetrate=${Math.round(sampleRate * 0.87)}`,
       `aresample=${sampleRate}`,
-      "aecho=0.80:0.78:20|32|44|58:0.30|0.24|0.18|0.12",
-      "highpass=f=45",
-      "treble=g=-3:f=5500",
-      "alimiter=limit=0.98",
+      "asplit=2[dry][wet];[wet]adelay=35|35,highpass=f=140,aecho=0.8:0.88:60|120:0.4|0.25,lowpass=f=4800,stereotools=mlev=1.0:slev=1.2,volume=-5dB[w];[dry][w]amix=inputs=2:weights=1 1:normalize=0,alimiter=limit=0.944",
     ],
   },
   "spatial-8d-reverb": {
@@ -680,13 +677,29 @@ export function getAudioFilterGraph(
     case "trimmer":
       return buildTrimmerFilter(params as TrimmerParams);
     case "slowed-reverb": {
-      const speed = params.speed || 0.85;
+      const speed = typeof params.speed === "number" ? params.speed : 0.87;
+      const preservePitch = params.preservePitch !== false && (params.preservePitch === true || (params.speed !== undefined && !("preservePitch" in params)));
+      const preDelayMs = typeof params.preDelayMs === "number" ? params.preDelayMs : 35;
+      const wetHighPassHz = typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140;
+      const hfDamping = typeof params.hfDamping === "number" ? params.hfDamping : 65;
+      const lowpassHz = typeof params.lowpassHz === "number" ? params.lowpassHz : Math.round(14000 - (hfDamping / 100) * 14154);
+      const wetGainDb = typeof params.wetGainDb === "number" ? params.wetGainDb : -5.0;
+      const sampleRate = params.sampleRate || 44100;
+
       const chain: string[] = [];
-      let rem = speed;
-      while (rem < 0.5) { chain.push("atempo=0.5"); rem /= 0.5; }
-      while (rem > 2.0) { chain.push("atempo=2.0"); rem /= 2.0; }
-      chain.push(`atempo=${rem.toFixed(4)}`);
-      chain.push("aecho=0.8:0.88:60|120:0.4|0.25");
+      if (!preservePitch) {
+        chain.push(`asetrate=${Math.round(sampleRate * speed)}`);
+        chain.push(`aresample=${sampleRate}`);
+      } else {
+        let rem = speed;
+        while (rem < 0.5) { chain.push("atempo=0.5"); rem /= 0.5; }
+        while (rem > 2.0) { chain.push("atempo=2.0"); rem /= 2.0; }
+        chain.push(`atempo=${rem.toFixed(4)}`);
+      }
+
+      chain.push(
+        `asplit=2[dry][wet];[wet]adelay=${preDelayMs}|${preDelayMs},highpass=f=${wetHighPassHz},aecho=0.8:0.88:60|120:0.4|0.25,lowpass=f=${lowpassHz},stereotools=mlev=1.0:slev=1.2,volume=${wetGainDb}dB[w];[dry][w]amix=inputs=2:weights=1 1:normalize=0,alimiter=limit=0.944`
+      );
       return chain;
     }
     case "audio-effects":
@@ -734,7 +747,15 @@ export function getDefaultAudioParams(effect: AudioEffectType): Record<string, a
     case "ringtone-maker":
       return { startSec: 0, endSec: 30, fadeInSec: 1.5, fadeOutSec: 1.5, boostDb: 0, cutMode: "keep" };
     case "slowed-reverb":
-      return { speed: 0.85, preset: "cathedral", wetPercent: 55, dryPercent: 70 };
+      return {
+        speed: 0.87,
+        preservePitch: false,
+        reverbMix: 0.36,
+        preDelayMs: 35,
+        hfDamping: 65,
+        wetHighPassHz: 140,
+        wetGainDb: -5.0,
+      };
     case "audio-effects":
     case "audio-dsp":
       return { cycleSec: 8, intensity: 0.85, widening: 1.25 };
@@ -1028,10 +1049,10 @@ export const AUDIO_TOOLS_CATALOG: AudioToolMeta[] = [
     accentColor: "violet",
     iconName: "Waves",
     presets: [
-      { label: "Late Night Chill (0.85x)", params: { speed: 0.85 } },
-      { label: "Deep Cathedral (0.80x)", params: { speed: 0.80 } },
-      { label: "Subtle Slow (0.92x)", params: { speed: 0.92 } },
-      { label: "Ultra Slow Sleep (0.75x)", params: { speed: 0.75 } },
+      { label: "Studio Balanced (0.87x)", params: { speed: 0.87, preservePitch: false, preDelayMs: 35, hfDamping: 65, wetHighPassHz: 140, wetGainDb: -5 } },
+      { label: "Deep Atmospheric Phonk (0.84x)", params: { speed: 0.84, preservePitch: false, preDelayMs: 25, hfDamping: 70, wetHighPassHz: 150, wetGainDb: -3.5 } },
+      { label: "Subtle Slow (0.92x)", params: { speed: 0.92, preservePitch: false, preDelayMs: 30, hfDamping: 60, wetHighPassHz: 140, wetGainDb: -6 } },
+      { label: "Ultra Slow Sleep (0.75x)", params: { speed: 0.75, preservePitch: false, preDelayMs: 40, hfDamping: 75, wetHighPassHz: 160, wetGainDb: -4 } },
     ],
   },
   {

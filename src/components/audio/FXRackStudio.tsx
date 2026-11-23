@@ -119,6 +119,22 @@ export function FXRackStudio({
       const source = sourceNodeRef.current;
       try { source.disconnect(); } catch {}
 
+      // Sync tempo-changer module with HTMLAudioElement
+      const tempoMod = config.modules.find((m) => m.id === "tempo-changer" && m.enabled);
+      if (tempoMod && audioRef.current) {
+        audioRef.current.playbackRate = tempoMod.params.tempo ?? 0.87;
+        try {
+          (audioRef.current as any).preservesPitch = tempoMod.params.preservePitch === true;
+          (audioRef.current as any).mozPreservesPitch = tempoMod.params.preservePitch === true;
+          (audioRef.current as any).webkitPreservesPitch = tempoMod.params.preservePitch === true;
+        } catch {}
+      } else if (audioRef.current) {
+        audioRef.current.playbackRate = 1.0;
+        try {
+          (audioRef.current as any).preservesPitch = true;
+        } catch {}
+      }
+
       const { masterGain, cleanup } = createFXRackWebAudioNodes(ctx, source, config);
       masterGain.connect(ctx.destination);
       rackCleanupRef.current = cleanup;
@@ -166,6 +182,58 @@ export function FXRackStudio({
   const applyPreset = (presetName: string) => {
     void haptics.medium();
     switch (presetName) {
+      case "slowed-reverb-studio":
+        setConfig((prev) => ({
+          ...prev,
+          modules: prev.modules.map((m) => {
+            if (m.id === "tempo-changer") return { ...m, enabled: true, params: { tempo: 0.87, preservePitch: false } };
+            if (m.id === "reverb") return {
+              ...m,
+              enabled: true,
+              wetDry: 0.562,
+              params: {
+                preset: "slowed-reverb",
+                reverberance: 45,
+                roomScale: 90,
+                hfDamping: 65,
+                preDelayMs: 35,
+                stereoDepth: 100,
+                wetGainDb: -5,
+                wetHighPassHz: 140,
+              },
+            };
+            if (m.id === "master-limiter") return { ...m, enabled: true, params: { ceilingDb: -0.5 } };
+            return { ...m, enabled: false };
+          }),
+        }));
+        break;
+
+      case "slowed-reverb-phonk":
+        setConfig((prev) => ({
+          ...prev,
+          modules: prev.modules.map((m) => {
+            if (m.id === "tempo-changer") return { ...m, enabled: true, params: { tempo: 0.84, preservePitch: false } };
+            if (m.id === "reverb") return {
+              ...m,
+              enabled: true,
+              wetDry: 0.668,
+              params: {
+                preset: "slowed-reverb-phonk",
+                reverberance: 58,
+                roomScale: 100,
+                hfDamping: 70,
+                preDelayMs: 25,
+                stereoDepth: 100,
+                wetGainDb: -3.5,
+                wetHighPassHz: 150,
+              },
+            };
+            if (m.id === "master-limiter") return { ...m, enabled: true, params: { ceilingDb: -0.5 } };
+            return { ...m, enabled: false };
+          }),
+        }));
+        break;
+
       case "analog-warmth":
         setConfig((prev) => ({
           ...prev,
@@ -295,6 +363,20 @@ export function FXRackStudio({
           </span>
           <button
             type="button"
+            onClick={() => applyPreset("slowed-reverb-studio")}
+            className="rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 font-mono text-[11px] text-primary font-bold transition-all cursor-pointer"
+          >
+            Slowed + Reverb (Studio)
+          </button>
+          <button
+            type="button"
+            onClick={() => applyPreset("slowed-reverb-phonk")}
+            className="rounded-lg border border-border/60 bg-secondary/60 hover:bg-secondary hover:border-primary/40 px-2.5 py-1 font-mono text-[11px] text-foreground transition-all cursor-pointer"
+          >
+            Deep Phonk
+          </button>
+          <button
+            type="button"
             onClick={() => applyPreset("analog-warmth")}
             className="rounded-lg border border-border/60 bg-secondary/60 hover:bg-secondary hover:border-primary/40 px-2.5 py-1 font-mono text-[11px] text-foreground transition-all cursor-pointer"
           >
@@ -357,6 +439,38 @@ export function FXRackStudio({
 
               {/* Module Slot Interactive Parameter Controls */}
               <div className="pt-3 space-y-3">
+                {mod.id === "tempo-changer" && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between font-mono text-[11px]">
+                      <span className="text-muted-foreground">Playback Speed / Tempo:</span>
+                      <span className="text-primary font-bold">{(mod.params.tempo || 0.87).toFixed(2)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0.6}
+                      max={1.4}
+                      step={0.01}
+                      value={mod.params.tempo || 0.87}
+                      onChange={(e) => updateModuleParam(mod.id, "tempo", Number(e.target.value))}
+                      className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                    />
+                    <div className="flex items-center justify-between font-mono text-[11px] pt-1">
+                      <span className="text-muted-foreground">Preserve Pitch:</span>
+                      <button
+                        type="button"
+                        onClick={() => updateModuleParam(mod.id, "preservePitch", !mod.params.preservePitch)}
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold border transition-colors cursor-pointer ${
+                          mod.params.preservePitch
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "bg-secondary border-border text-muted-foreground"
+                        }`}
+                      >
+                        {mod.params.preservePitch ? "ON (Granular)" : "OFF (Analog Tape Drop)"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {mod.id === "pre-amp" && (
                   <div className="space-y-2">
                     <div className="flex justify-between font-mono text-[11px]">
@@ -494,10 +608,71 @@ export function FXRackStudio({
                     >
                       <option value="small-room">Small Room</option>
                       <option value="medium-room">Medium Room</option>
-                      <option value="large-room">Large Hall</option>
+                      <option value="large-hall">Large Hall</option>
                       <option value="church-hall">Cathedral Echo</option>
-                      <option value="slowed-reverb">Slowed & Ambient</option>
+                      <option value="slowed-reverb">Slowed & Ambient (Studio Balanced)</option>
+                      <option value="slowed-reverb-phonk">Slowed & Reverb (Deep Phonk)</option>
                     </select>
+
+                    {(mod.params.preset?.startsWith("slowed-reverb") || mod.params.preDelayMs !== undefined) && (
+                      <div className="pt-2 space-y-2 border-t border-border/40">
+                        <div className="flex justify-between font-mono text-[10px]">
+                          <span className="text-muted-foreground">Pre-Delay:</span>
+                          <span className="text-primary font-bold">{mod.params.preDelayMs ?? 35} ms</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={80}
+                          step={1}
+                          value={mod.params.preDelayMs ?? 35}
+                          onChange={(e) => updateModuleParam(mod.id, "preDelayMs", Number(e.target.value))}
+                          className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                        />
+
+                        <div className="flex justify-between font-mono text-[10px]">
+                          <span className="text-muted-foreground">HF Damping (Roll-off):</span>
+                          <span className="text-primary font-bold">{mod.params.hfDamping ?? 65}% (~4.8kHz)</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={mod.params.hfDamping ?? 65}
+                          onChange={(e) => updateModuleParam(mod.id, "hfDamping", Number(e.target.value))}
+                          className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                        />
+
+                        <div className="flex justify-between font-mono text-[10px]">
+                          <span className="text-muted-foreground">Wet High-Pass Cut:</span>
+                          <span className="text-primary font-bold">{mod.params.wetHighPassHz ?? 140} Hz</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={60}
+                          max={250}
+                          step={5}
+                          value={mod.params.wetHighPassHz ?? 140}
+                          onChange={(e) => updateModuleParam(mod.id, "wetHighPassHz", Number(e.target.value))}
+                          className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                        />
+
+                        <div className="flex justify-between font-mono text-[10px]">
+                          <span className="text-muted-foreground">Wet Gain:</span>
+                          <span className="text-primary font-bold">{mod.params.wetGainDb ?? -5.0} dB</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={-12.0}
+                          max={0.0}
+                          step={0.5}
+                          value={mod.params.wetGainDb ?? -5.0}
+                          onChange={(e) => updateModuleParam(mod.id, "wetGainDb", Number(e.target.value))}
+                          className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
