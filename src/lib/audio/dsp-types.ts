@@ -258,6 +258,7 @@ export type FXRackModuleId =
   | "equalizer"
   | "saturation"
   | "stereo-imager"
+  | "spatial-8d"
   | "reverb"
   | "master-limiter";
 

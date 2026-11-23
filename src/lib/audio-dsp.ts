@@ -354,6 +354,65 @@ export function buildSpatial8DFilter(p: Spatial8DParams): string[] {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 4b. 8D Spatial + Slowed & Reverb 3-Stage Combined DSP Pipeline             */
+/* -------------------------------------------------------------------------- */
+
+export interface EightDSlowedReverbOptions {
+  tempo?: number;
+  preservePitch?: boolean;
+  sampleRate?: number;
+  orbitRateHz?: number;
+  panDepth?: number;
+  haasDelayMs?: number;
+  rearHeadLowpassHz?: number;
+  bassMonoCrossoverHz?: number;
+  preDelayMs?: number;
+  wetHighPassHz?: number;
+  wetGainDb?: number;
+  hfDamping?: number;
+  lowpassHz?: number;
+}
+
+export function build8DSlowedReverbFilter(options: EightDSlowedReverbOptions = {}): string[] {
+  const tempo = typeof options.tempo === "number" ? options.tempo : 0.87;
+  const preservePitch = options.preservePitch === true;
+  const sampleRate = options.sampleRate || 44100;
+  const orbitRateHz = typeof options.orbitRateHz === "number" ? options.orbitRateHz : 0.12;
+  const panDepth = typeof options.panDepth === "number" ? options.panDepth : 0.88;
+  const bassMonoCrossoverHz = typeof options.bassMonoCrossoverHz === "number" ? options.bassMonoCrossoverHz : 120;
+  const preDelayMs = typeof options.preDelayMs === "number" ? options.preDelayMs : 35;
+  const wetHighPassHz = typeof options.wetHighPassHz === "number" ? options.wetHighPassHz : 140;
+  const wetGainDb = typeof options.wetGainDb === "number" ? options.wetGainDb : -5.5;
+  const hfDamping = typeof options.hfDamping === "number" ? options.hfDamping : 65;
+  const lowpassHz = typeof options.lowpassHz === "number" ? options.lowpassHz : 4800;
+
+  const chain: string[] = [];
+
+  // Stage 1: Tempo Changer (Pitch drop / speed reduction)
+  if (!preservePitch) {
+    chain.push(`asetrate=${sampleRate}*${tempo}`);
+    chain.push(`aresample=${sampleRate}`);
+  } else {
+    let rem = tempo;
+    while (rem < 0.5) { chain.push("atempo=0.5"); rem /= 0.5; }
+    while (rem > 2.0) { chain.push("atempo=2.0"); rem /= 2.0; }
+    chain.push(`atempo=${rem.toFixed(4)}`);
+  }
+
+  // Stage 2: 8D Spatial Panner with 120Hz sub-bass mono anchor
+  chain.push(
+    `asplit=2[bass_in][spatial_in];[bass_in]lowpass=f=${bassMonoCrossoverHz},pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1[bass_mono];[spatial_in]highpass=f=${bassMonoCrossoverHz},apulsator=mode=sine:hz=${orbitRateHz}:amount=${panDepth}:offset_l=0:offset_r=0.5[spatial_orbit];[bass_mono][spatial_orbit]amix=inputs=2:weights=1 1:normalize=0`
+  );
+
+  // Stage 3: Stereo Reverb with 35ms pre-delay & 140Hz high-pass
+  chain.push(
+    `asplit=2[dry][wet];[wet]adelay=${preDelayMs}|${preDelayMs},highpass=f=${wetHighPassHz},aecho=0.8:0.88:60|120:0.4|0.25,lowpass=f=${lowpassHz},stereotools=mlev=1.0:slev=1.2,volume=${wetGainDb}dB[w];[dry][w]amix=inputs=2:weights=1 1:normalize=0,alimiter=limit=0.944`
+  );
+
+  return chain;
+}
+
+/* -------------------------------------------------------------------------- */
 /* 5. Auto Panner                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -653,6 +712,23 @@ export function getAudioFilterGraph(
 ): string[] {
   switch (effect) {
     case "spatial-8d":
+      if (params.is8DCombined) {
+        return build8DSlowedReverbFilter({
+          tempo: typeof params.speed === "number" ? params.speed : 0.87,
+          preservePitch: params.preservePitch === true,
+          sampleRate: params.sampleRate || 44100,
+          orbitRateHz: typeof params.orbitRateHz === "number" ? params.orbitRateHz : (params.cycleSec ? 1 / params.cycleSec : 0.12),
+          panDepth: typeof params.panDepth === "number" ? params.panDepth : (typeof params.intensity === "number" ? params.intensity : 0.88),
+          haasDelayMs: params.haasDelayMs ?? 0.35,
+          rearHeadLowpassHz: params.rearHeadLowpassHz ?? 7200,
+          bassMonoCrossoverHz: params.bassMonoCrossoverHz ?? 120,
+          preDelayMs: typeof params.preDelayMs === "number" ? params.preDelayMs : 35,
+          wetHighPassHz: typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140,
+          wetGainDb: typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5,
+          hfDamping: typeof params.hfDamping === "number" ? params.hfDamping : 65,
+          lowpassHz: typeof params.lowpassHz === "number" ? params.lowpassHz : 4800,
+        });
+      }
       return buildSpatial8DFilter(params as Spatial8DParams);
     case "auto-panner":
       return buildAutoPannerFilter(params as AutoPannerParams);
@@ -677,6 +753,23 @@ export function getAudioFilterGraph(
     case "trimmer":
       return buildTrimmerFilter(params as TrimmerParams);
     case "slowed-reverb": {
+      if (params.is8DCombined) {
+        return build8DSlowedReverbFilter({
+          tempo: typeof params.speed === "number" ? params.speed : 0.87,
+          preservePitch: params.preservePitch === true,
+          sampleRate: params.sampleRate || 44100,
+          orbitRateHz: typeof params.orbitRateHz === "number" ? params.orbitRateHz : (params.cycleSec ? 1 / params.cycleSec : 0.12),
+          panDepth: typeof params.panDepth === "number" ? params.panDepth : (typeof params.intensity === "number" ? params.intensity : 0.88),
+          haasDelayMs: params.haasDelayMs ?? 0.35,
+          rearHeadLowpassHz: params.rearHeadLowpassHz ?? 7200,
+          bassMonoCrossoverHz: params.bassMonoCrossoverHz ?? 120,
+          preDelayMs: typeof params.preDelayMs === "number" ? params.preDelayMs : 35,
+          wetHighPassHz: typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140,
+          wetGainDb: typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5,
+          hfDamping: typeof params.hfDamping === "number" ? params.hfDamping : 65,
+          lowpassHz: typeof params.lowpassHz === "number" ? params.lowpassHz : 4800,
+        });
+      }
       const speed = typeof params.speed === "number" ? params.speed : 0.87;
       const preservePitch = params.preservePitch !== false && (params.preservePitch === true || (params.speed !== undefined && !("preservePitch" in params)));
       const preDelayMs = typeof params.preDelayMs === "number" ? params.preDelayMs : 35;

@@ -62,6 +62,19 @@ export const DEFAULT_FX_RACK_CONFIG: FXRackConfig = {
       params: { width: 1.25, pan: 0 },
     },
     {
+      id: "spatial-8d",
+      name: "8D Spatial Panner",
+      enabled: false,
+      wetDry: 1.0,
+      params: {
+        orbitRateHz: 0.12,
+        panDepth: 0.88,
+        haasDelayMs: 0.35,
+        rearHeadLowpassHz: 7200,
+        bassMonoCrossoverHz: 120,
+      },
+    },
+    {
       id: "reverb",
       name: "Studio Reverb",
       enabled: false,
@@ -171,9 +184,138 @@ export const SLOWED_REVERB_PHONK_PRESET: FXRackConfig = {
   ],
 };
 
+/**
+ * Preset A — "8D Spatial + Slowed & Reverb (Studio Balanced)":
+ * Signal Chain: 1. Tempo Changer -> 2. 8D Spatial Panner -> 3. Stereo Reverb
+ * - Stage 1 (Tempo Changer): tempo 0.87, preservePitch false (true analog tape drop)
+ * - Stage 2 (8D Spatial Panner): orbitRateHz 0.12 (8.33s orbit), panDepth 0.88 (88%),
+ *                                haasDelayMs 0.35ms, rearHeadLowpassHz 7200Hz, bassMonoCrossoverHz 120Hz
+ * - Stage 3 (Stereo Reverb): preDelayMs 35ms, reverberance 46%, roomScale 92%, hfDamping 65%,
+ *                            stereoDepth 100%, wetGainDb -5.5dB, wetHighPassHz 140Hz
+ */
+export const EIGHT_D_SLOWED_REVERB_STUDIO_PRESET: FXRackConfig = {
+  isBypassed: false,
+  masterGainDb: 0,
+  modules: [
+    {
+      id: "tempo-changer",
+      name: "Tempo Changer",
+      enabled: true,
+      wetDry: 1.0,
+      params: {
+        tempo: 0.87,
+        preservePitch: false,
+      },
+    },
+    {
+      id: "spatial-8d",
+      name: "8D Spatial Panner",
+      enabled: true,
+      wetDry: 1.0,
+      params: {
+        orbitRateHz: 0.12,
+        panDepth: 0.88,
+        haasDelayMs: 0.35,
+        rearHeadLowpassHz: 7200,
+        bassMonoCrossoverHz: 120,
+      },
+    },
+    {
+      id: "reverb",
+      name: "Stereo Reverb",
+      enabled: true,
+      wetDry: 0.531, // 10^(-5.5/20) = ~0.5309
+      params: {
+        preset: "slowed-reverb-8d",
+        preDelayMs: 35,
+        reverberance: 46,
+        roomScale: 92,
+        hfDamping: 65,
+        stereoDepth: 100,
+        wetGainDb: -5.5,
+        wetHighPassHz: 140,
+      },
+    },
+    {
+      id: "master-limiter",
+      name: "Broadcast Peak Limiter",
+      enabled: true,
+      wetDry: 1.0,
+      params: { ceilingDb: -0.5, attackMs: 4, releaseMs: 60 },
+    },
+  ],
+};
+
+/**
+ * Preset B — "8D Spatial + Slowed & Reverb (Deep Hypnotic)":
+ * Signal Chain: 1. Tempo Changer -> 2. 8D Spatial Panner -> 3. Stereo Reverb
+ * - Stage 1: tempo 0.84, preservePitch false
+ * - Stage 2: orbitRateHz 0.09 (11.1s orbit), panDepth 0.94 (94%),
+ *            haasDelayMs 0.45ms, rearHeadLowpassHz 5800Hz, bassMonoCrossoverHz 120Hz
+ * - Stage 3: preDelayMs 28ms, reverberance 56%, roomScale 100%, hfDamping 70%,
+ *            stereoDepth 100%, wetGainDb -4.0dB, wetHighPassHz 150Hz
+ */
+export const EIGHT_D_SLOWED_REVERB_HYPNOTIC_PRESET: FXRackConfig = {
+  isBypassed: false,
+  masterGainDb: 0,
+  modules: [
+    {
+      id: "tempo-changer",
+      name: "Tempo Changer",
+      enabled: true,
+      wetDry: 1.0,
+      params: {
+        tempo: 0.84,
+        preservePitch: false,
+      },
+    },
+    {
+      id: "spatial-8d",
+      name: "8D Spatial Panner",
+      enabled: true,
+      wetDry: 1.0,
+      params: {
+        orbitRateHz: 0.09,
+        panDepth: 0.94,
+        haasDelayMs: 0.45,
+        rearHeadLowpassHz: 5800,
+        bassMonoCrossoverHz: 120,
+      },
+    },
+    {
+      id: "reverb",
+      name: "Stereo Reverb",
+      enabled: true,
+      wetDry: 0.631, // 10^(-4.0/20) = ~0.6310
+      params: {
+        preset: "slowed-reverb-8d-hypnotic",
+        preDelayMs: 28,
+        reverberance: 56,
+        roomScale: 100,
+        hfDamping: 70,
+        stereoDepth: 100,
+        wetGainDb: -4.0,
+        wetHighPassHz: 150,
+      },
+    },
+    {
+      id: "master-limiter",
+      name: "Broadcast Peak Limiter",
+      enabled: true,
+      wetDry: 1.0,
+      params: { ceilingDb: -0.5, attackMs: 4, releaseMs: 60 },
+    },
+  ],
+};
+
+export const SLOWED_REVERB_8D_STUDIO_PRESET = EIGHT_D_SLOWED_REVERB_STUDIO_PRESET;
+export const SLOWED_REVERB_8D_HYPNOTIC_PRESET = EIGHT_D_SLOWED_REVERB_HYPNOTIC_PRESET;
+
 export const SLOWED_REVERB_PRESETS = {
   "studio-balanced": SLOWED_REVERB_STUDIO_PRESET,
   "deep-atmospheric-phonk": SLOWED_REVERB_PHONK_PRESET,
+  "8d-slowed-reverb-studio": EIGHT_D_SLOWED_REVERB_STUDIO_PRESET,
+  "8d-slowed-reverb-hypnotic": EIGHT_D_SLOWED_REVERB_HYPNOTIC_PRESET,
 } as const;
 
 /**
@@ -294,6 +436,17 @@ export function buildFXRackFilterChain(config: FXRackConfig): string[] {
         if (width !== 1.0 || pan !== 0) {
           filters.push(`stereotools=mlev=1.0:slev=${width.toFixed(2)}:mpan=${pan.toFixed(2)}`);
         }
+        break;
+      }
+
+      case "spatial-8d": {
+        const p = mod.params || {};
+        const orbitRateHz = typeof p.orbitRateHz === "number" ? p.orbitRateHz : 0.12;
+        const panDepth = typeof p.panDepth === "number" ? p.panDepth : 0.88;
+        const bassMonoCrossoverHz = typeof p.bassMonoCrossoverHz === "number" ? p.bassMonoCrossoverHz : 120;
+        filters.push(
+          `asplit=2[bass_in][spatial_in];[bass_in]lowpass=f=${bassMonoCrossoverHz},pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1[bass_mono];[spatial_in]highpass=f=${bassMonoCrossoverHz},apulsator=mode=sine:hz=${orbitRateHz}:amount=${panDepth}:offset_l=0:offset_r=0.5[spatial_orbit];[bass_mono][spatial_orbit]amix=inputs=2:weights=1 1:normalize=0`
+        );
         break;
       }
 
@@ -471,6 +624,74 @@ export function createFXRackWebAudioNodes(
           currentHead = panner;
           nodesToCleanup.push(panner);
         }
+        break;
+      }
+
+      case "spatial-8d": {
+        const p = mod.params || {};
+        const orbitRateHz = typeof p.orbitRateHz === "number" ? p.orbitRateHz : 0.12;
+        const panDepth = typeof p.panDepth === "number" ? p.panDepth : 0.88;
+        const haasDelayMs = typeof p.haasDelayMs === "number" ? p.haasDelayMs : 0.35;
+        const rearHeadLowpassHz = typeof p.rearHeadLowpassHz === "number" ? p.rearHeadLowpassHz : 7200;
+        const bassMonoCrossoverHz = typeof p.bassMonoCrossoverHz === "number" ? p.bassMonoCrossoverHz : 120;
+
+        // 1. Crossover splitter at bassMonoCrossoverHz (120 Hz)
+        // Low Band (< 120 Hz): Summed to mono center
+        const lowpassFilter = ctx.createBiquadFilter();
+        lowpassFilter.type = "lowpass";
+        lowpassFilter.frequency.value = bassMonoCrossoverHz;
+
+        const monoBassGain = ctx.createGain();
+        monoBassGain.gain.value = 1.0;
+        currentHead.connect(lowpassFilter);
+        lowpassFilter.connect(monoBassGain);
+
+        // High Band (>= 120 Hz): 8D Spatial Panner with LFO + Haas delay + Rear-azimuth LPF
+        const highpassFilter = ctx.createBiquadFilter();
+        highpassFilter.type = "highpass";
+        highpassFilter.frequency.value = bassMonoCrossoverHz;
+        currentHead.connect(highpassFilter);
+
+        let spatialOutput: AudioNode = highpassFilter;
+
+        if (ctx.createStereoPanner) {
+          const pannerNode = ctx.createStereoPanner();
+          const lfoOsc = ctx.createOscillator();
+          const lfoGain = ctx.createGain();
+
+          lfoOsc.type = "sine";
+          lfoOsc.frequency.value = orbitRateHz;
+          lfoGain.gain.value = panDepth;
+
+          lfoOsc.connect(lfoGain);
+          lfoGain.connect(pannerNode.pan);
+          try { lfoOsc.start(); } catch {}
+
+          highpassFilter.connect(pannerNode);
+
+          // Haas micro delay (0.35 ms = 0.00035s)
+          const haasDelay = ctx.createDelay(0.01);
+          haasDelay.delayTime.value = Math.max(0.0001, haasDelayMs / 1000);
+          pannerNode.connect(haasDelay);
+
+          // Rear-azimuth lowpass filter (7200 Hz)
+          const rearLpf = ctx.createBiquadFilter();
+          rearLpf.type = "lowpass";
+          rearLpf.frequency.value = rearHeadLowpassHz;
+          haasDelay.connect(rearLpf);
+
+          spatialOutput = rearLpf;
+          nodesToCleanup.push(lfoOsc, lfoGain, pannerNode, haasDelay, rearLpf);
+        }
+
+        // Recombine Low mono bass + High 8D spatial band
+        const combiner = ctx.createGain();
+        combiner.gain.value = 1.0;
+        monoBassGain.connect(combiner);
+        spatialOutput.connect(combiner);
+
+        currentHead = combiner;
+        nodesToCleanup.push(lowpassFilter, monoBassGain, highpassFilter, combiner);
         break;
       }
 

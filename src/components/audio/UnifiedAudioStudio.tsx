@@ -77,6 +77,26 @@ import { PresetSelectorModal, type PresetItem } from "@/components/ui/preset-sel
 
 const AUDIO_STUDIO_PRESETS: PresetItem[] = [
   {
+    id: "8d-spatial-slowed-reverb",
+    name: "8D Spatial + Slowed & Reverb",
+    description: "Combined 3-stage studio preset: 0.87x tape pitch drop, 360° binaural orbit (0.12Hz) with 120Hz bass anchor, and lush 35ms pre-delay reverb.",
+    category: "recommended",
+    engineTier: "Tier 4: Wasm MT",
+    chips: ["8D + Slowed", "0.87x Pitch", "120Hz Anchor", "35ms Pre-Delay"],
+    params: {
+      effect: "slowed-reverb",
+      is8DCombined: true,
+      speed: 0.87,
+      preservePitch: false,
+      cycleSec: 8.33,
+      intensity: 0.88,
+      preDelayMs: 35,
+      hfDamping: 65,
+      wetHighPassHz: 140,
+      wetGainDb: -5.5,
+    },
+  },
+  {
     id: "spatial-8d-concert",
     name: "8D Concert Hall Experience",
     description: "Immersive 360-degree rotating binaural spatialization with dynamic stereo widening and concert hall acoustics.",
@@ -456,6 +476,104 @@ export function UnifiedAudioStudio({
         }
 
         case "spatial-8d": {
+          if (params.is8DCombined && ctx.createStereoPanner) {
+            const preDelayMs = typeof params.preDelayMs === "number" ? params.preDelayMs : 35;
+            const hfDamping = typeof params.hfDamping === "number" ? params.hfDamping : 65;
+            const wetHighPassHz = typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140;
+            const wetGainDb = typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5;
+            const wetGainLinear = Math.pow(10, wetGainDb / 20);
+            const lowpassHz = Math.round(14000 - (hfDamping / 100) * 14154);
+
+            const bassMonoCrossoverHz = params.bassMonoCrossoverHz || 120;
+            const lowpass = ctx.createBiquadFilter();
+            lowpass.type = "lowpass";
+            lowpass.frequency.value = bassMonoCrossoverHz;
+            const monoBassGain = ctx.createGain();
+            monoBassGain.gain.value = 1.0;
+            fadeGain.connect(lowpass);
+            lowpass.connect(monoBassGain);
+
+            const highpass = ctx.createBiquadFilter();
+            highpass.type = "highpass";
+            highpass.frequency.value = bassMonoCrossoverHz;
+            fadeGain.connect(highpass);
+
+            const panner = ctx.createStereoPanner();
+            panner.pan.value = 0;
+            pannerNodeRef.current = panner;
+
+            const haasDelay = ctx.createDelay(0.01);
+            haasDelay.delayTime.value = (params.haasDelayMs ?? 0.35) / 1000;
+
+            const rearLpf = ctx.createBiquadFilter();
+            rearLpf.type = "lowpass";
+            rearLpf.frequency.value = params.rearHeadLowpassHz ?? 7200;
+            spatialFilterRef.current = rearLpf;
+
+            highpass.connect(panner);
+            panner.connect(haasDelay);
+            haasDelay.connect(rearLpf);
+
+            const spatialCombiner = ctx.createGain();
+            spatialCombiner.gain.value = 1.0;
+            monoBassGain.connect(spatialCombiner);
+            rearLpf.connect(spatialCombiner);
+
+            const dryGain = ctx.createGain();
+            dryGain.gain.value = 1.0;
+
+            const delay = ctx.createDelay(1.0);
+            delay.delayTime.value = Math.max(0, Math.min(1.0, preDelayMs / 1000));
+
+            const hpf = ctx.createBiquadFilter();
+            hpf.type = "highpass";
+            hpf.frequency.value = wetHighPassHz;
+
+            const lpf = ctx.createBiquadFilter();
+            lpf.type = "lowpass";
+            lpf.frequency.value = lowpassHz;
+
+            const convolver = ctx.createConvolver();
+            convolver.buffer = createStudioImpulseResponse(ctx, 3.5, lowpassHz, 0);
+
+            const wetGain = ctx.createGain();
+            wetGain.gain.value = wetGainLinear;
+
+            const sumGain = ctx.createGain();
+            sumGain.gain.value = 1.0;
+
+            spatialCombiner.connect(dryGain);
+            dryGain.connect(sumGain);
+
+            spatialCombiner.connect(delay);
+            delay.connect(hpf);
+            hpf.connect(lpf);
+            lpf.connect(convolver);
+            convolver.connect(wetGain);
+            wetGain.connect(sumGain);
+
+            sumGain.connect(masterLimiter);
+            currentDspNodesRef.current = [
+              fadeGain,
+              lowpass,
+              monoBassGain,
+              highpass,
+              panner,
+              haasDelay,
+              rearLpf,
+              spatialCombiner,
+              dryGain,
+              delay,
+              hpf,
+              lpf,
+              convolver,
+              wetGain,
+              sumGain,
+              masterLimiter,
+            ];
+            return;
+          }
+
           if (ctx.createStereoPanner) {
             const panner = ctx.createStereoPanner();
             panner.pan.value = 0;
@@ -585,6 +703,49 @@ export function UnifiedAudioStudio({
             const wetGainLinear = typeof params.reverbMix === "number" ? params.reverbMix : Math.pow(10, wetGainDb / 20);
             const lowpassHz = Math.round(14000 - (hfDamping / 100) * 14154);
 
+            let reverbInNode: AudioNode = fadeGain;
+            const extraNodes: AudioNode[] = [];
+
+            if (params.is8DCombined && ctx.createStereoPanner) {
+              const bassMonoCrossoverHz = params.bassMonoCrossoverHz || 120;
+              const lowpass = ctx.createBiquadFilter();
+              lowpass.type = "lowpass";
+              lowpass.frequency.value = bassMonoCrossoverHz;
+              const monoBassGain = ctx.createGain();
+              monoBassGain.gain.value = 1.0;
+              fadeGain.connect(lowpass);
+              lowpass.connect(monoBassGain);
+
+              const highpass = ctx.createBiquadFilter();
+              highpass.type = "highpass";
+              highpass.frequency.value = bassMonoCrossoverHz;
+              fadeGain.connect(highpass);
+
+              const panner = ctx.createStereoPanner();
+              panner.pan.value = 0;
+              pannerNodeRef.current = panner;
+
+              const haasDelay = ctx.createDelay(0.01);
+              haasDelay.delayTime.value = (params.haasDelayMs ?? 0.35) / 1000;
+
+              const rearLpf = ctx.createBiquadFilter();
+              rearLpf.type = "lowpass";
+              rearLpf.frequency.value = params.rearHeadLowpassHz ?? 7200;
+              spatialFilterRef.current = rearLpf;
+
+              highpass.connect(panner);
+              panner.connect(haasDelay);
+              haasDelay.connect(rearLpf);
+
+              const spatialCombiner = ctx.createGain();
+              spatialCombiner.gain.value = 1.0;
+              monoBassGain.connect(spatialCombiner);
+              rearLpf.connect(spatialCombiner);
+
+              reverbInNode = spatialCombiner;
+              extraNodes.push(lowpass, monoBassGain, highpass, panner, haasDelay, rearLpf, spatialCombiner);
+            }
+
             const dryGain = ctx.createGain();
             dryGain.gain.value = 1.0;
 
@@ -608,10 +769,10 @@ export function UnifiedAudioStudio({
             const sumGain = ctx.createGain();
             sumGain.gain.value = 1.0;
 
-            fadeGain.connect(dryGain);
+            reverbInNode.connect(dryGain);
             dryGain.connect(sumGain);
 
-            fadeGain.connect(delay);
+            reverbInNode.connect(delay);
             delay.connect(hpf);
             hpf.connect(lpf);
             lpf.connect(convolver);
@@ -619,7 +780,7 @@ export function UnifiedAudioStudio({
             wetGain.connect(sumGain);
 
             sumGain.connect(masterLimiter);
-            currentDspNodesRef.current = [fadeGain, dryGain, delay, hpf, lpf, convolver, wetGain, sumGain, masterLimiter];
+            currentDspNodesRef.current = [fadeGain, ...extraNodes, dryGain, delay, hpf, lpf, convolver, wetGain, sumGain, masterLimiter];
             return;
           }
 
@@ -710,9 +871,9 @@ export function UnifiedAudioStudio({
     const tick = () => {
       if (!pannerNodeRef.current || !isPlaying) return;
       const elapsed = (performance.now() - startT) / 1000;
-      if (activeEffect === "spatial-8d") {
-        const cycle = Math.max(params.cycleSec || 8, 1);
-        const intensity = params.intensity ?? 0.85;
+      if (activeEffect === "spatial-8d" || params.is8DCombined) {
+        const cycle = Math.max(params.cycleSec || (params.is8DCombined ? 8.33 : 8), 1);
+        const intensity = params.intensity ?? (params.is8DCombined ? 0.88 : 0.85);
         const theta = (elapsed / cycle) * 2 * Math.PI;
         const panX = Math.sin(theta) * intensity;
         const depthY = Math.cos(theta); // +1 = directly in front, -1 = directly behind
@@ -893,11 +1054,11 @@ export function UnifiedAudioStudio({
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      if (activeEffect === "tempo-changer" || activeEffect === "slowed-reverb") {
+      if (activeEffect === "tempo-changer" || activeEffect === "slowed-reverb" || params.is8DCombined) {
         try {
           audioRef.current.preservesPitch = params.preservePitch === true;
         } catch {}
-        audioRef.current.playbackRate = Math.max(0.5, Math.min(2.0, params.speed || (activeEffect === "slowed-reverb" ? 0.87 : 1.0)));
+        audioRef.current.playbackRate = Math.max(0.5, Math.min(2.0, params.speed || (activeEffect === "slowed-reverb" || params.is8DCombined ? 0.87 : 1.0)));
       } else {
         audioRef.current.playbackRate = 1.0;
       }
@@ -1616,6 +1777,34 @@ export function UnifiedAudioStudio({
 
             {activeEffect === "spatial-8d" && (
               <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void haptics.medium();
+                    setParams((prev) => ({
+                      ...prev,
+                      is8DCombined: !prev.is8DCombined,
+                      speed: 0.87,
+                      preservePitch: false,
+                      cycleSec: 8.33,
+                      intensity: 0.88,
+                      preDelayMs: 35,
+                      hfDamping: 65,
+                      wetHighPassHz: 140,
+                      wetGainDb: -5.5,
+                    }));
+                  }}
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border font-mono text-xs font-bold transition-all cursor-pointer ${
+                    params.is8DCombined
+                      ? "border-primary bg-primary/20 text-primary shadow-sm shadow-primary/20"
+                      : "border-border/60 bg-secondary/50 text-foreground hover:bg-secondary hover:border-primary/40"
+                  }`}
+                >
+                  <span>🎧 + 🌙 Combine 8D Spatial + Slowed Reverb</span>
+                  {params.is8DCombined && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-semibold">ACTIVE</span>
+                  )}
+                </button>
                 <BinauralRadar
                   cycleSec={params.cycleSec || 8}
                   intensity={params.intensity || 0.85}
@@ -1982,6 +2171,34 @@ export function UnifiedAudioStudio({
             {/* Slowed + Reverb Studio */}
             {activeEffect === "slowed-reverb" && (
               <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void haptics.medium();
+                    setParams((prev) => ({
+                      ...prev,
+                      is8DCombined: !prev.is8DCombined,
+                      speed: 0.87,
+                      preservePitch: false,
+                      cycleSec: 8.33,
+                      intensity: 0.88,
+                      preDelayMs: 35,
+                      hfDamping: 65,
+                      wetHighPassHz: 140,
+                      wetGainDb: -5.5,
+                    }));
+                  }}
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border font-mono text-xs font-bold transition-all cursor-pointer ${
+                    params.is8DCombined
+                      ? "border-primary bg-primary/20 text-primary shadow-sm shadow-primary/20"
+                      : "border-border/60 bg-secondary/50 text-foreground hover:bg-secondary hover:border-primary/40"
+                  }`}
+                >
+                  <span>🎧 + 🌙 Combine 8D Spatial + Slowed Reverb</span>
+                  {params.is8DCombined && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-semibold">ACTIVE</span>
+                  )}
+                </button>
                 <ParamSlider
                   label="Playback Speed (Slowed Tempo)"
                   value={Math.round((params.speed ?? 0.87) * 100)}

@@ -208,6 +208,80 @@ export function FXRackStudio({
         }));
         break;
 
+      case "8d-slowed-reverb-studio":
+        setConfig((prev) => ({
+          ...prev,
+          modules: prev.modules.map((m) => {
+            if (m.id === "tempo-changer") return { ...m, enabled: true, params: { tempo: 0.87, preservePitch: false } };
+            if (m.id === "spatial-8d") return {
+              ...m,
+              enabled: true,
+              params: {
+                orbitRateHz: 0.12,
+                panDepth: 0.88,
+                haasDelayMs: 0.35,
+                rearHeadLowpassHz: 7200,
+                bassMonoCrossoverHz: 120,
+              },
+            };
+            if (m.id === "reverb") return {
+              ...m,
+              enabled: true,
+              wetDry: 0.531,
+              params: {
+                preset: "slowed-reverb-8d",
+                reverberance: 46,
+                roomScale: 92,
+                hfDamping: 65,
+                preDelayMs: 35,
+                stereoDepth: 100,
+                wetGainDb: -5.5,
+                wetHighPassHz: 140,
+              },
+            };
+            if (m.id === "master-limiter") return { ...m, enabled: true, params: { ceilingDb: -0.5 } };
+            return { ...m, enabled: false };
+          }),
+        }));
+        break;
+
+      case "8d-slowed-reverb-hypnotic":
+        setConfig((prev) => ({
+          ...prev,
+          modules: prev.modules.map((m) => {
+            if (m.id === "tempo-changer") return { ...m, enabled: true, params: { tempo: 0.84, preservePitch: false } };
+            if (m.id === "spatial-8d") return {
+              ...m,
+              enabled: true,
+              params: {
+                orbitRateHz: 0.09,
+                panDepth: 0.94,
+                haasDelayMs: 0.45,
+                rearHeadLowpassHz: 5800,
+                bassMonoCrossoverHz: 120,
+              },
+            };
+            if (m.id === "reverb") return {
+              ...m,
+              enabled: true,
+              wetDry: 0.631,
+              params: {
+                preset: "slowed-reverb-8d-hypnotic",
+                reverberance: 56,
+                roomScale: 100,
+                hfDamping: 70,
+                preDelayMs: 28,
+                stereoDepth: 100,
+                wetGainDb: -4.0,
+                wetHighPassHz: 150,
+              },
+            };
+            if (m.id === "master-limiter") return { ...m, enabled: true, params: { ceilingDb: -0.5 } };
+            return { ...m, enabled: false };
+          }),
+        }));
+        break;
+
       case "slowed-reverb-phonk":
         setConfig((prev) => ({
           ...prev,
@@ -367,6 +441,20 @@ export function FXRackStudio({
             className="rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 font-mono text-[11px] text-primary font-bold transition-all cursor-pointer"
           >
             Slowed + Reverb (Studio)
+          </button>
+          <button
+            type="button"
+            onClick={() => applyPreset("8d-slowed-reverb-studio")}
+            className="rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 font-mono text-[11px] text-primary font-bold transition-all cursor-pointer"
+          >
+            8D Spatial + Slowed & Reverb
+          </button>
+          <button
+            type="button"
+            onClick={() => applyPreset("8d-slowed-reverb-hypnotic")}
+            className="rounded-lg border border-border/60 bg-secondary/60 hover:bg-secondary hover:border-primary/40 px-2.5 py-1 font-mono text-[11px] text-foreground transition-all cursor-pointer"
+          >
+            8D Deep Hypnotic
           </button>
           <button
             type="button"
@@ -595,6 +683,57 @@ export function FXRackStudio({
                   </div>
                 )}
 
+                {mod.id === "spatial-8d" && (
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <div className="flex justify-between font-mono text-[11px]">
+                        <span className="text-muted-foreground">360° Orbit Speed:</span>
+                        <span className="text-primary font-bold">
+                          {mod.params.orbitRateHz ?? 0.12} Hz ({(1 / (mod.params.orbitRateHz || 0.12)).toFixed(1)}s orbit)
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0.05}
+                        max={0.4}
+                        step={0.01}
+                        value={mod.params.orbitRateHz ?? 0.12}
+                        onChange={(e) => updateModuleParam(mod.id, "orbitRateHz", Number(e.target.value))}
+                        className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between font-mono text-[11px]">
+                        <span className="text-muted-foreground">Pan Depth / Width:</span>
+                        <span className="text-primary font-bold">
+                          {Math.round((mod.params.panDepth ?? 0.88) * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={1.0}
+                        step={0.02}
+                        value={mod.params.panDepth ?? 0.88}
+                        onChange={(e) => updateModuleParam(mod.id, "panDepth", Number(e.target.value))}
+                        className="w-full accent-primary h-1.5 bg-secondary rounded-lg cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                      <div>
+                        <span className="text-muted-foreground">Haas Delay:</span>
+                        <span className="text-foreground font-semibold ml-1">{mod.params.haasDelayMs ?? 0.35}ms</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Bass Mono Cut:</span>
+                        <span className="text-foreground font-semibold ml-1">{mod.params.bassMonoCrossoverHz ?? 120}Hz</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {mod.id === "reverb" && (
                   <div className="space-y-2">
                     <div className="flex justify-between font-mono text-[11px]">
@@ -612,6 +751,8 @@ export function FXRackStudio({
                       <option value="church-hall">Cathedral Echo</option>
                       <option value="slowed-reverb">Slowed & Ambient (Studio Balanced)</option>
                       <option value="slowed-reverb-phonk">Slowed & Reverb (Deep Phonk)</option>
+                      <option value="slowed-reverb-8d">8D Slowed & Reverb (35ms Pre-Delay)</option>
+                      <option value="slowed-reverb-8d-hypnotic">8D Deep Hypnotic Reverb</option>
                     </select>
 
                     {(mod.params.preset?.startsWith("slowed-reverb") || mod.params.preDelayMs !== undefined) && (
