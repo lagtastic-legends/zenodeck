@@ -68,7 +68,7 @@ function FeatureCard({
   );
 }
 
-// Past release highlights preserved for release parity: 4K 30FPS Studio Compressor, Continuous Glide Typing
+// Past release highlights preserved for release parity: 4K 30FPS Studio Compressor, Continuous Glide Typing, Zero-Latency Android IME, Live Height Scale Slider, Tactile & Ergonomics Suite, Tactile &amp; Ergonomics Suite, One-Handed & Glide Trail
 export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [previousVersion, setPreviousVersion] = useState<string | null>(null);
@@ -161,39 +161,39 @@ export function WhatsNewModal() {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
         <FeatureCard
-          icon={<Keyboard className="size-4.5 text-cyan-400" />}
-          title="Zero-Latency Android IME"
-          badge="Flagship ⚡"
-          description="Immediate ACTION_DOWN character commits, multi-touch rollover, 120fps GPU popups, smart backspace repeat, and spacebar trackpad cursor scrubbing."
+          icon={<Headphones className="size-4.5 text-cyan-400" />}
+          title="3-Stage 8D + Slowed &amp; Reverb"
+          badge="Studio DSP 🎧"
+          description="Combined 3-stage signal chain: 0.87x tape pitch drop, 360° binaural orbit (0.12Hz) with 120Hz mono sub-bass anchor, and lush 35ms pre-delay reverb."
           accentClass="bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
           badgeClass="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
         />
 
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-emerald-400" />}
-          title="Live Height Scale Slider"
-          badge="0.85x – 1.30x 🎛️"
-          description="Configure ergonomic keyboard height with live dp readouts, one-tap quick preset pills, instant reset, and 120fps preview scaling in the Keyboard Deck."
+          icon={<Music className="size-4.5 text-violet-400" />}
+          title="Slowed &amp; Reverb Studio Upgrade"
+          badge="Analog Tape 🌙"
+          description="Calibrated 35ms pre-delay for crisp transient separation, 65% HF damping (~4.8kHz low-pass roll-off), -5dB wet gain, and 140Hz wet high-pass filter."
+          accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
+          badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
+        />
+
+        <FeatureCard
+          icon={<Download className="size-4.5 text-emerald-400" />}
+          title="Universal Downloader Stabilized"
+          badge="Zero Freeze 🚀"
+          description="Resolved 5% download freeze by eliminating multi-worker socket contention. Streamlined direct-to-disk RAM-safe OPFS downloading for 4K video and audio."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />
 
         <FeatureCard
-          icon={<Zap className="size-4.5 text-amber-400" />}
-          title="Tactile &amp; Ergonomics Suite"
-          badge="v1.0.37 🎛️"
-          description="4-tier hardware haptics (Off, Light, Crisp, Strong), 320ms long-press secondary character rail with instant retraction, and spacebar scrubbing toggles."
+          icon={<Keyboard className="size-4.5 text-amber-400" />}
+          title="ZenoTap Ergonomic IME Suite"
+          badge="120fps ✨"
+          description="Flagship zero-latency typing, 4-tier hardware haptics, 82% one-handed mode with flip gutters, 320ms long-press rails, and Champagne Gold glide trails."
           accentClass="bg-amber-500/15 text-amber-400 border border-amber-500/30"
           badgeClass="bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        />
-
-        <FeatureCard
-          icon={<Layers className="size-4.5 text-indigo-400" />}
-          title="One-Handed &amp; Glide Trail"
-          badge="120fps ✨"
-          description="82% ergonomic docked grid with 18% expand and flip side gutters, plus a zero-allocation 24-point Champagne Gold glide typing particle trail."
-          accentClass="bg-indigo-500/15 text-indigo-400 border border-indigo-500/30"
-          badgeClass="bg-indigo-500/15 text-indigo-300 border border-indigo-500/30"
         />
       </div>
     </ZenoModal>

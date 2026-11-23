@@ -5,6 +5,31 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.38] — 2026-11-23
+
+### 🎧 3-Stage 8D Spatial + Slowed & Reverb DSP Engine
+- **3-Stage Studio Signal Chain (`1. Tempo Changer -> 2. 8D Spatial Panner -> 3. Stereo Reverb`)**:
+  - Implemented end-to-end signal processing with exact parity between the real-time WebAudio preview engine and offline FFmpeg export pipeline.
+  - **Stage 1 (Tempo Changer)**: True analog tape pitch drop to `0.87x` (Studio Balanced) and `0.84x` (Deep Hypnotic) with `preservePitch: false`.
+  - **Stage 2 (8D Spatial Panner with 120Hz Mono Bass Anchor)**:
+    - 2-way frequency crossover at `120Hz`: sub-bass frequencies below `120Hz` are summed strictly to mono center (`lowpass=f=120,pan=stereo|c0=0.5*c0+0.5*c1|c1=0.5*c0+0.5*c1`), preserving powerful kick and 808 transient punch.
+    - Spatial high-pass band (≥120Hz) rotates in 360° binaural space via `0.12Hz` sine LFO modulation (`8.33s` full orbit), `88%` pan depth, `0.35ms` Haas micro-delay, and `7200Hz` rear-shadow low-pass filter.
+  - **Stage 3 (Calibrated Stereo Reverb)**:
+    - `35ms` pre-delay on wet path for transient separation without vocal smear.
+    - `140Hz` wet high-pass filter keeping reverb reflections out of the muddy low-end.
+    - `65%` HF tape damping (`~4.8kHz` low-pass roll-off) for warm analog decay.
+    - `-5.5dB` wet gain and `-0.5dB` true-peak broadcast safety limiter.
+- **Calibrated Studio Presets**:
+  - Registered `8D Spatial + Slowed & Reverb (Studio Balanced)` and `8D Spatial + Slowed & Reverb (Deep Hypnotic)` across `fx-rack-engine.ts`, `FXRackStudio.tsx`, and `UnifiedAudioStudio.tsx`.
+- **1-Tap Quick-Chain Pill**:
+  - Added `[ 🎧 + 🌙 Combine 8D Spatial + Slowed Reverb ]` 1-tap quick action in both 8D Audio and Slowed & Reverb decks in `UnifiedAudioStudio.tsx`.
+
+### 🚀 Universal Media Downloader Stabilization
+- **Eliminated 5% Download Stall**:
+  - Resolved mobile thread socket exhaustion by removing multi-worker chunk contention.
+  - Streamlined direct-to-disk RAM-safe Origin Private File System (OPFS) streaming for high-bitrate 4K video and audio extraction.
+  - Cleaned up obsolete turbo multi-worker acceleration selector UI in favor of reliable, single-stream direct acquisition.
+
 ## [1.0.37] — 2026-11-22
 
 ### 🎛️ ZenoTap Tactile & Ergonomic Control Suite

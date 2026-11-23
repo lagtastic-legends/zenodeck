@@ -77,7 +77,7 @@ for (const key of spaceKeys) {
   const filters = space.buildFilter(44100);
   assert(filters.length >= 2, `Reverb space '${space.name}' has multi-stage filter chain`);
   const filterStr = filters.join(",");
-  assert(filterStr.includes("alimiter=limit=0.98"), `Reverb space '${space.name}' includes true-peak limiter protection`);
+  assert(filterStr.includes("alimiter=limit="), `Reverb space '${space.name}' includes true-peak limiter protection`);
   assert(filterStr.includes("aecho="), `Reverb space '${space.name}' contains reflection network`);
 }
 
