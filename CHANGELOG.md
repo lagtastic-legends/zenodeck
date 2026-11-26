@@ -5,6 +5,20 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.40] — 2026-11-26
+
+### 🔗 YouTube Short-Link Canonicalization, SSRF-Hardened CDN Allowlist & Cloud Fallback Fix
+- **YouTube Short/Mobile URL Canonicalization (`src/lib/media/stream-security.ts`, `detector.ts`, `universal-resolver.ts`, `innertube.ts`, `download-queue-runner.ts`)**:
+  - Added hostname-anchored `canonicalizeYouTubeUrl()` and `extractCanonicalYouTubeId()` normalizing `youtu.be/<id>`, `m.youtube.com/watch?v=<id>`, `music.youtube.com/watch?v=<id>`, `youtube.com/shorts/<id>`, and `youtube.com/live/<id>` into `https://www.youtube.com/watch?v=<id>` (preserving valid `list=` playlist IDs and `youtube-nocookie.com/embed/...` preview links, while rejecting untrusted query-string spoofing).
+  - Normalized incoming URLs at the entry of `/api/youtube/info`, `/api/media/download`, `resolveMediaUrl`, `handleResolve`, and `DownloadQueueService`.
+- **Expanded & SSRF-Hardened Media CDN Allowlist (`src/lib/media/stream-security.ts`, `src/app/api/youtube/stream/route.ts`)**:
+  - Expanded `ALLOWED_STREAM_DOMAINS` with `youtube-nocookie.com`, `ytimg.com`, `ggpht.com`, and `tiktokv.com` alongside `youtube.com`, `youtu.be`, `googlevideo.com`, `tiktokcdn.com`, `cdninstagram.com`, `fbcdn.net`, `twimg.com`, `redd.it`, `vimeocdn.com`, and `sndcdn.com`.
+  - Enforced strict SSRF blocking (`isPrivateOrLoopbackHost` / `isAllowedStreamHost`) against non-HTTP(S) protocols, embedded `user:pass@` URLs, loopback/private/link-local/metadata IPs (`127.0.0.1`, `localhost`, `10.*`, `172.16-31.*`, `192.168.*`, `169.254.*`, `[::1]`, integer/hex IP literals), and unsafe HTTP `3xx` redirects.
+  - Added YouTube / `ytimg` / `ggpht` / `youtube-nocookie` / `sndcdn` `Referer` injection in `/api/youtube/stream`.
+- **Clean Cloud Fallback & Stale Error Banner Suppression (`youtube-downloader.tsx`, `api/media/download/route.ts`)**:
+  - Cleared `resolveError` via `setResolveError(null)` whenever metadata/fallback resolution succeeds or downloads start, and suppressed redundant `403 Forbidden` banners over active `isCloudRestricted` Web Player cards.
+  - Prevented `/api/media/download` and Web App chunk downloads from proxying `youtube-nocookie.com/embed` HTML pages as video files, routing cloud-restricted web downloads gracefully to the Embedded Web Player & Android APK CTA.
+
 ## [1.0.39] — 2026-11-26
 
 ### 🎨 Full UI Contrast Overhaul & APK Horizontal Toggle Pill Fix

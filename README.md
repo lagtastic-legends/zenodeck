@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.39">
-    <img src="https://img.shields.io/badge/Release-v1.0.39-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.39" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.40">
+    <img src="https://img.shields.io/badge/Release-v1.0.40-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.40" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.39/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.40/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,17 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.40 (YouTube Short-Link Canonicalization, SSRF-Hardened CDN Allowlist & Cloud Fallback Fix)
+
+- **YouTube Short/Mobile URL Canonicalization (`stream-security.ts`, `detector.ts`, `universal-resolver.ts`, `innertube.ts`, `youtube-downloader.tsx`):**
+  - Canonicalizes `youtu.be/<id>`, `m.youtube.com/watch?v=<id>`, `music.youtube.com/watch?v=<id>`, `youtube.com/shorts/<id>`, and `youtube.com/live/<id>` into `https://www.youtube.com/watch?v=<id>` across resolvers, API routes, and queue runners using strict URL hostname verification.
+- **SSRF-Hardened Media CDN Allowlist (`src/app/api/youtube/stream/route.ts`):**
+  - Expanded `ALLOWED_STREAM_DOMAINS` with `youtube-nocookie.com`, `ytimg.com`, `ggpht.com`, and `tiktokv.com`, added platform `Referer` injection, and strictly blocked private/loopback/link-local IPs (`127.0.0.1`, `localhost`, `10.*`, `172.16-31.*`, `192.168.*`, `169.254.*`, `[::1]`) and unsafe `3xx` redirects.
+- **Clean Cloud Fallback UX (`youtube-downloader.tsx`, `/api/media/download`):**
+  - Clears `resolveError` whenever fallback metadata resolves, suppresses redundant `403 Forbidden` banners over active `isCloudRestricted` cards, and routes cloud-restricted web downloads gracefully to the Embedded Web Player and Android APK CTA.
 
 ---
 

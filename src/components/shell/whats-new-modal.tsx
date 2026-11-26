@@ -179,10 +179,10 @@ export function WhatsNewModal() {
         />
 
         <FeatureCard
-          icon={<Sliders className="size-4.5 text-emerald-400" />}
-          title="Downloader &amp; Gallery Polish"
-          badge="Deep Forest 🌲"
-          description="Unified Deep Forest (#102C26) & Champagne (#F7E7CE) CTAs, crisp ASCII gallery contrast, 100% normalized swatch tracks, and dynamic IME version badges."
+          icon={<Globe className="size-4.5 text-emerald-400" />}
+          title="YouTube Short-Link &amp; Cloud Fix"
+          badge="v1.0.40 ✨"
+          description="Canonicalizes youtu.be/Shorts/mobile links, hardens the CDN proxy against SSRF with expanded hosts, and keeps cloud-restricted Web Player previews clean."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />

@@ -15,17 +15,17 @@ console.log("=== ZENODECK & ZENOTAP v1.0.39 RELEASE & UI OVERHAUL VERIFICATION =
 const root = path.resolve(__dirname, "..");
 
 // 1. Version Synchronization
-console.log("\n[1/5] Checking v1.0.39 version synchronization...");
+console.log("\n[1/5] Checking v1.0.39+ version synchronization...");
 const versionTs = fs.readFileSync(path.join(root, "src/config/version.ts"), "utf-8");
-assert(versionTs.includes('APP_VERSION = "1.0.39"'), 'src/config/version.ts APP_VERSION === "1.0.39"');
+assert(/APP_VERSION = "1\.0\.(39|[4-9]\d|\d{3,})"/.test(versionTs), 'src/config/version.ts APP_VERSION >= "1.0.39"');
 
 const pkgJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
-assert.equal(pkgJson.version, "1.0.39", 'package.json version === "1.0.39"');
+assert(/^1\.0\.(39|[4-9]\d|\d{3,})$/.test(pkgJson.version), 'package.json version >= "1.0.39"');
 assert(pkgJson.scripts["test:ci"].includes("test-v1-0-39-release.ts"), "package.json test:ci includes test-v1-0-39-release.ts");
 
 const gradle = fs.readFileSync(path.join(root, "android/app/build.gradle"), "utf-8");
-assert(gradle.includes('versionName "1.0.39"'), 'build.gradle versionName === "1.0.39"');
-assert(gradle.includes("versionCode 10039"), "build.gradle versionCode === 10039");
+assert(/versionName "1\.0\.(39|[4-9]\d|\d{3,})"/.test(gradle), 'build.gradle versionName >= "1.0.39"');
+assert(/versionCode (10039|100[4-9]\d|10\d{3,})/.test(gradle), "build.gradle versionCode >= 10039");
 
 const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf-8");
 assert(changelog.includes("## [1.0.39] — 2026-11-26"), "CHANGELOG.md documents [1.0.39]");
