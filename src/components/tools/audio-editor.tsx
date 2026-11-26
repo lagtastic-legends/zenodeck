@@ -208,8 +208,8 @@ export function AudioEditor() {
 
           {/* trim */}
           <ParamPanel title="trim">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="flex items-center justify-between gap-4">
+              <p className="min-w-0 flex-1 font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
                 enable cut range
               </p>
               <Switch checked={trimEnabled} onCheckedChange={setTrimEnabled} disabled={busy} aria-label="Enable trim" />
@@ -260,8 +260,8 @@ export function AudioEditor() {
 
           {/* transform */}
           <ParamPanel title="transform">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="flex items-center justify-between gap-4">
+              <p className="min-w-0 flex-1 font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
                 reverse playback
               </p>
               <Switch checked={reverse} onCheckedChange={setReverse} disabled={busy} aria-label="Reverse" />
@@ -292,8 +292,8 @@ export function AudioEditor() {
               disabled={busy || normalize}
               display={(v) => `${v > 0 ? "+" : ""}${v} dB`}
             />
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="flex items-center justify-between gap-4">
+              <p className="min-w-0 flex-1 font-mono text-[10px] md:text-xs lg:text-[13px] uppercase tracking-[0.18em] text-muted-foreground">
                 loudness normalize
               </p>
               <Switch checked={normalize} onCheckedChange={setNormalize} disabled={busy} aria-label="Normalize" />

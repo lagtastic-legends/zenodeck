@@ -361,8 +361,8 @@ export function VideoCompressor() {
 
         {/* Toggles row: Audio track + Allow 4K Upscale */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
-            <div>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
+            <div className="min-w-0 flex-1">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 Audio track
               </p>
@@ -373,8 +373,8 @@ export function VideoCompressor() {
             <Switch checked={keepAudio} onCheckedChange={setKeepAudio} disabled={busy} aria-label="Keep audio track" />
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
-            <div>
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
+            <div className="min-w-0 flex-1">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 Force Target / Upscale
               </p>

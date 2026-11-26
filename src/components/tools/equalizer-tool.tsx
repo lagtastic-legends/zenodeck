@@ -73,7 +73,7 @@ export function EqualizerTool() {
       runIcon={<SlidersVertical className="size-4" />}
       controls={
         <ParamPanel title="6-band shaper">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scroll-hud">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 pr-3 scroll-smooth">
             <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground shrink-0 pr-1 flex items-center gap-1">
               <Sparkles className="size-2.5 text-primary" />
               Presets:

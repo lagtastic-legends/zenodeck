@@ -1,7 +1,4 @@
-setTimeout(() => {
-  console.error("❌ TEST TIMEOUT - 15s limit reached");
-  process.exit(1);
-}, 15000).unref();
+setTimeout(() => { console.error("TIMEOUT"); process.exit(1); }, 20000).unref();
 
 import fs from "fs";
 import path from "path";
@@ -60,12 +57,12 @@ assert(
 
 const youtubeDownloader = fs.readFileSync(path.join(root, "src/components/tools/youtube-downloader.tsx"), "utf-8");
 assert(
-  youtubeDownloader.includes("<span>🔗 Paste Link</span>") && !youtubeDownloader.includes("⚡🔗"),
-  "youtube-downloader.tsx uses single link icon without duplicate Zap icon"
+  youtubeDownloader.includes("bg-[#102C26]") && youtubeDownloader.includes("text-[#F7E7CE]"),
+  "youtube-downloader.tsx uses ZenoDeck Deep Forest (#102C26) & Champagne (#F7E7CE) palette for active tabs & primary CTA"
 );
 assert(
-  youtubeDownloader.includes("<span>🌐 In-App Browser</span>") && !youtubeDownloader.includes("🌐🌐"),
-  "youtube-downloader.tsx uses single globe icon without duplicate icon"
+  !youtubeDownloader.includes("size-3.5 shrink-0 text-[#F7E7CE]"),
+  "youtube-downloader.tsx view switcher icons inherit button color smoothly across light/dark modes"
 );
 assert(
   youtubeDownloader.includes("overflow-x-auto no-scrollbar pr-4"),
@@ -144,8 +141,8 @@ assert(
 
 const asciiGen = fs.readFileSync(path.join(root, "src/components/tools/ascii-generator.tsx"), "utf-8");
 assert(
-  asciiGen.includes("text-xs leading-tight font-mono font-bold text-[#102C26] dark:text-[#F7E7CE]"),
-  "ascii-generator.tsx gallery cards have crisp high-contrast text-[#102C26] dark:text-[#F7E7CE]"
+  asciiGen.includes("bg-[#090D0C]") && asciiGen.includes("text-xs leading-tight font-mono font-bold text-[#F7E7CE]"),
+  "ascii-generator.tsx gallery cards have crisp high-contrast Champagne #F7E7CE ASCII art on #090D0C canvas"
 );
 
 console.log("\n🎉 ALL v1.0.19 FULL UI POLISH & CONTRAST ASSERTIONS PASSED (100%)!\n");

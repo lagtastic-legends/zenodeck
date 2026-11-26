@@ -10,13 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.36">
-    <img src="https://img.shields.io/badge/Release-v1.0.36-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.36" />
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/tag/v1.0.39">
+    <img src="https://img.shields.io/badge/Release-v1.0.39-8B5CF6?style=for-the-badge&logo=github&logoColor=white" alt="Release v1.0.39" />
   </a>
   <a href="https://omni-tool-two.vercel.app">
     <img src="https://img.shields.io/badge/Live%20Web%20App-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
-  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.36/app-universal-release.apk">
+  <a href="https://github.com/lagtastic-legends/zenodeck/releases/download/v1.0.39/app-universal-release.apk">
     <img src="https://img.shields.io/badge/Android%20Universal-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Universal APK" />
   </a>
   <a href="https://omni-tool-two.vercel.app/api/ios-profile">
@@ -43,6 +43,20 @@
 **ZenoDeck** is an all-in-one, privacy-first media powerhouse and document workbench built for modern browsers and native Android devices. 
 
 Unlike conventional web tools that upload your sensitive media to remote cloud servers, ZenoDeck executes every operation **100% locally on your device** using client-side **WebAssembly (FFmpeg WASM)**, **WebCodecs**, **WebGL 2.0**, and native Android hardware **MediaCodec / MediaMuxer** pipelines. Your files never touch a cloud server.
+
+---
+
+## 💎 What's New in v1.0.39 (Full UI Contrast Overhaul, Horizontal Toggle Fix & 3-Stage 8D Spatial + Slowed & Reverb)
+
+- **Global CSS & APK Toggle Switch Fix (`globals.css`, `keyboard-deck-manager.tsx`, `audio-editor.tsx`, `video-compressor.tsx`):**
+  - Exempted `[role="switch"]` and `[data-slot="switch"]` from `[data-platform="apk"] button { min-height: 44px; }` so native Android toggle pills always stay crisp horizontal `44×24px` switches without vertical squishing.
+  - Added `[data-theme="precision"]` dark-container `.text-muted-foreground` protection so text inside `bg-black`, `#090D0C`, `#102C26`, and Keyboard Deck cards never flips to low-contrast charcoal.
+- **UI Polish Across Downloader, Studio Recorder & ASCII Gallery:**
+  - Unified `youtube-downloader.tsx` view-switcher icons and primary Download CTA styling with Deep Forest (`#102C26`) and Champagne (`#F7E7CE`) accents.
+  - Brightened `studio-recorder.tsx` empty stage prompts (`text-[#F7E7CE]/85 font-medium`) and `ascii-generator.tsx` gallery cards (`bg-[#090D0C]` + `text-[#F7E7CE]`).
+  - Dynamic `APP_VERSION` (`v1.0.39`) badges across `keyboard-deck-manager.tsx` and sandbox inputs locked to `!bg-[#090D0C]/90 !text-[#F7E7CE]`.
+- **Calibrated 3-Stage 8D Spatial + Slowed & Reverb DSP Chain (`audio-dsp.ts`, `fx-rack-engine.ts`, `UnifiedAudioStudio.tsx`):**
+  - Verified `Slowed + Reverb` (`0.87x`, `35ms` pre-delay, `65%` HF damping clamped safely `≥1500Hz`, `-5dB` wet gain, `140Hz` wet high-pass) and 3-Stage `8D Spatial + Slowed & Reverb` (`Studio Balanced` & `Deep Hypnotic`) with 1:1 WebAudio/FFmpeg parity.
 
 ---
 

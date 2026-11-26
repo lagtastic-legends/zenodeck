@@ -449,12 +449,12 @@ export function AsciiGenerator() {
                       onClick={() => setActiveCategory(cat)}
                       className="group flex flex-col items-center justify-between rounded-xl border border-border/40 bg-card/60 p-4 transition-colors hover:border-primary/50 hover:bg-secondary/60"
                     >
-                      <div className="flex h-24 w-full items-center justify-center overflow-hidden rounded-lg bg-black/40 p-2">
-                        <pre className="text-xs leading-tight font-mono font-bold text-[#102C26] dark:text-[#F7E7CE] transition-colors group-hover:text-primary">
+                      <div className="flex h-24 w-full items-center justify-center overflow-hidden rounded-lg bg-[#090D0C] p-2 border border-[#A79277]/20">
+                        <pre className="text-xs leading-tight font-mono font-bold text-[#F7E7CE] transition-colors group-hover:text-primary">
                           {cat.thumbnail}
                         </pre>
                       </div>
-                      <span className="mt-4 font-display text-xs font-bold tracking-wide text-[#102C26] dark:text-[#F7E7CE]">
+                      <span className="mt-4 font-display text-xs font-bold tracking-wide text-foreground">
                         {cat.name}
                       </span>
                     </button>

@@ -1416,7 +1416,7 @@ export function YouTubeDownloader() {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Film className="hidden xs:inline sm:inline size-3.5 shrink-0 text-[#F7E7CE]" />
+          <Film className="hidden xs:inline sm:inline size-3.5 shrink-0" />
           <span className="whitespace-nowrap">Downloader</span>
         </button>
 
@@ -1432,7 +1432,7 @@ export function YouTubeDownloader() {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Layers className="hidden xs:inline sm:inline size-3.5 shrink-0 text-[#F7E7CE]" />
+          <Layers className="hidden xs:inline sm:inline size-3.5 shrink-0" />
           <span className="whitespace-nowrap">Queue</span>
           {activeQueueCount > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-[#A79277]/30 text-[9px] text-[#F7E7CE] font-bold shrink-0 animate-pulse border border-[#A79277]/40">
@@ -1453,7 +1453,7 @@ export function YouTubeDownloader() {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Subtitles className="hidden xs:inline sm:inline size-3.5 shrink-0 text-[#F7E7CE]" />
+          <Subtitles className="hidden xs:inline sm:inline size-3.5 shrink-0" />
           <span className="whitespace-nowrap">Subtitles</span>
           {videoInfo?.subtitles && videoInfo.subtitles.length > 0 && (
             <span className="px-1 py-0.2 rounded-full bg-[#A79277]/30 text-[9px] text-[#F7E7CE] font-bold shrink-0">
@@ -2228,10 +2228,10 @@ export function YouTubeDownloader() {
                   type="button"
                   onClick={handleStartDownload}
                   disabled={!selectedQuality}
-                  className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold text-white transition-all cursor-pointer ${
+                  className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 rounded-xl py-3 px-3 sm:py-3.5 sm:px-6 font-display text-xs sm:text-sm font-bold transition-all cursor-pointer border border-[#A79277]/50 shadow-lg ${
                     selectedQuality?.isAudioOnly
-                      ? "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 shadow-lg shadow-violet-500/25 hover:opacity-95"
-                      : "bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 shadow-lg shadow-red-500/20 hover:opacity-95"
+                      ? "bg-[#102C26] hover:bg-[#102C26]/90 text-[#F7E7CE] shadow-[#102C26]/30"
+                      : "bg-[#102C26] hover:bg-[#102C26]/90 text-[#F7E7CE] shadow-[#102C26]/30"
                   }`}
                 >
                   {selectedQuality?.isAudioOnly ? (

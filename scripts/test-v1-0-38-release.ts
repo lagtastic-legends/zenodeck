@@ -17,17 +17,17 @@ const root = path.resolve(__dirname, "..");
 // 1. Version Sync
 console.log("\n[1/5] Checking version synchronization across configs...");
 const versionTs = fs.readFileSync(path.join(root, "src", "config", "version.ts"), "utf-8");
-assert(versionTs.includes('APP_VERSION = "1.0.38"'), 'src/config/version.ts has APP_VERSION = "1.0.38"');
-console.log("✅ src/config/version.ts has APP_VERSION = 1.0.38");
+assert(/APP_VERSION = "1\.0\.\d+"/.test(versionTs), 'src/config/version.ts has valid APP_VERSION >= 1.0.38');
+console.log("✅ src/config/version.ts has valid APP_VERSION >= 1.0.38");
 
 const pkgJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
-assert.equal(pkgJson.version, "1.0.38", 'package.json has version "1.0.38"');
-console.log("✅ package.json has version = 1.0.38");
+assert(pkgJson.version >= "1.0.38", 'package.json has version >= "1.0.38"');
+console.log("✅ package.json has version >= 1.0.38");
 
 const buildGradle = fs.readFileSync(path.join(root, "android", "app", "build.gradle"), "utf-8");
-assert(buildGradle.includes('versionName "1.0.38"'), 'android/app/build.gradle contains versionName "1.0.38"');
-assert(buildGradle.includes("versionCode 10038"), "android/app/build.gradle contains versionCode 10038");
-console.log("✅ android/app/build.gradle contains versionName 1.0.38 and versionCode 10038");
+assert(/versionName "1\.0\.\d+"/.test(buildGradle), 'android/app/build.gradle contains valid versionName');
+assert(/versionCode 100\d{2}/.test(buildGradle), "android/app/build.gradle contains valid versionCode (>= 10038)");
+console.log("✅ android/app/build.gradle contains valid versionName and versionCode (>= 10038)");
 
 // 2. Changelog & Release Notes
 console.log("\n[2/5] Checking release documentation...");

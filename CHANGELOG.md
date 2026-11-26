@@ -5,6 +5,21 @@ All notable changes to ZenoDeck are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.39] — 2026-11-26
+
+### 🎨 Full UI Contrast Overhaul & APK Horizontal Toggle Pill Fix
+- **Global CSS APK Toggle Switch & Dark Surface Protection (`src/app/globals.css`)**:
+  - Excluded `[role="switch"]` and `[data-slot="switch"]` from `[data-platform="apk"] button:not(.no-touch-target)` (`min-height: 44px`), fixing vertically squished toggle pills across native Android APK builds.
+  - Added `[data-theme="precision"]` dark-surface `.text-muted-foreground` shield covering `bg-black`, `#090D0C`, `#102C26`, `#0a0e1a`, `#111828`, and `#141c2e` so dark viewports never inherit dark-charcoal typography in light mode.
+- **Horizontal Toggle Row Ergonomics (`keyboard-deck-manager.tsx`, `audio-editor.tsx`, `video-compressor.tsx`)**:
+  - Upgraded Keyboard Deck Tactile Suite toggles (`Key Popovers`, `Cursor Scrub`, `Glide Trail`) to semantic `role="switch"` horizontal `h-6 w-11 shrink-0` pills with `h-5 w-5 shrink-0` thumbs inside `flex items-center justify-between gap-4` rows.
+  - Added `min-w-0 flex-1` label wrapping across `audio-editor.tsx` and `video-compressor.tsx` toggle rows, plus dynamic `v{APP_VERSION}` badges and `!bg-[#090D0C]/90 !text-[#F7E7CE]` Live Test Sandbox input contrast in Keyboard Deck.
+- **Downloader, Recorder, Equalizer & ASCII Gallery Polish**:
+  - Removed hardcoded `text-[#F7E7CE]` on inactive view-switcher icons in `youtube-downloader.tsx` so inactive tabs retain legible `text-muted-foreground` in light mode and aligned primary download CTAs with ZenoDeck's Deep Forest (`#102C26`) & Champagne (`#F7E7CE`) palette.
+  - Brightened `studio-recorder.tsx` `"requesting ..."` and `"native screen recording ready"` stage text to `text-[#F7E7CE]/85 font-medium`, upgraded `ascii-generator.tsx` gallery cards to `bg-[#090D0C]` + `text-[#F7E7CE]`, and standardized `equalizer-tool.tsx` preset rail scrolling.
+- **DSP Safety & Modular Refinements (`audio-dsp.ts`, `fx-rack-engine.ts`, `UnifiedAudioStudio.tsx`)**:
+  - Added `Math.max(1500, ...)` floor to `hfDamping` -> `lowpassHz` mapping (preserving exact `4800Hz` at `65%` while eliminating negative cutoff values at `100%` damping) and extracted shared `mapCombined8DParams()` helper in `audio-dsp.ts`.
+
 ## [1.0.38] — 2026-11-23
 
 ### 🎧 3-Stage 8D Spatial + Slowed & Reverb DSP Engine

@@ -482,7 +482,7 @@ export function UnifiedAudioStudio({
             const wetHighPassHz = typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140;
             const wetGainDb = typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5;
             const wetGainLinear = Math.pow(10, wetGainDb / 20);
-            const lowpassHz = Math.round(14000 - (hfDamping / 100) * 14154);
+            const lowpassHz = Math.max(1500, Math.round(14000 - (hfDamping / 100) * 14154));
 
             const bassMonoCrossoverHz = params.bassMonoCrossoverHz || 120;
             const lowpass = ctx.createBiquadFilter();
@@ -701,7 +701,7 @@ export function UnifiedAudioStudio({
             const wetHighPassHz = typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140;
             const wetGainDb = typeof params.wetGainDb === "number" ? params.wetGainDb : -5.0;
             const wetGainLinear = typeof params.reverbMix === "number" ? params.reverbMix : Math.pow(10, wetGainDb / 20);
-            const lowpassHz = Math.round(14000 - (hfDamping / 100) * 14154);
+            const lowpassHz = Math.max(1500, Math.round(14000 - (hfDamping / 100) * 14154));
 
             let reverbInNode: AudioNode = fadeGain;
             const extraNodes: AudioNode[] = [];

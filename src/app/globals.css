@@ -670,9 +670,9 @@ body {
   user-select: text;
 }
 
-/* Strict Touch Target Ergonomics on APK (44px - 48px minimum) */
-[data-platform="apk"] button:not(.no-touch-target),
-[data-platform="apk"] [role="button"]:not(.no-touch-target),
+/* Strict Touch Target Ergonomics on APK (44px - 48px minimum), excluding compact toggle switches */
+[data-platform="apk"] button:not(.no-touch-target):not([role="switch"]):not([data-slot="switch"]),
+[data-platform="apk"] [role="button"]:not(.no-touch-target):not([role="switch"]),
 [data-platform="apk"] a:not(.no-touch-target) {
   min-height: 44px;
 }
@@ -883,9 +883,16 @@ body {
 /* Explicit guard: Ensure dark backgrounds always preserve their contrast */
 [data-theme="precision"] [class*="bg-[#090D0C]"],
 [data-theme="precision"] [class*="bg-[#102C26]"],
+[data-theme="precision"] [class*="bg-[#0a0e1a]"],
+[data-theme="precision"] [class*="bg-[#111828]"],
+[data-theme="precision"] [class*="bg-[#141c2e]"],
 [data-theme="precision"] [class*="bg-black"],
 [data-theme="precision"] [class*="bg-card"] {
   color-scheme: dark;
+}
+
+[data-theme="precision"] :is([class*="bg-black"], [class*="bg-[#090D0C]"], [class*="bg-[#102C26]"], [class*="bg-[#0a0e1a]"], [class*="bg-[#111828]"], [class*="bg-[#141c2e]"]) .text-muted-foreground:not([class*="!text-"]):not([class*="text-[#"]) {
+  color: #e5e7eb;
 }
 
 /* High contrast cards & structural borders */

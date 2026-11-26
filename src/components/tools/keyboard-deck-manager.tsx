@@ -1345,7 +1345,7 @@ export function KeyboardDeckManager() {
               <h2 className="font-headline text-sm font-bold text-[#e0e8f0] flex items-center gap-2">
                 ZenoTap Gboard-Grade Engine Settings
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  Native IME v1.0.15
+                  Native IME v{APP_VERSION}
                 </span>
               </h2>
               <p className="text-xs text-[#a0b4c4]">
@@ -1628,7 +1628,7 @@ export function KeyboardDeckManager() {
                 <span className="text-xs font-bold text-[#e0e8f0] flex items-center gap-2">
                   Tactile &amp; Ergonomics Control Suite
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                    v1.0.37
+                    v{APP_VERSION}
                   </span>
                 </span>
                 <p className="text-[10px] text-[#a0b4c4] mt-0.5">
@@ -1708,63 +1708,72 @@ export function KeyboardDeckManager() {
           {/* Section 3: Feature Toggles */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-sky-400/10">
             {/* Key Popovers Toggle */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
-              <div>
+            <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-[#e0e8f0]">Key Popovers</p>
                 <p className="text-[9px] text-[#a0b4c4]">Instant floating preview</p>
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={keyPopupEnabled}
+                aria-label="Toggle Key Popovers"
                 onClick={() => void handleKeyPopupChange(!keyPopupEnabled)}
-                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors cursor-pointer ${
                   keyPopupEnabled ? "bg-cyan-500" : "bg-neutral-700"
                 }`}
               >
-                <div
-                  className={`size-3.5 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 ${
-                    keyPopupEnabled ? "translate-x-4" : "translate-x-0"
+                <span
+                  className={`inline-block h-5 w-5 shrink-0 rounded-full bg-white shadow transition-transform duration-200 ${
+                    keyPopupEnabled ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
             </div>
 
             {/* Cursor Scrubbing Toggle */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
-              <div>
+            <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-[#e0e8f0]">Cursor Scrub</p>
                 <p className="text-[9px] text-[#a0b4c4]">Spacebar trackpad</p>
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={cursorScrubEnabled}
+                aria-label="Toggle Cursor Scrubbing"
                 onClick={() => void handleCursorScrubChange(!cursorScrubEnabled)}
-                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors cursor-pointer ${
                   cursorScrubEnabled ? "bg-cyan-500" : "bg-neutral-700"
                 }`}
               >
-                <div
-                  className={`size-3.5 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 ${
-                    cursorScrubEnabled ? "translate-x-4" : "translate-x-0"
+                <span
+                  className={`inline-block h-5 w-5 shrink-0 rounded-full bg-white shadow transition-transform duration-200 ${
+                    cursorScrubEnabled ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
             </div>
 
             {/* 120fps Glide Trail Toggle */}
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
-              <div>
+            <div className="flex items-center justify-between gap-4 p-2.5 rounded-lg bg-[#141c2e] border border-sky-400/15">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-[#e0e8f0]">Glide Trail</p>
                 <p className="text-[9px] text-[#a0b4c4]">120fps particle trail</p>
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={glideTrailEnabled}
+                aria-label="Toggle 120fps Glide Trail"
                 onClick={() => void handleGlideTrailChange(!glideTrailEnabled)}
-                className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors cursor-pointer ${
                   glideTrailEnabled ? "bg-cyan-500" : "bg-neutral-700"
                 }`}
               >
-                <div
-                  className={`size-3.5 rounded-full bg-white transition-transform absolute top-0.5 left-0.5 ${
-                    glideTrailEnabled ? "translate-x-4" : "translate-x-0"
+                <span
+                  className={`inline-block h-5 w-5 shrink-0 rounded-full bg-white shadow transition-transform duration-200 ${
+                    glideTrailEnabled ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -1808,7 +1817,7 @@ export function KeyboardDeckManager() {
               value={testSandboxText}
               onChange={(e) => setTestSandboxText(e.target.value)}
               placeholder="Tap here to test physical keyboard, IME, or voice typing..."
-              className="w-full px-3 py-1.5 text-xs rounded-lg border border-sky-400/20 bg-[#0a0e1a] text-[#e0e8f0] placeholder:text-muted-foreground focus:outline-none focus:border-[#7dd3fc]"
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-[#A79277]/30 !bg-[#090D0C]/90 !text-[#F7E7CE] placeholder:!text-[#A79277]/70 focus:outline-none focus:border-[#7dd3fc]"
             />
             <p className="text-[10px] text-[#a0b4c4]">
               Try typing <span className="font-mono text-cyan-300">&quot;dont&quot;</span>, swiping across keys for glide typing, or double-tapping Spacebar.

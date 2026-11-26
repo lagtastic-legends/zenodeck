@@ -456,7 +456,7 @@ export function buildFXRackFilterChain(config: FXRackConfig): string[] {
           const preDelayMs = p.preDelayMs ?? 35;
           const wetHighPassHz = p.wetHighPassHz ?? 140;
           const hfDamping = p.hfDamping ?? 65;
-          const lowpassHz = p.lowpassHz ?? Math.round(14000 - (hfDamping / 100) * 14154);
+          const lowpassHz = p.lowpassHz ?? Math.max(1500, Math.round(14000 - (hfDamping / 100) * 14154));
           const wetGainDb = p.wetGainDb ?? -5.0;
           filters.push(
             `asplit=2[dry][wet];[wet]adelay=${preDelayMs}|${preDelayMs},highpass=f=${wetHighPassHz},aecho=0.8:0.88:60|120:0.4|0.25,lowpass=f=${lowpassHz},stereotools=mlev=1.0:slev=1.2,volume=${wetGainDb}dB[w];[dry][w]amix=inputs=2:weights=1 1:normalize=0,alimiter=limit=0.944`
@@ -700,7 +700,7 @@ export function createFXRackWebAudioNodes(
         const preDelayMs = typeof p.preDelayMs === "number" ? p.preDelayMs : 35;
         const wetHighPassHz = typeof p.wetHighPassHz === "number" ? p.wetHighPassHz : 140;
         const hfDamping = typeof p.hfDamping === "number" ? p.hfDamping : 65;
-        const lowpassHz = typeof p.lowpassHz === "number" ? p.lowpassHz : Math.round(14000 - (hfDamping / 100) * 14154);
+        const lowpassHz = typeof p.lowpassHz === "number" ? p.lowpassHz : Math.max(1500, Math.round(14000 - (hfDamping / 100) * 14154));
         const wetGainDb = typeof p.wetGainDb === "number" ? p.wetGainDb : -5.0;
         const wetGainLinear = typeof p.wetGainDb === "number" ? Math.pow(10, wetGainDb / 20) : (mod.wetDry ?? 0.562);
         const dryGainLinear = 1.0;

@@ -68,7 +68,7 @@ function FeatureCard({
   );
 }
 
-// Past release highlights preserved for release parity: 4K 30FPS Studio Compressor, Continuous Glide Typing, Zero-Latency Android IME, Live Height Scale Slider, Tactile & Ergonomics Suite, Tactile &amp; Ergonomics Suite, One-Handed & Glide Trail
+// Past release highlights preserved for release parity: 4K 30FPS Studio Compressor, Continuous Glide Typing, Zero-Latency Android IME, Live Height Scale Slider, Tactile & Ergonomics Suite, Tactile &amp; Ergonomics Suite, One-Handed & Glide Trail, Slowed &amp; Reverb Studio Upgrade, Universal Downloader Stabilized
 export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [previousVersion, setPreviousVersion] = useState<string | null>(null);
@@ -170,19 +170,19 @@ export function WhatsNewModal() {
         />
 
         <FeatureCard
-          icon={<Music className="size-4.5 text-violet-400" />}
-          title="Slowed &amp; Reverb Studio Upgrade"
-          badge="Analog Tape 🌙"
-          description="Calibrated 35ms pre-delay for crisp transient separation, 65% HF damping (~4.8kHz low-pass roll-off), -5dB wet gain, and 140Hz wet high-pass filter."
+          icon={<CheckCircle2 className="size-4.5 text-violet-400" />}
+          title="UI Contrast &amp; Toggle Pill Overhaul"
+          badge="v1.0.39 ✨"
+          description="Global dark-surface readability shields, crisp Champagne (#F7E7CE) viewport prompts, horizontal 44x24px toggle pills on APK, and clean 2-line tool subtitles."
           accentClass="bg-violet-500/15 text-violet-400 border border-violet-500/30"
           badgeClass="bg-violet-500/15 text-violet-300 border border-violet-500/30"
         />
 
         <FeatureCard
-          icon={<Download className="size-4.5 text-emerald-400" />}
-          title="Universal Downloader Stabilized"
-          badge="Zero Freeze 🚀"
-          description="Resolved 5% download freeze by eliminating multi-worker socket contention. Streamlined direct-to-disk RAM-safe OPFS downloading for 4K video and audio."
+          icon={<Sliders className="size-4.5 text-emerald-400" />}
+          title="Downloader &amp; Gallery Polish"
+          badge="Deep Forest 🌲"
+          description="Unified Deep Forest (#102C26) & Champagne (#F7E7CE) CTAs, crisp ASCII gallery contrast, 100% normalized swatch tracks, and dynamic IME version badges."
           accentClass="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
           badgeClass="bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         />

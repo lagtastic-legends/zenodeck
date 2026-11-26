@@ -384,7 +384,7 @@ export function build8DSlowedReverbFilter(options: EightDSlowedReverbOptions = {
   const wetHighPassHz = typeof options.wetHighPassHz === "number" ? options.wetHighPassHz : 140;
   const wetGainDb = typeof options.wetGainDb === "number" ? options.wetGainDb : -5.5;
   const hfDamping = typeof options.hfDamping === "number" ? options.hfDamping : 65;
-  const lowpassHz = typeof options.lowpassHz === "number" ? options.lowpassHz : 4800;
+  const lowpassHz = typeof options.lowpassHz === "number" ? options.lowpassHz : Math.max(1500, Math.round(14000 - (hfDamping / 100) * 14154));
 
   const chain: string[] = [];
 
@@ -706,6 +706,24 @@ export function buildVolumeChangerFilter(p: VolumeChangerParams): string[] {
 /* Master Filter Dispatcher                                                   */
 /* -------------------------------------------------------------------------- */
 
+function mapCombined8DParams(params: Record<string, any>): EightDSlowedReverbOptions {
+  return {
+    tempo: typeof params.speed === "number" ? params.speed : 0.87,
+    preservePitch: params.preservePitch === true,
+    sampleRate: params.sampleRate || 44100,
+    orbitRateHz: typeof params.orbitRateHz === "number" ? params.orbitRateHz : (params.cycleSec ? 1 / params.cycleSec : 0.12),
+    panDepth: typeof params.panDepth === "number" ? params.panDepth : (typeof params.intensity === "number" ? params.intensity : 0.88),
+    haasDelayMs: params.haasDelayMs ?? 0.35,
+    rearHeadLowpassHz: params.rearHeadLowpassHz ?? 7200,
+    bassMonoCrossoverHz: params.bassMonoCrossoverHz ?? 120,
+    preDelayMs: typeof params.preDelayMs === "number" ? params.preDelayMs : 35,
+    wetHighPassHz: typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140,
+    wetGainDb: typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5,
+    hfDamping: typeof params.hfDamping === "number" ? params.hfDamping : 65,
+    lowpassHz: typeof params.lowpassHz === "number" ? params.lowpassHz : undefined,
+  };
+}
+
 export function getAudioFilterGraph(
   effect: AudioEffectType,
   params: Record<string, any>,
@@ -713,21 +731,7 @@ export function getAudioFilterGraph(
   switch (effect) {
     case "spatial-8d":
       if (params.is8DCombined) {
-        return build8DSlowedReverbFilter({
-          tempo: typeof params.speed === "number" ? params.speed : 0.87,
-          preservePitch: params.preservePitch === true,
-          sampleRate: params.sampleRate || 44100,
-          orbitRateHz: typeof params.orbitRateHz === "number" ? params.orbitRateHz : (params.cycleSec ? 1 / params.cycleSec : 0.12),
-          panDepth: typeof params.panDepth === "number" ? params.panDepth : (typeof params.intensity === "number" ? params.intensity : 0.88),
-          haasDelayMs: params.haasDelayMs ?? 0.35,
-          rearHeadLowpassHz: params.rearHeadLowpassHz ?? 7200,
-          bassMonoCrossoverHz: params.bassMonoCrossoverHz ?? 120,
-          preDelayMs: typeof params.preDelayMs === "number" ? params.preDelayMs : 35,
-          wetHighPassHz: typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140,
-          wetGainDb: typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5,
-          hfDamping: typeof params.hfDamping === "number" ? params.hfDamping : 65,
-          lowpassHz: typeof params.lowpassHz === "number" ? params.lowpassHz : 4800,
-        });
+        return build8DSlowedReverbFilter(mapCombined8DParams(params));
       }
       return buildSpatial8DFilter(params as Spatial8DParams);
     case "auto-panner":
@@ -754,28 +758,14 @@ export function getAudioFilterGraph(
       return buildTrimmerFilter(params as TrimmerParams);
     case "slowed-reverb": {
       if (params.is8DCombined) {
-        return build8DSlowedReverbFilter({
-          tempo: typeof params.speed === "number" ? params.speed : 0.87,
-          preservePitch: params.preservePitch === true,
-          sampleRate: params.sampleRate || 44100,
-          orbitRateHz: typeof params.orbitRateHz === "number" ? params.orbitRateHz : (params.cycleSec ? 1 / params.cycleSec : 0.12),
-          panDepth: typeof params.panDepth === "number" ? params.panDepth : (typeof params.intensity === "number" ? params.intensity : 0.88),
-          haasDelayMs: params.haasDelayMs ?? 0.35,
-          rearHeadLowpassHz: params.rearHeadLowpassHz ?? 7200,
-          bassMonoCrossoverHz: params.bassMonoCrossoverHz ?? 120,
-          preDelayMs: typeof params.preDelayMs === "number" ? params.preDelayMs : 35,
-          wetHighPassHz: typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140,
-          wetGainDb: typeof params.wetGainDb === "number" ? params.wetGainDb : -5.5,
-          hfDamping: typeof params.hfDamping === "number" ? params.hfDamping : 65,
-          lowpassHz: typeof params.lowpassHz === "number" ? params.lowpassHz : 4800,
-        });
+        return build8DSlowedReverbFilter(mapCombined8DParams(params));
       }
       const speed = typeof params.speed === "number" ? params.speed : 0.87;
       const preservePitch = params.preservePitch !== false && (params.preservePitch === true || (params.speed !== undefined && !("preservePitch" in params)));
       const preDelayMs = typeof params.preDelayMs === "number" ? params.preDelayMs : 35;
       const wetHighPassHz = typeof params.wetHighPassHz === "number" ? params.wetHighPassHz : 140;
       const hfDamping = typeof params.hfDamping === "number" ? params.hfDamping : 65;
-      const lowpassHz = typeof params.lowpassHz === "number" ? params.lowpassHz : Math.round(14000 - (hfDamping / 100) * 14154);
+      const lowpassHz = typeof params.lowpassHz === "number" ? params.lowpassHz : Math.max(1500, Math.round(14000 - (hfDamping / 100) * 14154));
       const wetGainDb = typeof params.wetGainDb === "number" ? params.wetGainDb : -5.0;
       const sampleRate = params.sampleRate || 44100;
 

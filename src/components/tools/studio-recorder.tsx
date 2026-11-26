@@ -651,14 +651,14 @@ export function StudioRecorder() {
                     )}
                   </div>
                 ) : mediaState === "starting" ? (
-                  <p className="animate-pulse font-mono text-[11px] text-muted-foreground">
+                  <p className="animate-pulse font-mono text-[11px] text-[#F7E7CE]/85 font-medium">
                     requesting {meta.label.toLowerCase()}…
                   </p>
                 ) : mode === "screen" && Capacitor.isNativePlatform() && mediaState === "live" ? (
                   <div className="flex flex-col items-center justify-center gap-4">
                     <div className="space-y-2">
-                      <Monitor className="mx-auto size-8 text-muted-foreground/50" />
-                      <p className="font-mono text-[11px] text-muted-foreground">
+                      <Monitor className="mx-auto size-8 text-[#F7E7CE]/75" />
+                      <p className="font-mono text-[11px] text-[#F7E7CE]/85 font-medium">
                         native screen recording ready
                       </p>
                     </div>
