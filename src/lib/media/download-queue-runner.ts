@@ -22,6 +22,7 @@ import { useHistoryStore } from "@/lib/youtube/history-store";
 import { notifyJobSuccess, notifyJobError } from "@/lib/notifications";
 import { acquireWakeLock, releaseWakeLock } from "@/lib/wake-lock";
 import { formatDuration } from "@/lib/youtube/innertube";
+import { canonicalizeYouTubeUrl } from "@/lib/media/stream-security";
 
 class DownloadQueueService {
   private isProcessing = false;
@@ -82,7 +83,7 @@ class DownloadQueueService {
         const result = await downloadYouTubeStream({
           option: nextTask.qualityOption,
           videoTitle: nextTask.title,
-          originalUrl: nextTask.url,
+          originalUrl: canonicalizeYouTubeUrl(nextTask.url),
           author: nextTask.author,
           thumbnailUrl: nextTask.thumbnailUrl,
           maxParallelWorkers: 6,
@@ -141,7 +142,7 @@ class DownloadQueueService {
               percent: 5,
             });
             const { resolveMediaUrl } = await import("@/lib/media/universal-resolver");
-            const resolved = await resolveMediaUrl(nextTask.url);
+            const resolved = await resolveMediaUrl(canonicalizeYouTubeUrl(nextTask.url));
             const matchedOpt =
               resolved.mediaInfo.qualities.find(
                 (q) =>

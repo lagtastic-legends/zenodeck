@@ -8,6 +8,10 @@
  */
 
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
+import {
+  canonicalizeYouTubeUrl,
+  extractCanonicalYouTubeId,
+} from "@/lib/media/stream-security";
 import type { YouTubeSubtitleTrack } from "./subtitles";
 
 export type { YouTubeSubtitleTrack };
@@ -158,25 +162,12 @@ export function extractYouTubeId(urlOrId: string): string | null {
   // Strip trailing punctuation like : / ? &
   trimmed = trimmed.replace(/[:\/\?&]+$/, "").trim();
 
-  // If already an 11-character video ID
-  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
-    return trimmed;
+  const canonicalId = extractCanonicalYouTubeId(canonicalizeYouTubeUrl(trimmed));
+  if (canonicalId) {
+    return canonicalId;
   }
 
-  // Handle standard YouTube URLs
-  const patterns = [
-    /(?:youtu\.be\/|(?:www\.|m\.|music\.)?youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?v=|shorts\/|live\/))([a-zA-Z0-9_-]{11})/,
-    /[?&]v=([a-zA-Z0-9_-]{11})/,
-  ];
-
-  for (const regex of patterns) {
-    const match = trimmed.match(regex);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-
-  return null;
+  return extractCanonicalYouTubeId(trimmed);
 }
 
 /**

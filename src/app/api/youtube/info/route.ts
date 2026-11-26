@@ -9,6 +9,7 @@ import { extractFacebookMedia } from "@/lib/media/extractors/facebook";
 import { extractVimeoMedia } from "@/lib/media/extractors/vimeo";
 import { extractPinterestMedia } from "@/lib/media/extractors/pinterest";
 import { detectPlatform } from "@/lib/media/detector";
+import { canonicalizeYouTubeUrl } from "@/lib/media/stream-security";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +24,8 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-async function handleResolve(urlOrId: string, clientIp?: string) {
+async function handleResolve(rawUrlOrId: string, clientIp?: string) {
+  const urlOrId = canonicalizeYouTubeUrl(rawUrlOrId);
   const detected = detectPlatform(urlOrId);
   const platform = detected?.platform || "youtube";
 

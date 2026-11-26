@@ -20,14 +20,18 @@ export function detectPlatform(inputUrl: string): DetectedPlatformResult | null 
   const url = inputUrl.trim();
 
   // 1. YouTube
-  // Matches: youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/..., music.youtube.com/...
+  // Matches: youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/..., youtube.com/live/..., music.youtube.com/...
   const ytMatch = url.match(
-    /(?:https?:\/\/)?(?:www\.|m\.|music\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
+    /^(?:https?:\/\/)?(?:www\.|m\.|music\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
   );
   if (ytMatch) {
+    const listMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+    const canonicalUrl = listMatch?.[1]
+      ? `https://www.youtube.com/watch?v=${ytMatch[1]}&list=${listMatch[1]}`
+      : `https://www.youtube.com/watch?v=${ytMatch[1]}`;
     return {
       platform: "youtube",
-      cleanUrl: url,
+      cleanUrl: canonicalUrl,
       id: ytMatch[1],
     };
   }

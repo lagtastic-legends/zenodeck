@@ -9,6 +9,7 @@ import { extractFacebookMedia } from "@/lib/media/extractors/facebook";
 import { extractVimeoMedia } from "@/lib/media/extractors/vimeo";
 import { extractPinterestMedia } from "@/lib/media/extractors/pinterest";
 import { detectPlatform } from "@/lib/media/detector";
+import { canonicalizeYouTubeUrl } from "@/lib/media/stream-security";
 import type { UniversalQualityOption } from "@/lib/media/types";
 import fs from "fs";
 
@@ -25,7 +26,8 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-async function handleDownload(url: string, quality = "best", format?: string, clientIp?: string) {
+async function handleDownload(rawUrl: string, quality = "best", format?: string, clientIp?: string) {
+  const url = canonicalizeYouTubeUrl(rawUrl);
   if (!isValidMediaInput(url)) {
     return NextResponse.json(
       { error: "Invalid media URL or video ID." },
@@ -90,6 +92,12 @@ async function handleDownload(url: string, quality = "best", format?: string, cl
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be") || /^[0-9A-Za-z_-]{11}$/.test(url);
     if (isYouTube) {
       const info = await resolveYouTubeVideo(url, clientIp);
+      if (info.isCloudRestricted) {
+        return NextResponse.json(
+          { error: "YouTube restricted cloud stream extraction. Watch in the Web Player or use the Android APK." },
+          { status: 502, headers: corsHeaders }
+        );
+      }
       const chosen =
         info.qualities.find(
           (q) =>
@@ -100,7 +108,7 @@ async function handleDownload(url: string, quality = "best", format?: string, cl
         ) || info.qualities[0];
 
       const streamUrl = chosen?.videoFormat?.url || chosen?.audioFormat?.url;
-      if (streamUrl) {
+      if (streamUrl && !streamUrl.includes("youtube-nocookie.com/embed")) {
         const candidateUrls = buildCandidateUrls(streamUrl);
         let upstream: Response | null = null;
 

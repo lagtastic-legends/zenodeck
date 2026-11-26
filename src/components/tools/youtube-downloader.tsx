@@ -95,6 +95,7 @@ import {
   PLATFORM_CONFIGS,
   type DetectedPlatformResult,
 } from "@/lib/media/detector";
+import { canonicalizeYouTubeUrl } from "@/lib/media/stream-security";
 import { resolveMediaUrl } from "@/lib/media/universal-resolver";
 import { downloadUniversalMedia, fetchStreamWithProgress } from "@/lib/media/downloader";
 import type {
@@ -441,7 +442,8 @@ export function YouTubeDownloader() {
   }, [engineState, boot]);
 
   // Handle URL Resolution
-  const handleResolve = async (urlToResolve = inputUrl) => {
+  const handleResolve = async (rawUrlToResolve = inputUrl) => {
+    const urlToResolve = canonicalizeYouTubeUrl(rawUrlToResolve);
     const detected = detectPlatform(urlToResolve);
     const videoId = extractYouTubeId(urlToResolve);
     const playlistId = extractPlaylistId(urlToResolve);
@@ -483,6 +485,7 @@ export function YouTubeDownloader() {
           audioFormat: q.isAudioOnly ? ({ url: q.downloadUrl } as any) : undefined,
         }));
 
+        setResolveError(null);
         setVideoInfo({
           videoId: res.mediaInfo.id,
           title: res.mediaInfo.title,
@@ -651,6 +654,7 @@ export function YouTubeDownloader() {
       }
 
       const info: YouTubeVideoInfo = data;
+      setResolveError(null);
       setVideoInfo(info);
       setIsQualitySheetOpen(true);
 
@@ -722,6 +726,7 @@ export function YouTubeDownloader() {
   // Handle Turbo Download
   const handleStartDownload = async () => {
     if (!videoInfo || !selectedQuality) return;
+    setResolveError(null);
 
     if (activePlatform !== "youtube" && universalMedia) {
       const chosenUniversalOpt =
@@ -846,8 +851,9 @@ export function YouTubeDownloader() {
       });
 
       const qualityParam = selectedQuality.badge || selectedQuality.resolutionLabel || selectedQuality.label || "best";
+      const canonicalSourceUrl = canonicalizeYouTubeUrl(inputUrl.trim() || videoInfo.videoId);
       const fallbackUrl = getYouTubeApiUrl(
-        `/api/youtube/download?url=${encodeURIComponent(inputUrl.trim() || videoInfo.videoId)}&quality=${encodeURIComponent(qualityParam)}&format=${encodeURIComponent(selectedQuality.container)}`
+        `/api/youtube/download?url=${encodeURIComponent(canonicalSourceUrl)}&quality=${encodeURIComponent(qualityParam)}&format=${encodeURIComponent(selectedQuality.container)}`
       );
 
       // Activity-based watchdog: aborts only if stream stalls with 0 bytes transferred for 30 seconds
@@ -980,11 +986,44 @@ export function YouTubeDownloader() {
       }
     }, watchdogTimeoutMs);
 
+    const isCloudEmbedFallback =
+      !Capacitor.isNativePlatform() &&
+      (Boolean(videoInfo.isCloudRestricted) ||
+        Boolean(selectedQuality.videoFormat?.url?.includes("youtube-nocookie.com/embed")) ||
+        Boolean(selectedQuality.audioFormat?.url?.includes("youtube-nocookie.com/embed")));
+
+    if (isCloudEmbedFallback) {
+      if (stallWatchdogTimer) clearTimeout(stallWatchdogTimer);
+      try {
+        didFallback = true;
+        await triggerYtDlpStreamFallback("Cloud fallback active — trying server extractor");
+      } catch (cloudErr: any) {
+        if (cloudErr?.name !== "AbortError" && cloudErr?.message !== "Download aborted") {
+          setResolveError(null);
+          setIsWebPlayerOpen(true);
+          setProgress(null);
+          toast({
+            title: "Cloud Extraction Restricted",
+            description:
+              "YouTube restricts direct binary downloads from cloud datacenters. Stream cleanly in the Embedded Web Player below or download the Android APK.",
+          });
+        }
+      } finally {
+        void releaseWakeLock();
+        pauseControllerRef.current = null;
+        setIsPaused(false);
+        setIsDownloading(false);
+      }
+      return;
+    }
+
     try {
       const result = await downloadYouTubeStream({
         option: selectedQuality,
         videoTitle: videoInfo.title,
-        originalUrl: inputUrl || (videoInfo ? `https://www.youtube.com/watch?v=${videoInfo.videoId}` : undefined),
+        originalUrl: canonicalizeYouTubeUrl(
+          inputUrl || (videoInfo ? `https://www.youtube.com/watch?v=${videoInfo.videoId}` : "")
+        ),
         author: videoInfo.author,
         thumbnailUrl: videoInfo.thumbnailUrl,
         engine: activeEngine,
@@ -1070,6 +1109,7 @@ export function YouTubeDownloader() {
               statusMessage: "Refreshing unthrottled stream credentials…",
             });
             const freshInfo = await resolveYouTubeVideo(videoInfo.videoId);
+            setResolveError(null);
             setVideoInfo(freshInfo);
             const matchingQ =
               freshInfo.qualities.find((q) => q.id === selectedQuality.id) ||
@@ -1080,7 +1120,9 @@ export function YouTubeDownloader() {
               const retryRes = await downloadYouTubeStream({
                 option: matchingQ,
                 videoTitle: freshInfo.title,
-                originalUrl: inputUrl || `https://www.youtube.com/watch?v=${freshInfo.videoId}`,
+                originalUrl: canonicalizeYouTubeUrl(
+                  inputUrl || `https://www.youtube.com/watch?v=${freshInfo.videoId}`
+                ),
                 author: freshInfo.author,
                 thumbnailUrl: freshInfo.thumbnailUrl,
                 engine: activeEngine,
@@ -1117,9 +1159,15 @@ export function YouTubeDownloader() {
       } catch (fallbackErr: any) {
         if (fallbackErr.name !== "AbortError" && fallbackErr.message !== "Download aborted") {
           console.error("Both direct streaming and stream fallback failed:", fallbackErr);
-          setResolveError(fallbackErr.message || "Download failed. Please try a different quality tier.");
-          void haptics.error();
-          playError();
+          if (videoInfo?.isCloudRestricted) {
+            setResolveError(null);
+            setIsWebPlayerOpen(true);
+            setProgress(null);
+          } else {
+            setResolveError(fallbackErr.message || "Download failed. Please try a different quality tier.");
+            void haptics.error();
+            playError();
+          }
         }
       } finally {
         setIsDownloading(false);
@@ -1577,7 +1625,11 @@ export function YouTubeDownloader() {
         </div>
 
         {/* Error message */}
-        {resolveError && (
+        {resolveError &&
+          !(
+            videoInfo?.isCloudRestricted &&
+            /403|Forbidden|authorized video stream CDN|bot|LOGIN_REQUIRED/i.test(resolveError)
+          ) && (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-xs font-mono text-red-300 shadow-elevation1">
             <div className="flex items-start gap-3">
               <AlertCircle className="size-5 shrink-0 text-red-400 mt-0.5" />
@@ -1953,12 +2005,18 @@ export function YouTubeDownloader() {
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-mono text-emerald-300 w-fit">
                     <ShieldCheck className="size-3.5 text-emerald-400" />
-                    <span>Streams verified · Direct unthrottled endpoints ready</span>
+                    <span>
+                      {videoInfo.isCloudRestricted
+                        ? "Metadata & Web Player verified · Cloud fallback active"
+                        : "Streams verified · Direct unthrottled endpoints ready"}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-mono text-primary w-fit">
-                    <Sparkles className="size-3.5 text-primary" />
-                    <span>🎬 Powered by yt-dlp Video Engine • Need MP3/M4A audio? Tap Convert Video to Audio right after downloading</span>
-                  </div>
+                  {!videoInfo.isCloudRestricted && (
+                    <div className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-mono text-primary w-fit">
+                      <Sparkles className="size-3.5 text-primary" />
+                      <span>🎬 Powered by yt-dlp Video Engine • Need MP3/M4A audio? Tap Convert Video to Audio right after downloading</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Cloud Restriction Notice & Web Player Console for Web App */}
@@ -1971,7 +2029,7 @@ export function YouTubeDownloader() {
                       </span>
                     </div>
                     <p className="text-[11px] text-amber-200/80 font-sans leading-relaxed">
-                      YouTube restricts direct file extraction from cloud datacenters. You can stream in the Web Player preview below or download the ZenoDeck Android APK for direct 8K 60FPS downloads.
+                      YouTube restricts direct file extraction from cloud datacenters. Stream cleanly in the Embedded Web Player below or download the ZenoDeck Android APK for direct 8K 60FPS offline downloads.
                     </p>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <button

@@ -107,10 +107,12 @@ export async function resolveMediaUrl(url: string): Promise<{
     );
   }
 
+  const canonicalUrl = detected.cleanUrl || url;
+
   // 1. Try resolving with backend yt-dlp engine first (supports 1700+ platforms)
   try {
     const apiUrl = getYouTubeApiUrl("/api/media/info");
-    const queryUrl = `${apiUrl}?url=${encodeURIComponent(url.trim())}`;
+    const queryUrl = `${apiUrl}?url=${encodeURIComponent(canonicalUrl.trim())}`;
     const res = await universalFetch(queryUrl, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(18000),

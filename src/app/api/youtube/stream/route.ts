@@ -15,64 +15,10 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-const ALLOWED_STREAM_DOMAINS = [
-  "googlevideo.com",
-  "youtube.com",
-  "youtu.be",
-  "tiktokcdn.com",
-  "tiktokcdn-us.com",
-  "byteoversea.com",
-  "ibytedtos.com",
-  "tikwm.com",
-  "tiktok.com",
-  "cdninstagram.com",
-  "fbcdn.net",
-  "fbsbx.com",
-  "facebook.com",
-  "instagram.com",
-  "threads.net",
-  "threadscdn.com",
-  "twimg.com",
-  "twitter.com",
-  "x.com",
-  "vxtwitter.com",
-  "fxtwitter.com",
-  "v.redd.it",
-  "reddit.com",
-  "redd.it",
-  "redditmedia.com",
-  "preview.redd.it",
-  "packaged-media.redd.it",
-  "vimeocdn.com",
-  "vimeo.com",
-  "akamaized.net",
-  "akamaihd.net",
-  "edgekey.net",
-  "cloudfront.net",
-  "ttvnw.net",
-  "twitch.tv",
-  "jtvnw.net",
-  "pinimg.com",
-  "pinterest.com",
-  "bsky.app",
-  "bsky.social",
-  "sndcdn.com",
-  "soundcloud.com",
-  "rapidcdn.app",
-  "cobalt.tools",
-  "snapinst.app",
-];
+import { isAllowedStreamHost } from "@/lib/media/stream-security";
 
 function isAllowedHost(urlStr: string): boolean {
-  try {
-    const parsed = new URL(urlStr);
-    const host = parsed.hostname.toLowerCase();
-    return ALLOWED_STREAM_DOMAINS.some(
-      (domain) => host === domain || host.endsWith("." + domain)
-    );
-  } catch {
-    return false;
-  }
+  return isAllowedStreamHost(urlStr);
 }
 
 
@@ -122,6 +68,14 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
     // Platform-specific Referer injection to prevent 403 Forbidden on CDNs
     if (targetUrl.includes("tiktok") || targetUrl.includes("byteoversea") || targetUrl.includes("ibytedtos")) {
       fetchHeaders["Referer"] = "https://www.tiktok.com/";
+    } else if (
+      targetUrl.includes("youtube.com") ||
+      targetUrl.includes("youtube-nocookie.com") ||
+      targetUrl.includes("youtu.be") ||
+      targetUrl.includes("ytimg.com") ||
+      targetUrl.includes("ggpht.com")
+    ) {
+      fetchHeaders["Referer"] = "https://www.youtube.com/";
     } else if (targetUrl.includes("twimg.com") || targetUrl.includes("twitter.com") || targetUrl.includes("x.com")) {
       fetchHeaders["Referer"] = "https://twitter.com/";
     } else if (targetUrl.includes("instagram.com") || targetUrl.includes("cdninstagram.com")) {
@@ -134,6 +88,8 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
       fetchHeaders["Referer"] = "https://vimeo.com/";
     } else if (targetUrl.includes("pinterest.com") || targetUrl.includes("pinimg.com")) {
       fetchHeaders["Referer"] = "https://www.pinterest.com/";
+    } else if (targetUrl.includes("sndcdn.com") || targetUrl.includes("soundcloud.com")) {
+      fetchHeaders["Referer"] = "https://soundcloud.com/";
     }
 
     const activeRange = rangeHeader || (isHead ? "bytes=0-0" : null);
@@ -146,7 +102,7 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
 
     for (const urlToTry of candidateUrls) {
       try {
-        const finalUrl = urlToTry;
+        let finalUrl = urlToTry;
 
         const controller = new AbortController();
         const connectTimeoutMs = isHead ? 3000 : 5000;
@@ -163,14 +119,43 @@ async function handleStream(req: Request, isHead = false, bodyUrl?: string) {
           );
         }
 
-        const res = await fetch(finalUrl, {
-          method: "GET",
-          headers: fetchHeaders,
-          redirect: "follow",
-          signal: controller.signal,
-        });
+        let res: Response | null = null;
+        for (let hop = 0; hop < 4; hop++) {
+          if (!isAllowedHost(finalUrl)) {
+            res = null;
+            lastError = new Error("Forbidden: Redirect target host is not an authorized video stream CDN");
+            break;
+          }
+          const hopRes = await fetch(finalUrl, {
+            method: "GET",
+            headers: fetchHeaders,
+            redirect: "manual",
+            signal: controller.signal,
+          });
+          if (hopRes.status >= 300 && hopRes.status < 400) {
+            const location = hopRes.headers.get("location");
+            if (!location) {
+              res = hopRes;
+              break;
+            }
+            const nextUrl = new URL(location, finalUrl).toString();
+            if (!isAllowedHost(nextUrl)) {
+              res = null;
+              lastError = new Error("Forbidden: Redirect target host is not an authorized video stream CDN");
+              break;
+            }
+            finalUrl = nextUrl;
+            continue;
+          }
+          res = hopRes;
+          break;
+        }
 
         clearTimeout(connectTimer);
+
+        if (!res) {
+          continue;
+        }
 
         if (res.ok || res.status === 206 || res.status === 304) {
           upstreamRes = res;
