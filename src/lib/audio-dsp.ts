@@ -706,7 +706,7 @@ export function buildVolumeChangerFilter(p: VolumeChangerParams): string[] {
 /* Master Filter Dispatcher                                                   */
 /* -------------------------------------------------------------------------- */
 
-function mapCombined8DParams(params: Record<string, any>): EightDSlowedReverbOptions {
+export function mapCombined8DParams(params: Record<string, any>): EightDSlowedReverbOptions {
   return {
     tempo: typeof params.speed === "number" ? params.speed : 0.87,
     preservePitch: params.preservePitch === true,

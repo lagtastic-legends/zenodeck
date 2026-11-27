@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { resolveYouTubePlaylist } from "@/lib/youtube/playlist";
+import { extractPlaylistId, resolveYouTubePlaylist } from "@/lib/youtube/playlist";
+import { isValidMediaInput } from "@/lib/media/python-engine";
 import { execFile } from "child_process";
 import path from "path";
 import fs from "fs";
@@ -53,6 +54,13 @@ export async function GET(req: Request) {
 
     if (!list) {
       return NextResponse.json({ status: "YouTube Playlist Service Online" }, { headers: corsHeaders });
+    }
+
+    if (!isValidMediaInput(list) && !extractPlaylistId(list)) {
+      return NextResponse.json(
+        { error: "Invalid YouTube playlist URL or ID." },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const clientIp =

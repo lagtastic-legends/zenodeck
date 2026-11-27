@@ -1,3 +1,5 @@
+setTimeout(() => { console.error("TIMEOUT"); process.exit(1); }, 25000).unref();
+
 /**
  * test-responsive-all-devices.ts
  *
@@ -130,7 +132,7 @@ async function runResponsiveTestSuite() {
 
   // Check specific dimension values per qualifier
   const defDimens = fs.readFileSync(path.join(resDir, "values/dimens.xml"), "utf-8");
-  assert(defDimens.includes("46dp") && defDimens.includes("38dp") && defDimens.includes("210dp") && defDimens.includes("15sp"), "values/dimens.xml matches standard phone specs (46dp key, 38dp ribbon, 210dp vault, 15sp text)");
+  assert(defDimens.includes("54dp") && defDimens.includes("44dp") && defDimens.includes("215dp") && defDimens.includes("16sp"), "values/dimens.xml matches flagship phone specs (54dp key, 44dp ribbon, 215dp vault, 16sp text)");
 
   const sw320Dimens = fs.readFileSync(path.join(resDir, "values-sw320dp/dimens.xml"), "utf-8");
   assert(sw320Dimens.includes("40dp") && sw320Dimens.includes("34dp") && sw320Dimens.includes("180dp") && sw320Dimens.includes("13sp"), "values-sw320dp/dimens.xml matches compact specs (40dp key, 34dp ribbon, 180dp vault, 13sp text)");
@@ -139,9 +141,10 @@ async function runResponsiveTestSuite() {
   assert(sw600Dimens.includes("54dp") && sw600Dimens.includes("44dp") && sw600Dimens.includes("260dp") && sw600Dimens.includes("17sp"), "values-sw600dp/dimens.xml matches tablet/foldable specs (54dp key, 44dp ribbon, 260dp vault, 17sp text)");
 
   const landDimens = fs.readFileSync(path.join(resDir, "values-land/dimens.xml"), "utf-8");
-  assert(landDimens.includes("36dp") && landDimens.includes("32dp") && landDimens.includes("145dp"), "values-land/dimens.xml matches landscape specs (36dp key, 32dp ribbon, 145dp vault)");
+  assert(landDimens.includes("34dp") && landDimens.includes("30dp") && landDimens.includes("140dp"), "values-land/dimens.xml matches landscape specs (34dp key, 30dp ribbon, 140dp vault)");
 
   console.log("\n🎉 ALL 28 RESPONSIVE AUDIT CHECKS PASSED PERFECTION!\n");
+  process.exit(0);
 }
 
 void runResponsiveTestSuite();

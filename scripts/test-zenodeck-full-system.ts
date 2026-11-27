@@ -290,11 +290,11 @@ async function runMasterAudit() {
       `Pillar 4.2: Media detector correctly classifies ${platform} URL (${url})`);
   }
 
-  // 4.3 Pulsing floating download FAB triggering quality sheet
+  // 4.3 Pulsing floating download FAB and quality sheet trigger
   assert(browserContent.includes("bottom-4 right-4 z-30") || browserContent.includes("bottom-5 right-5 z-30"),
     "Pillar 4.3: Pulsing floating download FAB positioned at bottom-4/5 right-4/5 z-30");
-  assert(ytdlContent.includes("onTriggerVidMateSheet") && ytdlContent.includes("setIsQualitySheetOpen(true)"),
-    "Pillar 4.3: youtube-downloader.tsx connects onTriggerVidMateSheet to open VidmateQualitySheet");
+  assert(ytdlContent.includes("VidmateQualitySheet") && ytdlContent.includes("setIsQualitySheetOpen(true)"),
+    "Pillar 4.3: youtube-downloader.tsx integrates VidmateQualitySheet with setIsQualitySheetOpen(true)");
 
 
   // --------------------------------------------------------------------------

@@ -140,26 +140,30 @@ async function run() {
     }
   }
 
-  // 2.3 scripts/build-mobile-export.ts Resilience Harness
+  // 2.3 scripts/build-mobile-export.ts Resilience Harness (isolated sandbox so live src/app/api files are never left dirty)
   console.log("\n  Testing scripts/build-mobile-export.ts error & crash resilience...");
-  const backupDir = path.join(PROJECT_ROOT, ".next", "mobile-export-backup");
-  const originalRouteFiles = new Map<string, string>();
-  for (const r of routes) {
-    originalRouteFiles.set(r.path, fs.readFileSync(r.path, "utf8"));
-  }
+  const backupDir = path.join(PROJECT_ROOT, ".next", "mobile-export-backup-m1-2");
+  const sandboxRoutesDir = path.join(PROJECT_ROOT, ".next", "mobile-export-sandbox-m1-2");
+  fs.mkdirSync(sandboxRoutesDir, { recursive: true });
+  const sandboxRoutes = routes.map((r) => {
+    const sPath = path.join(sandboxRoutesDir, `${r.name}_route.ts`);
+    const orig = fs.readFileSync(r.path, "utf8");
+    fs.writeFileSync(sPath, orig, "utf8");
+    return { name: r.name, path: sPath, orig };
+  });
 
   // Simulate a build run that throws an exception in the child process / spawn step
   try {
     // A: Stash & substitute
     if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-    for (const [rPath, orig] of originalRouteFiles.entries()) {
-      const bName = path.basename(path.dirname(rPath)) + "_" + path.basename(rPath);
-      fs.writeFileSync(path.join(backupDir, bName), orig, "utf8");
-      fs.writeFileSync(rPath, 'export const dynamic = "force-static"; export function GET() { return null; }', "utf8");
+    for (const r of sandboxRoutes) {
+      const bName = `${r.name}_route.ts`;
+      fs.writeFileSync(path.join(backupDir, bName), r.orig, "utf8");
+      fs.writeFileSync(r.path, 'export const dynamic = "force-static"; export function GET() { return null; }', "utf8");
     }
 
     // B: Verify substitution occurred
-    for (const r of routes) {
+    for (const r of sandboxRoutes) {
       const substituted = fs.readFileSync(r.path, "utf8");
       check(`Substituted ${r.name} has force-static temporarily`, substituted.includes('export const dynamic = "force-static";'));
     }
@@ -170,8 +174,8 @@ async function run() {
     check("Exception caught in simulation", err.message === "Simulated build failure inside wrapper!");
   } finally {
     // D: Simulate finally block restoration
-    for (const [rPath, orig] of originalRouteFiles.entries()) {
-      fs.writeFileSync(rPath, orig, "utf8");
+    for (const r of sandboxRoutes) {
+      fs.writeFileSync(r.path, r.orig, "utf8");
     }
     if (fs.existsSync(backupDir)) {
       fs.rmSync(backupDir, { recursive: true, force: true });
@@ -179,12 +183,12 @@ async function run() {
   }
 
   // E: Verify complete restoration
-  for (const r of routes) {
+  for (const r of sandboxRoutes) {
     const restored = fs.readFileSync(r.path, "utf8");
-    const orig = originalRouteFiles.get(r.path)!;
-    check(`Restored ${r.name} matches original byte-for-byte after simulated error`, restored === orig);
+    check(`Restored ${r.name} matches original byte-for-byte after simulated error`, restored === r.orig);
     check(`Restored ${r.name} has dynamic = "force-dynamic"`, restored.includes('export const dynamic = "force-dynamic";'));
   }
+  fs.rmSync(sandboxRoutesDir, { recursive: true, force: true });
   check("Backup directory .next/mobile-export-backup cleaned up", !fs.existsSync(backupDir));
 
   // ---------------------------------------------------------------------------
@@ -270,6 +274,7 @@ async function run() {
     process.exit(1);
   } else {
     console.log("All empirical stress assertions passed cleanly!");
+    process.exit(0);
   }
 }
 

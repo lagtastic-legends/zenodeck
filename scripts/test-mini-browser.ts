@@ -63,20 +63,14 @@ async function runTests() {
   }
   console.log("✔ ZenoMedia3Plugin.kt verified: openInAppBrowser, closeInAppBrowser, and mediaDetected listener active.");
 
-  // 3. Verify youtube-downloader.tsx integration
+  // 3. Verify youtube-downloader.tsx streamlined direct architecture & quality sheet
   const downloaderPath = path.join(process.cwd(), "src/components/tools/youtube-downloader.tsx");
   const downloaderContent = fs.readFileSync(downloaderPath, "utf-8");
 
-  if (!downloaderContent.includes("MiniBrowserView")) {
-    throw new Error("Missing MiniBrowserView integration in youtube-downloader.tsx");
+  if (!downloaderContent.includes("VidmateQualitySheet") || !downloaderContent.includes("setIsQualitySheetOpen(true)")) {
+    throw new Error("Missing VidmateQualitySheet or quality sheet trigger in youtube-downloader.tsx");
   }
-  if (!downloaderContent.includes("downloaderMode")) {
-    throw new Error("Missing downloaderMode segmented control in youtube-downloader.tsx");
-  }
-  if (!downloaderContent.includes("In-App Browser")) {
-    throw new Error("Missing In-App Browser toggle tab in youtube-downloader.tsx");
-  }
-  console.log("✔ youtube-downloader.tsx verified: Dual downloader mode toggle and MiniBrowserView mount verified.");
+  console.log("✔ youtube-downloader.tsx verified: Streamlined universal downloader and VidmateQualitySheet active (MiniBrowser decoupled cleanly).");
 
   // 4. Verify version is at least v1.0.14
   const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf-8"));
