@@ -774,6 +774,22 @@ class ZenoDeckKeyboardService : InputMethodService() {
         applyKeyLayout(currentLayout)
     }
 
+    private fun getPointerRawX(event: MotionEvent, pointerIndex: Int): Float {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            event.getRawX(pointerIndex)
+        } else {
+            event.getX(pointerIndex) + (event.rawX - event.x)
+        }
+    }
+
+    private fun getPointerRawY(event: MotionEvent, pointerIndex: Int): Float {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            event.getRawY(pointerIndex)
+        } else {
+            event.getY(pointerIndex) + (event.rawY - event.y)
+        }
+    }
+
     private fun setupGutterTouchInterception(root: View) {
         val row1 = root.findViewById<View>(R.id.row_keys_1)
         val row2 = root.findViewById<View>(R.id.row_keys_2)
@@ -784,7 +800,7 @@ class ZenoDeckKeyboardService : InputMethodService() {
             row.setOnTouchListener { _, event ->
                 if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
                     val pIdx = event.actionIndex
-                    val targetKey = findKeyAtLocation(event.getRawX(pIdx), event.getRawY(pIdx))
+                    val targetKey = findKeyAtLocation(getPointerRawX(event, pIdx), getPointerRawY(event, pIdx))
                     if (targetKey != null) {
                         targetKey.dispatchTouchEvent(event)
                         return@setOnTouchListener true
@@ -1151,8 +1167,8 @@ class ZenoDeckKeyboardService : InputMethodService() {
                             state.pointerId = pointerId
                             state.keyChar = typedChar
                             state.button = targetBtn
-                            state.downX = event.getRawX(pointerIndex)
-                            state.downY = event.getRawY(pointerIndex)
+                            state.downX = getPointerRawX(event, pointerIndex)
+                            state.downY = getPointerRawY(event, pointerIndex)
                             state.downTime = System.currentTimeMillis()
                             state.isGlide = false
                             state.characterCommitted = true
@@ -1203,11 +1219,11 @@ class ZenoDeckKeyboardService : InputMethodService() {
                     MotionEvent.ACTION_MOVE -> {
                         val state = pointerStates[pointerId.coerceIn(0, 9)]
                         if (state.isLongPressActive) {
-                            updateSecondaryCharacterRailSelection(event.getRawX(pointerIndex))
+                            updateSecondaryCharacterRailSelection(getPointerRawX(event, pointerIndex))
                         } else if (isGestureTypingEnabled && state.active && pointerId == 0 && !isSymbolsMode) {
                             val dist = Math.hypot(
-                                (event.getRawX(pointerIndex) - state.downX).toDouble(),
-                                (event.getRawY(pointerIndex) - state.downY).toDouble()
+                                (getPointerRawX(event, pointerIndex) - state.downX).toDouble(),
+                                (getPointerRawY(event, pointerIndex) - state.downY).toDouble()
                             )
                             if (!state.isGlide && dist >= gestureThreshold) {
                                 longPressHandler.removeCallbacksAndMessages(null)
@@ -1220,9 +1236,9 @@ class ZenoDeckKeyboardService : InputMethodService() {
                             }
                             if (state.isGlide) {
                                 if (isGlideTrailEnabled) {
-                                    glideTrailOverlay?.addPoint(event.getRawX(pointerIndex), event.getRawY(pointerIndex))
+                                    glideTrailOverlay?.addPoint(getPointerRawX(event, pointerIndex), getPointerRawY(event, pointerIndex))
                                 }
-                                val currentKey = findKeyAtLocation(event.getRawX(pointerIndex), event.getRawY(pointerIndex))
+                                val currentKey = findKeyAtLocation(getPointerRawX(event, pointerIndex), getPointerRawY(event, pointerIndex))
                                 if (currentKey != null) {
                                     val c = currentKey.tag as? String
                                     if (c != null && (glideTrajectory.isEmpty() || glideTrajectory.last() != c)) {

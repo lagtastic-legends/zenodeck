@@ -1,6 +1,7 @@
 package com.omnitool.app;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -15,6 +16,7 @@ import com.getcapacitor.BridgeWebViewClient;
 import com.getcapacitor.WebViewListener;
 import com.omnitool.app.keyboard.ZenoDeckKeyboardBridgePlugin;
 import com.omnitool.app.media.ZenoMedia3Plugin;
+import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -59,8 +61,8 @@ public class MainActivity extends BridgeActivity {
             bridge.addWebViewListener(new WebViewListener() {
                 @Override
                 public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                    boolean didCrash = detail != null && detail.didCrash();
-                    int rendererPriority = detail != null ? detail.rendererPriorityAtExit() : -1;
+                    boolean didCrash = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && detail != null && detail.didCrash();
+                    int rendererPriority = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && detail != null) ? detail.rendererPriorityAtExit() : -1;
                     Log.e(TAG, "WebView render process exited: didCrash=" + didCrash + ", priority=" + rendererPriority);
                     
                     if (view != null) {
@@ -143,11 +145,11 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void dispatchSharedUrlToWebView(final String url) {
-        if (bridge == null || bridge.getWebView() == null) return;
+        if (bridge == null || bridge.getWebView() == null || url == null) return;
         final WebView webView = bridge.getWebView();
-        final String escapedUrl = url.replace("'", "\\'");
-        final String js = "window.__zenodeck_pending_shared_url = '" + escapedUrl + "'; " +
-                          "window.dispatchEvent(new CustomEvent('zenodeck:shared-url', { detail: { url: '" + escapedUrl + "' } }));";
+        final String quotedUrl = JSONObject.quote(url);
+        final String js = "window.__zenodeck_pending_shared_url = " + quotedUrl + "; " +
+                          "window.dispatchEvent(new CustomEvent('zenodeck:shared-url', { detail: { url: " + quotedUrl + " } }));";
         webView.post(() -> {
             try {
                 webView.evaluateJavascript(js, null);

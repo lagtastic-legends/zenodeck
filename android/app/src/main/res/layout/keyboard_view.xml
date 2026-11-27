@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/keyboard_outer_container"
     android:layout_width="match_parent"
     android:layout_height="@dimen/keyboard_total_height">
@@ -228,7 +229,7 @@
                 android:contentDescription="Voice Dictation" />
 
             <!-- Right: Switch IME & Close Keyboard Buttons -->
-            <ImageButton
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btn_switch_ime"
                 android:layout_width="26dp"
                 android:layout_height="26dp"
@@ -236,16 +237,16 @@
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Switch Keyboard"
                 android:src="@android:drawable/ic_menu_agenda"
-                android:tint="#94A3B8" />
+                app:tint="#94A3B8" />
 
-            <ImageButton
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btn_close_keyboard"
                 android:layout_width="26dp"
                 android:layout_height="26dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Close Keyboard"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#64748B" />
+                app:tint="#64748B" />
         </LinearLayout>
 
         <!-- Smart Clipboard Listener Strip -->

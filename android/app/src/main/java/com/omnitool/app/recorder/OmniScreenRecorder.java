@@ -136,23 +136,36 @@ public class OmniScreenRecorder {
         int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat);
         if (minBufferSize <= 0) minBufferSize = 4096;
 
-        if (recordInternalAudio && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            AudioPlaybackCaptureConfiguration config = new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
-                    .addMatchingUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                    .addMatchingUsage(android.media.AudioAttributes.USAGE_GAME)
-                    .addMatchingUsage(android.media.AudioAttributes.USAGE_UNKNOWN)
-                    .build();
-            audioRecord = new AudioRecord.Builder()
-                    .setAudioPlaybackCaptureConfig(config)
-                    .setAudioFormat(new AudioFormat.Builder()
-                            .setEncoding(audioFormat)
-                            .setSampleRate(sampleRate)
-                            .setChannelMask(channelConfig)
-                            .build())
-                    .setBufferSizeInBytes(minBufferSize * 2)
-                    .build();
-        } else {
-            audioRecord = new AudioRecord(android.media.MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, minBufferSize * 2);
+        try {
+            if (recordInternalAudio && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                AudioPlaybackCaptureConfiguration config = new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
+                        .addMatchingUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                        .addMatchingUsage(android.media.AudioAttributes.USAGE_GAME)
+                        .addMatchingUsage(android.media.AudioAttributes.USAGE_UNKNOWN)
+                        .build();
+                audioRecord = new AudioRecord.Builder()
+                        .setAudioPlaybackCaptureConfig(config)
+                        .setAudioFormat(new AudioFormat.Builder()
+                                .setEncoding(audioFormat)
+                                .setSampleRate(sampleRate)
+                                .setChannelMask(channelConfig)
+                                .build())
+                        .setBufferSizeInBytes(minBufferSize * 2)
+                        .build();
+            } else {
+                audioRecord = new AudioRecord(android.media.MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, minBufferSize * 2);
+            }
+        } catch (SecurityException se) {
+            Log.e(TAG, "RECORD_AUDIO permission missing; skipping audio capture: " + se.getMessage());
+            audioRecord = null;
+            return;
+        }
+
+        if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord failed to initialize; continuing video-only recording.");
+            try { audioRecord.release(); } catch (Exception ignored) {}
+            audioRecord = null;
+            return;
         }
 
         MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, 1);
